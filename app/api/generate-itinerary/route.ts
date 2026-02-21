@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: Request) {
   try {
@@ -15,6 +15,21 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+
+    // Validate environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error('Supabase environment variables are not configured')
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
+
+    // Initialize server-side Supabase client
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
     // Validate OpenAI API key
     const openaiApiKey = process.env.OPENAI_API_KEY
@@ -111,7 +126,8 @@ Format the response as plain text with clear sections separated by line breaks.`
     }
 
     // Save generated itinerary to database
-    const { error: updateError } = await (supabase.from('requests') as any)
+    const { error: updateError } = await supabase
+      .from('requests')
       .update({ itinerary: generatedItinerary })
       .eq('id', requestId)
 
