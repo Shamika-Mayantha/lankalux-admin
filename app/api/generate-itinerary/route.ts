@@ -17,33 +17,36 @@ export async function POST(request: Request) {
     }
 
     // Validate environment variables
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('Missing OPENAI_API_KEY')
+      return NextResponse.json({ error: 'Missing OpenAI key' }, { status: 500 })
+    }
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      console.error('Supabase environment variables are not configured')
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('Missing SUPABASE_SERVICE_ROLE_KEY')
       return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
+        { error: 'Missing Supabase service key' },
+        { status: 500 }
+      )
+    }
+
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.error('Missing SUPABASE_URL')
+      return NextResponse.json(
+        { error: 'Missing Supabase URL' },
         { status: 500 }
       )
     }
 
     // Initialize server-side Supabase client
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
-
-    // Validate OpenAI API key
-    const openaiApiKey = process.env.OPENAI_API_KEY
-    if (!openaiApiKey) {
-      console.error('OPENAI_API_KEY is not configured')
-      return NextResponse.json(
-        { success: false, error: 'OpenAI API key is not configured' },
-        { status: 500 }
-      )
-    }
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
 
     // Initialize OpenAI client
     const openai = new OpenAI({
-      apiKey: openaiApiKey,
+      apiKey: process.env.OPENAI_API_KEY,
     })
 
     // Fetch request details from database
