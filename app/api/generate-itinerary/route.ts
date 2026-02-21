@@ -81,9 +81,31 @@ export async function POST(request: Request) {
       ? new Date(requestData.end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
       : 'Not specified'
 
-    const passengerInfo = requestData.passenger_count 
-      ? `Number of Passengers: ${requestData.passenger_count}${requestData.child_age ? ` (including 1 child aged ${requestData.child_age} years)` : ''}`
-      : 'Not specified'
+    let passengerInfo = 'Not specified'
+    if (requestData.number_of_adults || requestData.number_of_children) {
+      const adults = requestData.number_of_adults || 0
+      const children = requestData.number_of_children || 0
+      let childrenInfo = ''
+      
+      if (children > 0 && requestData.children_ages) {
+        try {
+          const ages = JSON.parse(requestData.children_ages)
+          if (Array.isArray(ages) && ages.length > 0) {
+            childrenInfo = ` (${children} child${children > 1 ? 'ren' : ''} aged ${ages.join(', ')} year${ages.length > 1 ? 's' : ''})`
+          } else if (children === 1) {
+            childrenInfo = ` (1 child)`
+          }
+        } catch {
+          if (children > 0) {
+            childrenInfo = ` (${children} child${children > 1 ? 'ren' : ''})`
+          }
+        }
+      } else if (children > 0) {
+        childrenInfo = ` (${children} child${children > 1 ? 'ren' : ''})`
+      }
+      
+      passengerInfo = `Adults: ${adults}${childrenInfo}`
+    }
 
     const prompt = `You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Generate exactly 3 distinct, premium itinerary options for the following client:
 
@@ -104,8 +126,19 @@ Requirements:
 - Emphasize luxury positioning and premium accommodations
 - Ensure logical travel flow between destinations
 - Make each option diverse (e.g., cultural heritage, wildlife & nature, beach & relaxation, adventure, wellness/ayurveda)
-${requestData.child_age ? `- IMPORTANT: Consider child-friendly activities and accommodations suitable for a ${requestData.child_age}-year-old child` : ''}
-${requestData.passenger_count && requestData.passenger_count > 2 ? `- Consider group activities and accommodations suitable for ${requestData.passenger_count} passengers` : ''}
+${requestData.number_of_children && requestData.number_of_children > 0 ? (() => {
+  let childInfo = `- IMPORTANT: Consider child-friendly activities and accommodations suitable for ${requestData.number_of_children} child${requestData.number_of_children > 1 ? 'ren' : ''}`
+  if (requestData.children_ages) {
+    try {
+      const ages = JSON.parse(requestData.children_ages)
+      if (Array.isArray(ages) && ages.length > 0) {
+        childInfo += ` (ages: ${ages.join(', ')} years)`
+      }
+    } catch {}
+  }
+  return childInfo
+})() : ''}
+${requestData.number_of_adults && requestData.number_of_adults + (requestData.number_of_children || 0) > 2 ? `- Consider group activities and accommodations suitable for ${(requestData.number_of_adults || 0) + (requestData.number_of_children || 0)} total passengers` : ''}
 
 Format your response as a valid JSON object with this exact structure:
 {

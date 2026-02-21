@@ -12,9 +12,9 @@ export default function NewRequestPage() {
   const [endDate, setEndDate] = useState('')
   const [duration, setDuration] = useState<number | null>(null)
   const [originCountry, setOriginCountry] = useState('')
-  const [passengerCount, setPassengerCount] = useState('')
-  const [hasChildren, setHasChildren] = useState(false)
-  const [childAge, setChildAge] = useState('')
+  const [numberOfAdults, setNumberOfAdults] = useState('')
+  const [numberOfChildren, setNumberOfChildren] = useState('')
+  const [childrenAges, setChildrenAges] = useState<string[]>([])
   const [additionalPreferences, setAdditionalPreferences] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -72,8 +72,9 @@ export default function NewRequestPage() {
             end_date: endDate || null,
             duration: duration || null,
             origin_country: originCountry.trim() || null,
-            passenger_count: passengerCount ? parseInt(passengerCount) : null,
-            child_age: hasChildren && childAge ? parseInt(childAge) : null,
+            number_of_adults: numberOfAdults ? parseInt(numberOfAdults) : null,
+            number_of_children: numberOfChildren ? parseInt(numberOfChildren) : null,
+            children_ages: childrenAges.length > 0 ? JSON.stringify(childrenAges.map(age => parseInt(age)).filter(age => !isNaN(age))) : null,
             additional_preferences: additionalPreferences.trim() || null,
             status: 'new',
           },
@@ -235,59 +236,84 @@ export default function NewRequestPage() {
               />
             </div>
 
-            {/* Passenger Count */}
+            {/* Number of Adults */}
             <div>
-              <label htmlFor="passenger_count" className="block text-sm font-medium text-gray-300 mb-2">
-                Number of Passengers
+              <label htmlFor="number_of_adults" className="block text-sm font-medium text-gray-300 mb-2">
+                Number of Adults
               </label>
               <input
-                id="passenger_count"
+                id="number_of_adults"
                 type="number"
                 min="1"
-                value={passengerCount}
-                onChange={(e) => setPassengerCount(e.target.value)}
-                placeholder="Enter number of passengers"
+                value={numberOfAdults}
+                onChange={(e) => setNumberOfAdults(e.target.value)}
+                placeholder="Enter number of adults"
                 className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                 disabled={loading}
               />
             </div>
 
-            {/* Has Children */}
+            {/* Number of Children */}
             <div>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={hasChildren}
-                  onChange={(e) => {
-                    setHasChildren(e.target.checked)
-                    if (!e.target.checked) {
-                      setChildAge('')
-                    }
-                  }}
-                  className="w-5 h-5 bg-[#0a0a0a] border border-[#333] rounded text-[#d4af37] focus:ring-2 focus:ring-[#d4af37] focus:ring-offset-0"
-                  disabled={loading}
-                />
-                <span className="text-sm font-medium text-gray-300">Traveling with children</span>
+              <label htmlFor="number_of_children" className="block text-sm font-medium text-gray-300 mb-2">
+                Number of Children
               </label>
+              <input
+                id="number_of_children"
+                type="number"
+                min="0"
+                value={numberOfChildren}
+                onChange={(e) => {
+                  const count = parseInt(e.target.value) || 0
+                  setNumberOfChildren(e.target.value)
+                  // Initialize or adjust children ages array
+                  if (count >= 2 && count <= 3) {
+                    setChildrenAges(prev => {
+                      const newAges = [...prev]
+                      while (newAges.length < count) {
+                        newAges.push('')
+                      }
+                      return newAges.slice(0, count)
+                    })
+                  } else {
+                    setChildrenAges([])
+                  }
+                }}
+                placeholder="Enter number of children (0-3)"
+                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                disabled={loading}
+              />
             </div>
 
-            {/* Child Age */}
-            {hasChildren && (
+            {/* Children Ages (only show if 2-3 children) */}
+            {parseInt(numberOfChildren) > 0 && parseInt(numberOfChildren) >= 2 && parseInt(numberOfChildren) <= 3 && (
               <div>
-                <label htmlFor="child_age" className="block text-sm font-medium text-gray-300 mb-2">
-                  Child Age (years)
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Children Ages (years)
                 </label>
-                <input
-                  id="child_age"
-                  type="number"
-                  min="0"
-                  max="17"
-                  value={childAge}
-                  onChange={(e) => setChildAge(e.target.value)}
-                  placeholder="Enter child age in years"
-                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
-                  disabled={loading}
-                />
+                <div className="space-y-3">
+                  {childrenAges.map((age, index) => (
+                    <div key={index}>
+                      <label className="block text-xs text-gray-400 mb-1">
+                        Child {index + 1} Age
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="17"
+                        value={age}
+                        onChange={(e) => {
+                          const newAges = [...childrenAges]
+                          newAges[index] = e.target.value
+                          setChildrenAges(newAges)
+                        }}
+                        placeholder={`Enter age of child ${index + 1}`}
+                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        disabled={loading}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

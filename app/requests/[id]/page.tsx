@@ -23,8 +23,9 @@ interface Request {
   end_date: string | null
   duration: number | null
   origin_country: string | null
-  passenger_count: number | null
-  child_age: number | null
+  number_of_adults: number | null
+  number_of_children: number | null
+  children_ages: string | null
   additional_preferences: string | null
   itineraryoptions: string | null
   itinerary_options?: ItineraryOptions | null
@@ -54,9 +55,9 @@ export default function RequestDetailsPage() {
   const [whatsappValue, setWhatsappValue] = useState('')
   const [startDateValue, setStartDateValue] = useState('')
   const [endDateValue, setEndDateValue] = useState('')
-  const [passengerCountValue, setPassengerCountValue] = useState('')
-  const [hasChildrenValue, setHasChildrenValue] = useState(false)
-  const [childAgeValue, setChildAgeValue] = useState('')
+  const [numberOfAdultsValue, setNumberOfAdultsValue] = useState('')
+  const [numberOfChildrenValue, setNumberOfChildrenValue] = useState('')
+  const [childrenAgesValue, setChildrenAgesValue] = useState<string[]>([])
   const [additionalPreferencesValue, setAdditionalPreferencesValue] = useState('')
   const [saving, setSaving] = useState(false)
   const [cancelling, setCancelling] = useState(false)
@@ -115,9 +116,18 @@ export default function RequestDetailsPage() {
         setWhatsappValue(requestData.whatsapp || '')
         setStartDateValue(requestData.start_date || '')
         setEndDateValue(requestData.end_date || '')
-        setPassengerCountValue(requestData.passenger_count?.toString() || '')
-        setHasChildrenValue(!!requestData.child_age)
-        setChildAgeValue(requestData.child_age?.toString() || '')
+        setNumberOfAdultsValue(requestData.number_of_adults?.toString() || '')
+        setNumberOfChildrenValue(requestData.number_of_children?.toString() || '')
+        if (requestData.children_ages) {
+          try {
+            const ages = JSON.parse(requestData.children_ages)
+            setChildrenAgesValue(Array.isArray(ages) ? ages.map(a => a.toString()) : [])
+          } catch {
+            setChildrenAgesValue([])
+          }
+        } else {
+          setChildrenAgesValue([])
+        }
         setAdditionalPreferencesValue(requestData.additional_preferences || '')
         setLoading(false)
       } catch (err) {
@@ -198,9 +208,18 @@ export default function RequestDetailsPage() {
       setWhatsappValue(requestData.whatsapp || '')
       setStartDateValue(requestData.start_date || '')
       setEndDateValue(requestData.end_date || '')
-      setPassengerCountValue(requestData.passenger_count?.toString() || '')
-      setHasChildrenValue(!!requestData.child_age)
-      setChildAgeValue(requestData.child_age?.toString() || '')
+      setNumberOfAdultsValue(requestData.number_of_adults?.toString() || '')
+      setNumberOfChildrenValue(requestData.number_of_children?.toString() || '')
+      if (requestData.children_ages) {
+        try {
+          const ages = JSON.parse(requestData.children_ages)
+          setChildrenAgesValue(Array.isArray(ages) ? ages.map(a => a.toString()) : [])
+        } catch {
+          setChildrenAgesValue([])
+        }
+      } else {
+        setChildrenAgesValue([])
+      }
       setAdditionalPreferencesValue(requestData.additional_preferences || '')
       setStatusValue(requestData.status || '')
       setNotesValue(requestData.notes || '')
@@ -234,8 +253,9 @@ export default function RequestDetailsPage() {
           start_date: startDateValue || null,
           end_date: endDateValue || null,
           duration: duration || null,
-          passenger_count: passengerCountValue ? parseInt(passengerCountValue) : null,
-          child_age: hasChildrenValue && childAgeValue ? parseInt(childAgeValue) : null,
+          number_of_adults: numberOfAdultsValue ? parseInt(numberOfAdultsValue) : null,
+          number_of_children: numberOfChildrenValue ? parseInt(numberOfChildrenValue) : null,
+          children_ages: childrenAgesValue.length > 0 ? JSON.stringify(childrenAgesValue.map(age => parseInt(age)).filter(age => !isNaN(age))) : null,
           additional_preferences: additionalPreferencesValue.trim() || null,
           updated_at: new Date().toISOString(),
         })
@@ -790,9 +810,18 @@ LankaLux Team`
                         setWhatsappValue(request.whatsapp || '')
                         setStartDateValue(request.start_date || '')
                         setEndDateValue(request.end_date || '')
-                        setPassengerCountValue(request.passenger_count?.toString() || '')
-                        setHasChildrenValue(!!request.child_age)
-                        setChildAgeValue(request.child_age?.toString() || '')
+                        setNumberOfAdultsValue(request.number_of_adults?.toString() || '')
+                        setNumberOfChildrenValue(request.number_of_children?.toString() || '')
+                        if (request.children_ages) {
+                          try {
+                            const ages = JSON.parse(request.children_ages)
+                            setChildrenAgesValue(Array.isArray(ages) ? ages.map(a => a.toString()) : [])
+                          } catch {
+                            setChildrenAgesValue([])
+                          }
+                        } else {
+                          setChildrenAgesValue([])
+                        }
                         setAdditionalPreferencesValue(request.additional_preferences || '')
                         setEditingClientInfo(false)
                       }}
@@ -903,44 +932,72 @@ LankaLux Team`
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                        Number of Passengers
+                        Number of Adults
                       </label>
                       <input
                         type="number"
                         min="1"
-                        value={passengerCountValue}
-                        onChange={(e) => setPassengerCountValue(e.target.value)}
+                        value={numberOfAdultsValue}
+                        onChange={(e) => setNumberOfAdultsValue(e.target.value)}
                         className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                       />
                     </div>
                     <div>
-                      <label className="flex items-center gap-3 cursor-pointer mb-2">
-                        <input
-                          type="checkbox"
-                          checked={hasChildrenValue}
-                          onChange={(e) => {
-                            setHasChildrenValue(e.target.checked)
-                            if (!e.target.checked) {
-                              setChildAgeValue('')
-                            }
-                          }}
-                          className="w-5 h-5 bg-[#0a0a0a] border border-[#333] rounded text-[#d4af37] focus:ring-2 focus:ring-[#d4af37] focus:ring-offset-0"
-                        />
-                        <span className="text-xs text-gray-500 uppercase tracking-wide">Traveling with children</span>
+                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                        Number of Children
                       </label>
-                      {hasChildrenValue && (
-                        <input
-                          type="number"
-                          min="0"
-                          max="17"
-                          value={childAgeValue}
-                          onChange={(e) => setChildAgeValue(e.target.value)}
-                          placeholder="Child age (years)"
-                          className="w-full mt-2 px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
-                        />
-                      )}
+                      <input
+                        type="number"
+                        min="0"
+                        value={numberOfChildrenValue}
+                        onChange={(e) => {
+                          const count = parseInt(e.target.value) || 0
+                          setNumberOfChildrenValue(e.target.value)
+                          if (count >= 2 && count <= 3) {
+                            setChildrenAgesValue(prev => {
+                              const newAges = [...prev]
+                              while (newAges.length < count) {
+                                newAges.push('')
+                              }
+                              return newAges.slice(0, count)
+                            })
+                          } else {
+                            setChildrenAgesValue([])
+                          }
+                        }}
+                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                      />
                     </div>
                   </div>
+                  {parseInt(numberOfChildrenValue) > 0 && parseInt(numberOfChildrenValue) >= 2 && parseInt(numberOfChildrenValue) <= 3 && (
+                    <div>
+                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                        Children Ages (years)
+                      </label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {childrenAgesValue.map((age, index) => (
+                          <div key={index}>
+                            <label className="block text-xs text-gray-400 mb-1">
+                              Child {index + 1} Age
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="17"
+                              value={age}
+                              onChange={(e) => {
+                                const newAges = [...childrenAgesValue]
+                                newAges[index] = e.target.value
+                                setChildrenAgesValue(newAges)
+                              }}
+                              placeholder={`Age of child ${index + 1}`}
+                              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -960,15 +1017,33 @@ LankaLux Team`
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Number of Passengers</p>
-                      <p className="text-gray-300">{request.passenger_count || 'N/A'}</p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Number of Adults</p>
+                      <p className="text-gray-300">{request.number_of_adults || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Child Age</p>
-                      <p className="text-gray-300">
-                        {request.child_age ? `${request.child_age} years` : 'N/A'}
-                      </p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Number of Children</p>
+                      <p className="text-gray-300">{request.number_of_children || 'N/A'}</p>
                     </div>
+                    {request.children_ages && (() => {
+                      try {
+                        const ages = JSON.parse(request.children_ages)
+                        if (Array.isArray(ages) && ages.length > 0) {
+                          return (
+                            <div className="md:col-span-2">
+                              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Children Ages</p>
+                              <p className="text-gray-300">
+                                {ages.map((age: number, index: number) => (
+                                  <span key={index}>
+                                    Child {index + 1}: {age} years{index < ages.length - 1 ? ', ' : ''}
+                                  </span>
+                                ))}
+                              </p>
+                            </div>
+                          )
+                        }
+                      } catch {}
+                      return null
+                    })()}
                   </div>
                 </div>
               )}
