@@ -65,10 +65,19 @@ export default function PublicItineraryPage() {
     const fetchItinerary = async () => {
       try {
         setLoading(true)
-        const token = params.token as string
-        const optionParam = params.option as string
+        // Access params - in Next.js App Router, nested dynamic routes use the folder name as the key
+        const token = params?.token as string || (params as any)?.token || ''
+        const optionParam = params?.option as string || (params as any)?.option || ''
+
+        console.log('Itinerary page params:', { 
+          token, 
+          optionParam, 
+          allParams: params,
+          paramsKeys: Object.keys(params || {})
+        })
 
         if (!token) {
+          console.error('No token found in URL')
           setNotFound(true)
           setLoading(false)
           return
@@ -77,10 +86,13 @@ export default function PublicItineraryPage() {
         // Parse option index from URL parameter
         const optionIndex = optionParam ? parseInt(optionParam, 10) : null
         if (optionIndex === null || isNaN(optionIndex)) {
+          console.error('Invalid option index:', optionParam)
           setNotFound(true)
           setLoading(false)
           return
         }
+
+        console.log('Fetching itinerary with token:', token, 'option:', optionIndex)
 
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -92,19 +104,35 @@ export default function PublicItineraryPage() {
           .eq('public_token', token)
           .single()
 
-        if (error || !data) {
-          console.error('Error fetching itinerary:', error)
+        if (error) {
+          console.error('Error fetching itinerary from database:', error)
+          setNotFound(true)
+          setLoading(false)
+          return
+        }
+
+        if (!data) {
+          console.error('No data found for token:', token)
           setNotFound(true)
           setLoading(false)
           return
         }
 
         const requestData = data as any
+        console.log('Request data found:', { 
+          id: requestData.id, 
+          hasItineraryOptions: !!requestData.itineraryoptions,
+          selectedOption: requestData.selected_option
+        })
 
         // Parse itineraryoptions string to object if it exists
         if (requestData.itineraryoptions && typeof requestData.itineraryoptions === 'string') {
           try {
             requestData.itinerary_options = JSON.parse(requestData.itineraryoptions)
+            console.log('Parsed itinerary options:', {
+              optionsCount: requestData.itinerary_options?.options?.length,
+              requestedOptionIndex: optionIndex
+            })
           } catch (parseError) {
             console.error('Error parsing itineraryoptions:', parseError)
             requestData.itinerary_options = null
@@ -114,6 +142,7 @@ export default function PublicItineraryPage() {
         }
 
         if (!requestData.itinerary_options) {
+          console.error('No itinerary options found')
           setNotFound(true)
           setLoading(false)
           return
@@ -122,11 +151,13 @@ export default function PublicItineraryPage() {
         // Get itinerary option from URL parameter (not from database selected_option)
         const selectedOption = requestData.itinerary_options.options?.[optionIndex]
         if (!selectedOption) {
+          console.error('Option not found at index:', optionIndex, 'Available options:', requestData.itinerary_options.options?.length)
           setNotFound(true)
           setLoading(false)
           return
         }
 
+        console.log('Successfully loaded itinerary option:', selectedOption.title)
         setRequest(requestData)
         setSelectedItinerary(selectedOption)
         setLoading(false)
@@ -138,7 +169,7 @@ export default function PublicItineraryPage() {
     }
 
     fetchItinerary()
-  }, [params.token, params.option])
+  }, [params])
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A'
