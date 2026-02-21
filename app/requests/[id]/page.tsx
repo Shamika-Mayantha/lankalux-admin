@@ -241,7 +241,9 @@ export default function RequestDetailsPage() {
         const end = new Date(endDateValue)
         if (end >= start) {
           const diffTime = Math.abs(end.getTime() - start.getTime())
-          duration = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+          // Add 1 to make duration inclusive of both start and end dates
+          // e.g., June 2-4 = 3 days (June 2, 3, 4)
+          duration = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
         }
       }
 
@@ -918,7 +920,9 @@ LankaLux Team`
                               const end = new Date(endDateValue)
                               if (end >= start) {
                                 const diffTime = Math.abs(end.getTime() - start.getTime())
-                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                                // Add 1 to make duration inclusive of both start and end dates
+                                // e.g., June 2-4 = 3 days (June 2, 3, 4)
+                                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
                                 return `${diffDays} days`
                               }
                               return 'Invalid'

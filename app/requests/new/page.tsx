@@ -26,7 +26,9 @@ export default function NewRequestPage() {
       const end = new Date(endDate)
       if (end >= start) {
         const diffTime = Math.abs(end.getTime() - start.getTime())
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        // Add 1 to make duration inclusive of both start and end dates
+        // e.g., June 2-4 = 3 days (June 2, 3, 4)
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
         setDuration(diffDays)
       } else {
         setDuration(null)
