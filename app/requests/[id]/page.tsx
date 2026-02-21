@@ -46,6 +46,8 @@ export default function RequestDetailsPage() {
   const [statusValue, setStatusValue] = useState('')
   const [notesValue, setNotesValue] = useState('')
   const [saving, setSaving] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [reopening, setReopening] = useState(false)
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -109,18 +111,22 @@ export default function RequestDetailsPage() {
   const getStatusColor = (status: string | null) => {
     if (!status) return 'text-gray-400'
     const statusLower = status.toLowerCase()
-    if (statusLower === 'pending' || statusLower === 'new') return 'text-yellow-400'
-    if (statusLower === 'approved' || statusLower === 'confirmed') return 'text-green-400'
-    if (statusLower === 'rejected' || statusLower === 'cancelled') return 'text-red-400'
+    if (statusLower === 'new') return 'text-blue-400'
+    if (statusLower === 'follow_up') return 'text-orange-400'
+    if (statusLower === 'sold') return 'text-green-400'
+    if (statusLower === 'after_sales') return 'text-purple-400'
+    if (statusLower === 'cancelled') return 'text-red-400'
     return 'text-gray-400'
   }
 
   const getStatusBgColor = (status: string | null) => {
     if (!status) return 'bg-gray-800'
     const statusLower = status.toLowerCase()
-    if (statusLower === 'pending' || statusLower === 'new') return 'bg-yellow-900/30'
-    if (statusLower === 'approved' || statusLower === 'confirmed') return 'bg-green-900/30'
-    if (statusLower === 'rejected' || statusLower === 'cancelled') return 'bg-red-900/30'
+    if (statusLower === 'new') return 'bg-blue-900/30'
+    if (statusLower === 'follow_up') return 'bg-orange-900/30'
+    if (statusLower === 'sold') return 'bg-green-900/30'
+    if (statusLower === 'after_sales') return 'bg-purple-900/30'
+    if (statusLower === 'cancelled') return 'bg-red-900/30'
     return 'bg-gray-800'
   }
 
@@ -332,6 +338,74 @@ LankaLux Team`
     }
   }
 
+  const handleCancelTrip = async () => {
+    if (!request) return
+
+    if (!confirm('Are you sure you want to cancel this trip? This will update the status to "cancelled".')) {
+      return
+    }
+
+    try {
+      setCancelling(true)
+      const { error } = await (supabase.from('requests') as any)
+        .update({
+          status: 'cancelled',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+
+      if (error) {
+        console.error('Error cancelling trip:', error)
+        alert('Failed to cancel trip. Please try again.')
+        setCancelling(false)
+        return
+      }
+
+      const updatedRequest = await fetchRequestData(request.id)
+      if (updatedRequest) {
+        setRequest(updatedRequest)
+        setStatusValue('cancelled')
+      }
+      setCancelling(false)
+    } catch (err) {
+      console.error('Unexpected error cancelling trip:', err)
+      alert('An unexpected error occurred. Please try again.')
+      setCancelling(false)
+    }
+  }
+
+  const handleReopenTrip = async () => {
+    if (!request) return
+
+    try {
+      setReopening(true)
+      const { error } = await (supabase.from('requests') as any)
+        .update({
+          status: 'follow_up',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+
+      if (error) {
+        console.error('Error reopening trip:', error)
+        alert('Failed to reopen trip. Please try again.')
+        setReopening(false)
+        return
+      }
+
+      const updatedRequest = await fetchRequestData(request.id)
+      if (updatedRequest) {
+        setRequest(updatedRequest)
+        setStatusValue('follow_up')
+      }
+      setReopening(false)
+    } catch (err) {
+      console.error('Unexpected error reopening trip:', err)
+      alert('An unexpected error occurred. Please try again.')
+      setReopening(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -361,6 +435,7 @@ LankaLux Team`
   }
 
   const itineraryOptions = request.itinerary_options?.options || []
+  const isCancelled = request.status?.toLowerCase() === 'cancelled'
 
   return (
     <div className="min-h-screen bg-black">
@@ -395,6 +470,52 @@ LankaLux Team`
           </p>
         </div>
 
+        {/* Cancelled Warning Banner */}
+        {isCancelled && (
+          <div className="mb-6 bg-red-900/20 border-2 border-red-500 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <svg
+                  className="w-6 h-6 text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                <div>
+                  <h3 className="text-lg font-semibold text-red-400">Trip Cancelled</h3>
+                  <p className="text-sm text-red-300">This trip has been cancelled. Itinerary generation is disabled.</p>
+                </div>
+              </div>
+              <button
+                onClick={handleReopenTrip}
+                disabled={reopening}
+                className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {reopening ? (
+                  <>
+                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
+                    Reopening...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Reopen Trip
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Request Details Card */}
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8 mb-8">
           <div className="space-y-6">
@@ -404,13 +525,17 @@ LankaLux Team`
                 <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Status</p>
                 {editingStatus ? (
                   <div className="flex items-center gap-2">
-                    <input
-                      type="text"
+                    <select
                       value={statusValue}
                       onChange={(e) => setStatusValue(e.target.value)}
                       className="px-3 py-1 bg-[#0a0a0a] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                      placeholder="e.g., pending, confirmed"
-                    />
+                    >
+                      <option value="new">new</option>
+                      <option value="follow_up">follow_up</option>
+                      <option value="sold">sold</option>
+                      <option value="after_sales">after_sales</option>
+                      <option value="cancelled">cancelled</option>
+                    </select>
                     <button
                       onClick={handleSaveStatus}
                       disabled={saving}
@@ -433,7 +558,7 @@ LankaLux Team`
                     <span
                       className={`inline-block px-4 py-2 rounded-md font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current/20`}
                     >
-                      {request.status || 'Pending'}
+                      {request.status || 'new'}
                     </span>
                     <button
                       onClick={() => setEditingStatus(true)}
@@ -446,9 +571,32 @@ LankaLux Team`
                   </div>
                 )}
               </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Created At</p>
-                <p className="text-gray-300">{formatDate(request.created_at)}</p>
+              <div className="flex items-center gap-4">
+                {!isCancelled && (
+                  <button
+                    onClick={handleCancelTrip}
+                    disabled={cancelling}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {cancelling ? (
+                      <>
+                        <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                        Cancelling...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Cancel Trip
+                      </>
+                    )}
+                  </button>
+                )}
+                <div className="text-right">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Created At</p>
+                  <p className="text-gray-300">{formatDate(request.created_at)}</p>
+                </div>
               </div>
             </div>
 
@@ -585,7 +733,7 @@ LankaLux Team`
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-semibold text-[#d4af37]">Itinerary Options</h2>
-            {itineraryOptions.length === 0 && !generatingItinerary && (
+            {itineraryOptions.length === 0 && !generatingItinerary && !isCancelled && (
               <button
                 onClick={handleGenerateItinerary}
                 disabled={generatingItinerary}
@@ -607,6 +755,9 @@ LankaLux Team`
                 </svg>
                 Generate Itinerary Options
               </button>
+            )}
+            {isCancelled && itineraryOptions.length === 0 && (
+              <p className="text-sm text-gray-500 italic">Itinerary generation disabled for cancelled trips</p>
             )}
             {request.public_token && request.selected_option !== null && (
               <div className="flex gap-2">
