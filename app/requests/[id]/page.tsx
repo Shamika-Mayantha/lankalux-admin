@@ -163,8 +163,12 @@ export default function RequestDetailsPage() {
 
   // Update sent itinerary state when request changes
   useEffect(() => {
-    if (request && request.selected_option !== null && request.selected_option !== undefined && request.itinerary_options?.options) {
-      const selectedOption = request.itinerary_options.options[request.selected_option]
+    if (request && request.sent_at && request.itinerary_options?.options) {
+      // Use selected_option if available, otherwise use first option
+      const optionIndex = request.selected_option !== null && request.selected_option !== undefined 
+        ? request.selected_option 
+        : 0
+      const selectedOption = request.itinerary_options.options[optionIndex]
       if (selectedOption && !editingSentItinerary) {
         setSentItineraryTitle(selectedOption.title || '')
         setSentItinerarySummary(selectedOption.summary || '')
@@ -1473,7 +1477,7 @@ LankaLux Team`
         </div>
 
         {/* Sent Itinerary Section - Only show after it's been sent */}
-        {request.sent_at && request.selected_option !== null && request.selected_option !== undefined && request.itinerary_options?.options && (
+        {request.sent_at && request.itinerary_options?.options && (
           <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8 mt-8">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -1545,8 +1549,11 @@ LankaLux Team`
                     <button
                       onClick={() => {
                         // Reset to original values
-                        if (request.itinerary_options?.options && request.selected_option !== null) {
-                          const selectedOption = request.itinerary_options.options[request.selected_option]
+                        const optionIndex = request.selected_option !== null && request.selected_option !== undefined 
+                          ? request.selected_option 
+                          : 0
+                        if (request.itinerary_options?.options && request.itinerary_options.options[optionIndex]) {
+                          const selectedOption = request.itinerary_options.options[optionIndex]
                           setSentItineraryTitle(selectedOption.title || '')
                           setSentItinerarySummary(selectedOption.summary || '')
                           setSentItineraryDays(selectedOption.days || '')
@@ -1564,8 +1571,20 @@ LankaLux Team`
             </div>
 
             {(() => {
-              const selectedOption = request.itinerary_options?.options[request.selected_option]
-              if (!selectedOption) return null
+              // Use selected_option if available, otherwise use index 0 as fallback
+              const optionIndex = request.selected_option !== null && request.selected_option !== undefined 
+                ? request.selected_option 
+                : 0
+              
+              const selectedOption = request.itinerary_options?.options[optionIndex]
+              if (!selectedOption) {
+                console.warn('No itinerary option found for sent itinerary')
+                return (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400">Itinerary was sent but option details are not available.</p>
+                  </div>
+                )
+              }
 
               // Use edited values when editing, otherwise use original values
               const displayTitle = editingSentItinerary ? sentItineraryTitle : selectedOption.title

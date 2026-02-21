@@ -146,15 +146,36 @@ export async function POST(request: Request) {
     const itineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}`
 
     // Create email transporter
+    // For Zoho Mail, ensure you're using an App Password, not your regular account password
     const transporter = nodemailer.createTransport({
       host: emailHost,
       port: emailPort,
-      secure: emailPort === 465,
+      secure: emailPort === 465, // true for 465, false for other ports
       auth: {
         user: emailUser,
         pass: emailPass,
       },
+      tls: {
+        // Do not fail on invalid certs
+        rejectUnauthorized: false
+      }
     })
+    
+    // Verify transporter configuration
+    try {
+      await transporter.verify()
+      console.log('SMTP server is ready to send emails')
+    } catch (verifyError) {
+      console.error('SMTP verification failed:', verifyError)
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'SMTP server verification failed. Please check your credentials.',
+          details: verifyError instanceof Error ? verifyError.message : String(verifyError),
+        },
+        { status: 500 }
+      )
+    }
 
     // Format dates
     const startDateFormatted = requestData.start_date
