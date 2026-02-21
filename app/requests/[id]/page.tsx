@@ -33,6 +33,9 @@ interface Request {
   public_token: string | null
   status: string | null
   notes: string | null
+  sent_at: string | null
+  last_sent_at: string | null
+  email_sent_count: number | null
   created_at: string
   updated_at: string | null
 }
@@ -62,6 +65,8 @@ export default function RequestDetailsPage() {
   const [saving, setSaving] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [reopening, setReopening] = useState(false)
+  const [sendingItinerary, setSendingItinerary] = useState(false)
+  const [sendSuccess, setSendSuccess] = useState(false)
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -199,6 +204,17 @@ export default function RequestDetailsPage() {
       }
     } else {
       requestData.itinerary_options = null
+    }
+
+    // Auto-update status to follow_up if email_sent_count > 0
+    if (requestData.email_sent_count && requestData.email_sent_count > 0 && requestData.status !== 'follow_up') {
+      // Update status in database
+      await (supabase.from('requests') as any)
+        .update({ status: 'follow_up', updated_at: new Date().toISOString() })
+        .eq('id', id)
+      
+      // Update local data
+      requestData.status = 'follow_up'
     }
 
     // Update local state values
@@ -541,6 +557,56 @@ LankaLux Team`
       console.error('Unexpected error reopening trip:', err)
       alert('An unexpected error occurred. Please try again.')
       setReopening(false)
+    }
+  }
+
+  const handleSendItinerary = async () => {
+    if (!request) return
+
+    if (request.selected_option === null || request.selected_option === undefined) {
+      alert('Please select an itinerary option first.')
+      return
+    }
+
+    try {
+      setSendingItinerary(true)
+      setSendSuccess(false)
+
+      const response = await fetch('/api/send-itinerary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: request.id }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        const errorMessage = result.error || 'Failed to send itinerary'
+        console.error('Error sending itinerary:', errorMessage)
+        alert(`Failed to send itinerary: ${errorMessage}`)
+        setSendingItinerary(false)
+        return
+      }
+
+      // Refresh request data
+      const updatedRequest = await fetchRequestData(request.id)
+      if (updatedRequest) {
+        setRequest(updatedRequest)
+      }
+
+      setSendSuccess(true)
+      setSendingItinerary(false)
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSendSuccess(false)
+      }, 3000)
+    } catch (err) {
+      console.error('Unexpected error sending itinerary:', err)
+      alert('An unexpected error occurred. Please try again.')
+      setSendingItinerary(false)
     }
   }
 
@@ -1124,6 +1190,28 @@ LankaLux Team`
           </div>
         </div>
 
+        {/* Success Message */}
+        {sendSuccess && (
+          <div className="mb-6 bg-green-900/20 border-2 border-green-500 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <svg
+                className="w-6 h-6 text-green-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              <p className="text-green-400 font-semibold">Itinerary sent successfully!</p>
+            </div>
+          </div>
+        )}
+
         {/* Itinerary Options Section */}
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8">
           <div className="flex items-center justify-between mb-6">
@@ -1154,17 +1242,39 @@ LankaLux Team`
             {isCancelled && itineraryOptions.length === 0 && (
               <p className="text-sm text-gray-500 italic">Itinerary generation disabled for cancelled trips</p>
             )}
-            {request.public_token && request.selected_option !== null && (
-              <div className="flex gap-2">
+            {request.selected_option !== null && request.selected_option !== undefined && request.public_token ? (
+              <div className="flex gap-2 flex-wrap items-center">
                 <button
-                  onClick={handleSendLink}
-                  className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
+                  onClick={handleSendItinerary}
+                  disabled={sendingItinerary}
+                  className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Send Itinerary Link
+                  {sendingItinerary ? (
+                    <>
+                      <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
+                      Sending...
+                    </>
+                  ) : request.sent_at ? (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Resend Itinerary
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Send Itinerary to Client
+                    </>
+                  )}
                 </button>
+                {request.sent_at && request.last_sent_at && (
+                  <div className="flex items-center text-xs text-gray-400 px-2">
+                    Last sent: {formatDate(request.last_sent_at)}
+                  </div>
+                )}
                 {request.whatsapp && (
                   <button
                     onClick={handleWhatsAppShare}
@@ -1177,7 +1287,7 @@ LankaLux Team`
                   </button>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
 
           {generatingItinerary ? (
