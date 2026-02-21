@@ -1446,7 +1446,7 @@ LankaLux Team`
                       disabled={selectingOption !== null}
                       className={`w-full py-2 px-4 rounded-md font-semibold transition-colors duration-200 ${
                         isSelected
-                          ? 'bg-[#d4af37] hover:bg-[#b8941f] text-black'
+                          ? 'bg-[#666] hover:bg-[#777] text-white'
                           : 'bg-[#d4af37] hover:bg-[#b8941f] text-black'
                       } disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
                     >
