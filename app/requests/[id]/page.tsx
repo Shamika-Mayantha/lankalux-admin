@@ -649,7 +649,28 @@ LankaLux Team`
       // Refresh request data
       const updatedRequest = await fetchRequestData(request.id)
       if (updatedRequest) {
+        console.log('Updated request after send:', {
+          sent_at: updatedRequest.sent_at,
+          selected_option: updatedRequest.selected_option,
+          has_itinerary_options: !!updatedRequest.itinerary_options?.options,
+          itineraryoptions_string: updatedRequest.itineraryoptions ? 'exists' : 'missing',
+        })
         setRequest(updatedRequest)
+        
+        // Initialize sent itinerary state if needed
+        if (updatedRequest.sent_at && updatedRequest.itinerary_options?.options) {
+          const optionIndex = updatedRequest.selected_option !== null && updatedRequest.selected_option !== undefined 
+            ? updatedRequest.selected_option 
+            : 0
+          const selectedOption = updatedRequest.itinerary_options.options[optionIndex]
+          if (selectedOption) {
+            setSentItineraryTitle(selectedOption.title || '')
+            setSentItinerarySummary(selectedOption.summary || '')
+            setSentItineraryDays(selectedOption.days || '')
+          }
+        }
+      } else {
+        console.error('Failed to fetch updated request after sending')
       }
 
       setSendSuccess(true)
@@ -1477,7 +1498,21 @@ LankaLux Team`
         </div>
 
         {/* Sent Itinerary Section - Only show after it's been sent */}
-        {request.sent_at && request.itinerary_options?.options && (
+        {(() => {
+          const hasSentAt = !!request.sent_at
+          const hasOptions = !!request.itinerary_options?.options
+          const shouldShow = hasSentAt && hasOptions
+          
+          if (hasSentAt && !hasOptions) {
+            console.warn('Sent itinerary section: sent_at exists but no itinerary options', {
+              sent_at: request.sent_at,
+              itineraryoptions: request.itineraryoptions,
+              itinerary_options: request.itinerary_options,
+            })
+          }
+          
+          return shouldShow
+        })() && (
           <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8 mt-8">
             <div className="flex items-center justify-between mb-6">
               <div>
