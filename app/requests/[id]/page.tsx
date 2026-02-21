@@ -1797,9 +1797,8 @@ LankaLux Team`
                   </div>
                 )}
               </div>
-            </div>
 
-            {(() => {
+              {(() => {
                 // Use last_sent_option to show what was actually sent
                 const optionIndex = request.last_sent_option !== null && request.last_sent_option !== undefined
                   ? request.last_sent_option
