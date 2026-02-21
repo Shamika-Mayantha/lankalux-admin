@@ -599,7 +599,7 @@ LankaLux Team`
                     <span
                       className={`inline-block px-4 py-2 rounded-md font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current/20`}
                     >
-                      {request.status || 'new'}
+                      {(request.status || 'new').toUpperCase()}
                     </span>
                     <button
                       onClick={() => setEditingStatus(true)}
@@ -612,32 +612,9 @@ LankaLux Team`
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-4">
-                {!isCancelled && (
-                  <button
-                    onClick={handleCancelTrip}
-                    disabled={cancelling}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {cancelling ? (
-                      <>
-                        <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                        Cancelling...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        Cancel Trip
-                      </>
-                    )}
-                  </button>
-                )}
-                <div className="text-right">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Created At</p>
-                  <p className="text-gray-300">{formatDate(request.created_at)}</p>
-                </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Created At</p>
+                <p className="text-gray-300">{formatDate(request.created_at)}</p>
               </div>
             </div>
 
