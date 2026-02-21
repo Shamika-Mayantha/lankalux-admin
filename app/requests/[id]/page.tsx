@@ -67,6 +67,15 @@ export default function RequestDetailsPage() {
   const [reopening, setReopening] = useState(false)
   const [sendingItinerary, setSendingItinerary] = useState(false)
   const [sendSuccess, setSendSuccess] = useState(false)
+  const [editingSentItinerary, setEditingSentItinerary] = useState(false)
+  const [sentItineraryTitle, setSentItineraryTitle] = useState('')
+  const [sentItinerarySummary, setSentItinerarySummary] = useState('')
+  const [sentItineraryDays, setSentItineraryDays] = useState('')
+  const [savingSentItinerary, setSavingSentItinerary] = useState(false)
+  const [editingSentItinerary, setEditingSentItinerary] = useState(false)
+  const [sentItineraryTitle, setSentItineraryTitle] = useState('')
+  const [sentItinerarySummary, setSentItinerarySummary] = useState('')
+  const [sentItineraryDays, setSentItineraryDays] = useState('')
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -134,6 +143,17 @@ export default function RequestDetailsPage() {
           setChildrenAgesValue([])
         }
         setAdditionalPreferencesValue(requestData.additional_preferences || '')
+        
+        // Initialize sent itinerary editing state if option is selected
+        if (requestData.selected_option !== null && requestData.selected_option !== undefined && requestData.itinerary_options?.options) {
+          const selectedOption = requestData.itinerary_options.options[requestData.selected_option]
+          if (selectedOption) {
+            setSentItineraryTitle(selectedOption.title || '')
+            setSentItinerarySummary(selectedOption.summary || '')
+            setSentItineraryDays(selectedOption.days || '')
+          }
+        }
+        
         setLoading(false)
       } catch (err) {
         console.error('Unexpected error fetching request:', err)
@@ -144,6 +164,18 @@ export default function RequestDetailsPage() {
 
     fetchRequest()
   }, [params.id])
+
+  // Update sent itinerary state when request changes
+  useEffect(() => {
+    if (request && request.selected_option !== null && request.selected_option !== undefined && request.itinerary_options?.options) {
+      const selectedOption = request.itinerary_options.options[request.selected_option]
+      if (selectedOption && !editingSentItinerary) {
+        setSentItineraryTitle(selectedOption.title || '')
+        setSentItinerarySummary(selectedOption.summary || '')
+        setSentItineraryDays(selectedOption.days || '')
+      }
+    }
+  }, [request, editingSentItinerary])
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A'
@@ -608,6 +640,67 @@ LankaLux Team`
       alert('An unexpected error occurred. Please try again.')
       setSendingItinerary(false)
     }
+  }
+
+  const handleSaveSentItinerary = async () => {
+    if (!request || request.selected_option === null || request.selected_option === undefined) return
+
+    try {
+      setSavingSentItinerary(true)
+
+      // Get current itinerary options
+      const currentOptions = request.itinerary_options?.options || []
+      if (!currentOptions[request.selected_option]) {
+        alert('Selected itinerary option not found.')
+        setSavingSentItinerary(false)
+        return
+      }
+
+      // Update the selected option
+      const updatedOptions = [...currentOptions]
+      updatedOptions[request.selected_option] = {
+        title: sentItineraryTitle.trim(),
+        summary: sentItinerarySummary.trim(),
+        days: sentItineraryDays.trim(),
+      }
+
+      // Save back to database
+      const updatedItineraryOptions = {
+        options: updatedOptions,
+      }
+      const itineraryOptionsString = JSON.stringify(updatedItineraryOptions)
+
+      const { error } = await (supabase.from('requests') as any)
+        .update({
+          itineraryoptions: itineraryOptionsString,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+
+      if (error) {
+        console.error('Error saving edited itinerary:', error)
+        alert('Failed to save itinerary changes. Please try again.')
+        setSavingSentItinerary(false)
+        return
+      }
+
+      // Refresh request data
+      const updatedRequest = await fetchRequestData(request.id)
+      if (updatedRequest) {
+        setRequest(updatedRequest)
+      }
+
+      setEditingSentItinerary(false)
+      setSavingSentItinerary(false)
+    } catch (err) {
+      console.error('Unexpected error saving sent itinerary:', err)
+      alert('An unexpected error occurred. Please try again.')
+      setSavingSentItinerary(false)
+    }
+  }
+
+  const handleResendFromSentSection = async () => {
+    await handleSendItinerary()
   }
 
   if (loading) {
@@ -1358,6 +1451,201 @@ LankaLux Team`
             </div>
           )}
         </div>
+
+        {/* Sent Itinerary Section */}
+        {request.selected_option !== null && request.selected_option !== undefined && request.itinerary_options?.options && (
+          <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8 mt-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-semibold text-[#d4af37]">Sent Itinerary</h2>
+                {request.sent_at && (
+                  <p className="text-sm text-gray-400 mt-1">
+                    First sent: {formatDate(request.sent_at)}
+                    {request.email_sent_count && request.email_sent_count > 1 && (
+                      <span className="ml-2">• Sent {request.email_sent_count} time{request.email_sent_count > 1 ? 's' : ''}</span>
+                    )}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {!editingSentItinerary ? (
+                  <>
+                    <button
+                      onClick={() => setEditingSentItinerary(true)}
+                      className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit Itinerary
+                    </button>
+                    {request.public_token && (
+                      <button
+                        onClick={handleResendFromSentSection}
+                        disabled={sendingItinerary}
+                        className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {sendingItinerary ? (
+                          <>
+                            <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            Resend to Client
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveSentItinerary}
+                      disabled={savingSentItinerary}
+                      className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {savingSentItinerary ? (
+                        <>
+                          <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Save Changes
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Reset to original values
+                        if (request.itinerary_options?.options && request.selected_option !== null) {
+                          const selectedOption = request.itinerary_options.options[request.selected_option]
+                          setSentItineraryTitle(selectedOption.title || '')
+                          setSentItinerarySummary(selectedOption.summary || '')
+                          setSentItineraryDays(selectedOption.days || '')
+                        }
+                        setEditingSentItinerary(false)
+                      }}
+                      disabled={savingSentItinerary}
+                      className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {(() => {
+              const selectedOption = request.itinerary_options?.options[request.selected_option]
+              if (!selectedOption) return null
+
+              // Use edited values when editing, otherwise use original values
+              const displayTitle = editingSentItinerary ? sentItineraryTitle : selectedOption.title
+              const displaySummary = editingSentItinerary ? sentItinerarySummary : selectedOption.summary
+              const displayDays = editingSentItinerary ? sentItineraryDays : selectedOption.days
+
+              return (
+                <div className="space-y-6">
+                  {/* Title */}
+                  <div>
+                    <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                      Itinerary Title
+                    </label>
+                    {editingSentItinerary ? (
+                      <input
+                        type="text"
+                        value={sentItineraryTitle}
+                        onChange={(e) => setSentItineraryTitle(e.target.value)}
+                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        placeholder="Enter itinerary title"
+                      />
+                    ) : (
+                      <h3 className="text-xl font-semibold text-[#d4af37]">{displayTitle}</h3>
+                    )}
+                  </div>
+
+                  {/* Summary */}
+                  <div>
+                    <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                      Summary
+                    </label>
+                    {editingSentItinerary ? (
+                      <textarea
+                        value={sentItinerarySummary}
+                        onChange={(e) => setSentItinerarySummary(e.target.value)}
+                        rows={3}
+                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y"
+                        placeholder="Enter itinerary summary"
+                      />
+                    ) : (
+                      <p className="text-gray-300">{displaySummary}</p>
+                    )}
+                  </div>
+
+                  {/* Days/Details */}
+                  <div>
+                    <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                      Day-by-Day Itinerary
+                    </label>
+                    {editingSentItinerary ? (
+                      <textarea
+                        value={sentItineraryDays}
+                        onChange={(e) => setSentItineraryDays(e.target.value)}
+                        rows={15}
+                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y"
+                        placeholder="Enter day-by-day itinerary details"
+                      />
+                    ) : (
+                      <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-4 max-h-96 overflow-y-auto">
+                        <p className="text-gray-300 text-sm whitespace-pre-wrap font-mono">
+                          {displayDays}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Public Link */}
+                  {request.public_token && (
+                    <div className="pt-4 border-t border-[#333]">
+                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                        Public Itinerary Link
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={typeof window !== 'undefined' ? `${window.location.origin}/itinerary/${request.public_token}` : ''}
+                          className="flex-1 px-4 py-2 bg-[#0a0a0a] border border-[#333] rounded-md text-gray-300 text-sm font-mono"
+                        />
+                        <button
+                          onClick={() => {
+                            const url = typeof window !== 'undefined' ? `${window.location.origin}/itinerary/${request.public_token}` : ''
+                            navigator.clipboard.writeText(url)
+                            alert('Link copied to clipboard!')
+                          }}
+                          className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+        )}
       </div>
     </div>
   )
