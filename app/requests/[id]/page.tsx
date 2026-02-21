@@ -61,9 +61,11 @@ export default function RequestDetailsPage() {
           return
         }
 
-        setRequest(data)
-        setItinerary(data.itinerary || null)
-        setEditingItinerary(data.itinerary || '')
+        const requestData = data as any
+
+        setRequest(requestData)
+        setItinerary(requestData.itinerary || null)
+        setEditingItinerary(requestData.itinerary || '')
         setLoading(false)
       } catch (err) {
         console.error('Unexpected error fetching request:', err)
