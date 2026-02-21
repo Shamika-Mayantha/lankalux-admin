@@ -110,80 +110,19 @@ export default function RequestDetailsPage() {
     return 'bg-gray-800'
   }
 
-  const generateSampleItineraries = () => {
-    const option1 = `OPTION 1: CLASSIC SRI LANKA TOUR
+  const fetchRequestData = async (id: string) => {
+    const { data, error } = await supabase
+      .from('requests')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-Day 1: Arrival in Colombo
-- Airport pickup and transfer to hotel
-- Welcome dinner at a local restaurant
-- Overnight in Colombo
+    if (error) {
+      console.error('Error fetching request:', error)
+      return null
+    }
 
-Day 2: Colombo City Tour → Kandy
-- Morning city tour of Colombo
-- Visit Gangaramaya Temple
-- Drive to Kandy (3 hours)
-- Evening: Cultural show with traditional dance
-- Overnight in Kandy
-
-Day 3: Kandy → Nuwara Eliya
-- Visit Temple of the Sacred Tooth Relic
-- Royal Botanical Gardens
-- Scenic train ride to Nuwara Eliya
-- Overnight in Nuwara Eliya
-
-Day 4: Nuwara Eliya → Yala
-- Visit tea plantations
-- Drive to Yala National Park
-- Evening safari (if time permits)
-- Overnight near Yala
-
-Day 5: Yala → Galle
-- Morning safari in Yala National Park
-- Drive to Galle (4 hours)
-- Explore Galle Fort
-- Overnight in Galle
-
-Day 6: Galle → Departure
-- Beach time in Unawatuna
-- Transfer to airport for departure`
-
-    const option2 = `OPTION 2: ADVENTURE & NATURE TOUR
-
-Day 1: Arrival in Colombo
-- Airport pickup and transfer
-- Briefing session
-- Overnight in Colombo
-
-Day 2: Colombo → Sigiriya
-- Early morning drive to Sigiriya (5 hours)
-- Afternoon: Climb Sigiriya Rock Fortress
-- Visit Dambulla Cave Temple
-- Overnight in Sigiriya
-
-Day 3: Sigiriya → Kandy
-- Morning: Minneriya National Park safari
-- Drive to Kandy
-- Visit Spice Garden
-- Overnight in Kandy
-
-Day 4: Kandy → Ella
-- Scenic train journey to Ella (one of the world's most beautiful train rides)
-- Visit Nine Arch Bridge
-- Hiking to Little Adam's Peak
-- Overnight in Ella
-
-Day 5: Ella → Mirissa
-- Drive to Mirissa
-- Whale watching tour (seasonal)
-- Beach relaxation
-- Overnight in Mirissa
-
-Day 6: Mirissa → Galle → Departure
-- Visit Galle Fort
-- Beach activities
-- Transfer to airport for departure`
-
-    return `${option1}\n\n${'='.repeat(60)}\n\n${option2}`
+    return data as any
   }
 
   const handleGenerateItinerary = async () => {
@@ -191,26 +130,39 @@ Day 6: Mirissa → Galle → Departure
 
     try {
       setGeneratingItinerary(true)
-      
-      // Generate 2 sample itinerary options
-      const generatedItinerary = generateSampleItineraries()
 
-      // Save to Supabase
-      const { error } = await (supabase.from('requests') as any)
-        .update({ itinerary: generatedItinerary })
-        .eq('id', request.id)
+      // Call the API to generate itinerary
+      const response = await fetch('/api/generate-itinerary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: request.id }),
+      })
 
-      if (error) {
-        console.error('Error saving itinerary:', error)
-        alert('Failed to save itinerary. Please try again.')
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        const errorMessage = result.error || 'Failed to generate itinerary'
+        console.error('Error generating itinerary:', errorMessage)
+        alert(`Failed to generate itinerary: ${errorMessage}`)
         setGeneratingItinerary(false)
         return
       }
 
-      // Update local state
-      setItinerary(generatedItinerary)
-      setEditingItinerary(generatedItinerary)
-      setRequest({ ...request, itinerary: generatedItinerary })
+      // Refetch updated request from Supabase
+      const updatedRequest = await fetchRequestData(request.id)
+
+      if (!updatedRequest) {
+        alert('Itinerary generated but failed to fetch updated data. Please refresh the page.')
+        setGeneratingItinerary(false)
+        return
+      }
+
+      // Update local state with fetched data
+      setRequest(updatedRequest)
+      setItinerary(updatedRequest.itinerary || null)
+      setEditingItinerary(updatedRequest.itinerary || '')
       setGeneratingItinerary(false)
     } catch (err) {
       console.error('Unexpected error generating itinerary:', err)
