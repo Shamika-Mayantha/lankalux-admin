@@ -179,7 +179,7 @@ export default function RequestDetailsPage() {
         if (Array.isArray(selectedOption.days)) {
           // New format: convert days array to readable format
           const daysText = selectedOption.days.map(day => 
-            `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities.map(act => `  • ${act}`).join('\n')}`
+            `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities.map((act: string) => `  • ${act}`).join('\n')}`
           ).join('\n\n')
           setSentItineraryDays(daysText)
         } else {
@@ -1569,8 +1569,8 @@ LankaLux Team`
             })
           }
           
-          return shouldShow
-        })() && (() => {
+          if (!shouldShow) return null
+          
           // Get the last sent option
           const lastSentOptionIndex = request.last_sent_option!
           const lastSentOption = request.itinerary_options?.options?.[lastSentOptionIndex]
@@ -1664,7 +1664,7 @@ LankaLux Team`
                           // Handle both old format (string) and new format (array)
                           if (Array.isArray(selectedOption.days)) {
                             const daysText = selectedOption.days.map(day => 
-                              `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities.map(act => `  • ${act}`).join('\n')}`
+                              `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities.map((act: string) => `  • ${act}`).join('\n')}`
                             ).join('\n\n')
                             setSentItineraryDays(daysText)
                           } else {
@@ -1684,30 +1684,30 @@ LankaLux Team`
             </div>
 
             {(() => {
-              // Use last_sent_option to show what was actually sent
-              const optionIndex = request.last_sent_option !== null && request.last_sent_option !== undefined
-                ? request.last_sent_option
-                : (request.selected_option !== null && request.selected_option !== undefined 
-                  ? request.selected_option 
-                  : 0)
-              
-              const selectedOption = request.itinerary_options?.options[optionIndex]
-              if (!selectedOption) {
-                console.warn('No itinerary option found for sent itinerary')
+                // Use last_sent_option to show what was actually sent
+                const optionIndex = request.last_sent_option !== null && request.last_sent_option !== undefined
+                  ? request.last_sent_option
+                  : (request.selected_option !== null && request.selected_option !== undefined 
+                    ? request.selected_option 
+                    : 0)
+                
+                const selectedOption = request.itinerary_options?.options[optionIndex]
+                if (!selectedOption) {
+                  console.warn('No itinerary option found for sent itinerary')
+                  return (
+                    <div className="text-center py-8">
+                      <p className="text-gray-400">Itinerary was sent but option details are not available.</p>
+                    </div>
+                  )
+                }
+
+                // Use edited values when editing, otherwise use original values
+                const displayTitle = editingSentItinerary ? sentItineraryTitle : selectedOption.title
+                const displaySummary = editingSentItinerary ? sentItinerarySummary : selectedOption.summary
+                const displayDays = editingSentItinerary ? sentItineraryDays : selectedOption.days
+
                 return (
-                  <div className="text-center py-8">
-                    <p className="text-gray-400">Itinerary was sent but option details are not available.</p>
-                  </div>
-                )
-              }
-
-              // Use edited values when editing, otherwise use original values
-              const displayTitle = editingSentItinerary ? sentItineraryTitle : selectedOption.title
-              const displaySummary = editingSentItinerary ? sentItinerarySummary : selectedOption.summary
-              const displayDays = editingSentItinerary ? sentItineraryDays : selectedOption.days
-
-              return (
-                <div className="space-y-6">
+                  <div className="space-y-6">
                   {/* Title */}
                   <div>
                     <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
@@ -1795,11 +1795,12 @@ LankaLux Team`
                       </div>
                     </div>
                   )}
-                </div>
-              )
-            })()}
-          </div>
-        )}
+                  </div>
+                )
+              })()}
+            </div>
+          )
+        })()}
       </div>
     </div>
   )
