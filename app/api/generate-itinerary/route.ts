@@ -172,14 +172,16 @@ Return ONLY the JSON object, no additional text before or after.`
       )
     }
 
-    // Save generated itinerary options to database
+    // Convert JSON object to string and save to itineraryoptions column
+    const itineraryOptionsString = JSON.stringify(itineraryOptions)
+    
     const { error: updateError } = await supabase
       .from('requests')
-      .update({ itinerary_options: itineraryOptions })
+      .update({ itineraryoptions: itineraryOptionsString })
       .eq('id', requestId)
 
     if (updateError) {
-      console.error('Error updating itinerary:', updateError)
+      console.error('Error updating itineraryoptions:', updateError)
       return NextResponse.json(
         { success: false, error: 'Failed to save itinerary' },
         { status: 500 }
