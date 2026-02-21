@@ -202,67 +202,230 @@ export async function POST(request: Request) {
       : 'Not specified'
 
     // Build email content with option-specific subject
-    const emailSubject = `Your LankaLux Sri Lanka Itinerary - ${selectedOption.title}`
+    const emailSubject = `Your LankaLux Sri Lanka Journey - ${selectedOption.title}`
+    const logoUrl = `${baseUrl}/favicon.png`
     const emailHtml = `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
             body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
+              font-family: 'Georgia', 'Times New Roman', serif;
+              line-height: 1.8;
+              color: #2c2c2c;
+              background-color: #f5f5f5;
+              padding: 0;
+              margin: 0;
+            }
+            .email-container {
               max-width: 600px;
               margin: 0 auto;
-              padding: 20px;
+              background-color: #ffffff;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             }
             .header {
-              background-color: #000;
-              color: #d4af37;
-              padding: 20px;
+              background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
+              padding: 40px 20px;
               text-align: center;
+              border-bottom: 4px solid #c8a45d;
+            }
+            .logo {
+              width: 80px;
+              height: 80px;
+              margin: 0 auto 20px;
+              display: block;
+              border-radius: 50%;
+              background-color: #ffffff;
+              padding: 10px;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            }
+            .header h1 {
+              color: #c8a45d;
+              font-size: 32px;
+              font-weight: 300;
+              letter-spacing: 2px;
+              margin: 0;
+              font-family: 'Georgia', serif;
+            }
+            .header .subtitle {
+              color: #ffffff;
+              font-size: 14px;
+              margin-top: 8px;
+              letter-spacing: 1px;
+              text-transform: uppercase;
             }
             .content {
-              padding: 20px;
-              background-color: #f9f9f9;
+              padding: 40px 30px;
+              background-color: #ffffff;
             }
-            .itinerary-link {
-              display: inline-block;
-              background-color: #d4af37;
-              color: #000;
-              padding: 12px 24px;
-              text-decoration: none;
+            .greeting {
+              font-size: 18px;
+              color: #2c2c2c;
+              margin-bottom: 20px;
+              font-weight: 400;
+            }
+            .intro-text {
+              font-size: 16px;
+              color: #555;
+              margin-bottom: 30px;
+              line-height: 1.8;
+            }
+            .info-box {
+              background-color: #fafafa;
+              border-left: 4px solid #c8a45d;
+              padding: 20px;
+              margin: 25px 0;
               border-radius: 4px;
-              font-weight: bold;
-              margin: 20px 0;
+            }
+            .info-row {
+              margin-bottom: 12px;
+              font-size: 15px;
+            }
+            .info-row:last-child {
+              margin-bottom: 0;
+            }
+            .info-label {
+              color: #666;
+              font-weight: 600;
+              display: inline-block;
+              min-width: 140px;
+              text-transform: uppercase;
+              font-size: 12px;
+              letter-spacing: 0.5px;
+            }
+            .info-value {
+              color: #2c2c2c;
+              font-weight: 400;
+            }
+            .journey-title {
+              color: #c8a45d;
+              font-size: 20px;
+              font-weight: 600;
+              margin-top: 8px;
+            }
+            .cta-section {
+              text-align: center;
+              margin: 40px 0;
+              padding: 30px 0;
+              border-top: 1px solid #e0e0e0;
+              border-bottom: 1px solid #e0e0e0;
+            }
+            .journey-link {
+              display: inline-block;
+              background: linear-gradient(135deg, #c8a45d 0%, #b8944d 100%);
+              color: #ffffff;
+              padding: 16px 40px;
+              text-decoration: none;
+              border-radius: 6px;
+              font-weight: 600;
+              font-size: 16px;
+              letter-spacing: 0.5px;
+              box-shadow: 0 4px 12px rgba(200, 164, 93, 0.3);
+              transition: all 0.3s ease;
+              text-transform: uppercase;
+            }
+            .journey-link:hover {
+              background: linear-gradient(135deg, #b8944d 0%, #a8843d 100%);
+              box-shadow: 0 6px 16px rgba(200, 164, 93, 0.4);
+              transform: translateY(-2px);
+            }
+            .closing-text {
+              font-size: 15px;
+              color: #555;
+              margin: 30px 0 20px;
+              line-height: 1.8;
+            }
+            .signature {
+              margin-top: 30px;
+              font-size: 15px;
+              color: #2c2c2c;
+            }
+            .signature-name {
+              font-weight: 600;
+              color: #c8a45d;
+              margin-top: 5px;
             }
             .footer {
-              padding: 20px;
+              background-color: #1a1a1a;
+              padding: 25px 20px;
               text-align: center;
-              color: #666;
+              color: #999;
               font-size: 12px;
+            }
+            .footer p {
+              margin: 5px 0;
+            }
+            .footer a {
+              color: #c8a45d;
+              text-decoration: none;
+            }
+            @media only screen and (max-width: 600px) {
+              .content {
+                padding: 30px 20px;
+              }
+              .header {
+                padding: 30px 15px;
+              }
+              .info-label {
+                display: block;
+                margin-bottom: 5px;
+              }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>LankaLux</h1>
-          </div>
-          <div class="content">
-            <p>Dear ${requestData.client_name || 'Valued Client'},</p>
-            <p>We are delighted to share your personalized Sri Lanka itinerary with you.</p>
-            <p><strong>Travel Dates:</strong> ${startDateFormatted} - ${endDateFormatted}</p>
-            <p><strong>Selected Itinerary:</strong> ${selectedOption.title}</p>
-            <p style="margin-top: 30px;">
-              <a href="${itineraryUrl}" class="itinerary-link">View Your Itinerary</a>
-            </p>
-            <p>This link provides access to your selected itinerary option. If you have any questions or would like to discuss modifications, please don't hesitate to reach out.</p>
-            <p>We look forward to creating an unforgettable experience for you in Sri Lanka.</p>
-            <p>Best regards,<br>LankaLux Team</p>
-          </div>
-          <div class="footer">
-            <p>© ${new Date().getFullYear()} LankaLux. All rights reserved.</p>
+          <div class="email-container">
+            <div class="header">
+              <img src="${logoUrl}" alt="LankaLux Logo" class="logo" />
+              <h1>LankaLux</h1>
+              <div class="subtitle">Journey</div>
+            </div>
+            <div class="content">
+              <div class="greeting">Dear ${requestData.client_name || 'Valued Client'},</div>
+              
+              <p class="intro-text">
+                We are absolutely delighted to share your personalized Sri Lanka journey with you. Every detail has been carefully crafted to ensure an unforgettable experience.
+              </p>
+              
+              <div class="info-box">
+                <div class="info-row">
+                  <span class="info-label">Travel Dates</span>
+                  <span class="info-value">${startDateFormatted} - ${endDateFormatted}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Selected Journey</span>
+                  <div class="journey-title">${selectedOption.title}</div>
+                </div>
+              </div>
+              
+              <div class="cta-section">
+                <a href="${itineraryUrl}" class="journey-link">View Your Journey</a>
+              </div>
+              
+              <p class="closing-text">
+                This link provides access to your complete journey details. We've designed every moment to showcase the beauty, culture, and wonder of Sri Lanka. If you have any questions or would like to discuss any modifications, please don't hesitate to reach out—we're here to make your journey perfect.
+              </p>
+              
+              <p class="closing-text">
+                We look forward to creating an extraordinary and unforgettable experience for you in the Pearl of the Indian Ocean.
+              </p>
+              
+              <div class="signature">
+                <p>Warm regards,</p>
+                <p class="signature-name">The LankaLux Team</p>
+              </div>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} LankaLux. All rights reserved.</p>
+              <p>Your journey to Sri Lanka begins here.</p>
+            </div>
           </div>
         </body>
       </html>
@@ -271,19 +434,22 @@ export async function POST(request: Request) {
     const emailText = `
 Dear ${requestData.client_name || 'Valued Client'},
 
-We are delighted to share your personalized Sri Lanka itinerary with you.
+We are absolutely delighted to share your personalized Sri Lanka journey with you. Every detail has been carefully crafted to ensure an unforgettable experience.
 
 Travel Dates: ${startDateFormatted} - ${endDateFormatted}
-Selected Itinerary: ${selectedOption.title}
+Selected Journey: ${selectedOption.title}
 
-View your itinerary here: ${itineraryUrl}
+View your journey here: ${itineraryUrl}
 
-This link provides access to your selected itinerary option. If you have any questions or would like to discuss modifications, please don't hesitate to reach out.
+This link provides access to your complete journey details. We've designed every moment to showcase the beauty, culture, and wonder of Sri Lanka. If you have any questions or would like to discuss any modifications, please don't hesitate to reach out—we're here to make your journey perfect.
 
-We look forward to creating an unforgettable experience for you in Sri Lanka.
+We look forward to creating an extraordinary and unforgettable experience for you in the Pearl of the Indian Ocean.
 
-Best regards,
-LankaLux Team
+Warm regards,
+The LankaLux Team
+
+© ${new Date().getFullYear()} LankaLux. All rights reserved.
+Your journey to Sri Lanka begins here.
     `
 
     // Send email
