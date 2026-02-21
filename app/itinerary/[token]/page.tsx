@@ -312,6 +312,17 @@ export default function PublicItineraryPage() {
                       </p>
                     </div>
                     
+                    {(day as any).what_to_expect && (
+                      <div className="border-t border-gray-200 pt-6 mb-6">
+                        <h4 className="text-lg font-semibold text-[#2c2c2c] mb-3 font-serif">
+                          What to Expect
+                        </h4>
+                        <p className="text-gray-700 leading-relaxed font-serif italic">
+                          {(day as any).what_to_expect}
+                        </p>
+                      </div>
+                    )}
+                    
                     <div className="border-t border-gray-200 pt-6">
                       <h4 className="text-lg font-semibold text-[#2c2c2c] mb-4 font-serif">
                         Activities
@@ -325,6 +336,25 @@ export default function PublicItineraryPage() {
                         ))}
                       </ul>
                     </div>
+                    
+                    {(day as any).optional_activities && Array.isArray((day as any).optional_activities) && (day as any).optional_activities.length > 0 && (
+                      <div className="border-t border-gray-200 pt-6 mt-6">
+                        <h4 className="text-lg font-semibold text-[#2c2c2c] mb-4 font-serif">
+                          Optional Activities
+                        </h4>
+                        <p className="text-sm text-gray-600 mb-3 italic">
+                          Enhance your experience with these optional activities (additional charges may apply)
+                        </p>
+                        <ul className="space-y-3">
+                          {(day as any).optional_activities.map((activity: string, actIndex: number) => (
+                            <li key={actIndex} className="flex items-start">
+                              <span className="text-[#c8a45d] mr-3 mt-1">+</span>
+                              <span className="text-gray-700 leading-relaxed">{activity}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 </div>
               )
