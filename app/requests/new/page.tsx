@@ -274,17 +274,25 @@ export default function NewRequestPage() {
                 type="date"
                 value={endDate}
                 onChange={(e) => {
+                  // Just update the value without validation
+                  setEndDate(e.target.value)
+                }}
+                onBlur={(e) => {
+                  // Validate only when user finishes entering the date (on blur)
                   const selectedEndDate = e.target.value
-                  // Only validate if both dates are complete (valid date format: YYYY-MM-DD)
-                  // Check if the date string matches the expected format and is complete
-                  const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(selectedEndDate)
-                  const isStartDateValid = startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)
-                  
-                  if (isValidDate && isStartDateValid && selectedEndDate < startDate) {
-                    alert('End date cannot be before start date')
-                    return
+                  if (selectedEndDate && startDate) {
+                    // Check if both dates are complete (valid date format: YYYY-MM-DD)
+                    const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(selectedEndDate)
+                    const isStartDateValid = /^\d{4}-\d{2}-\d{2}$/.test(startDate)
+                    
+                    if (isValidDate && isStartDateValid && selectedEndDate < startDate) {
+                      alert('End date cannot be before start date')
+                      // Clear the invalid end date
+                      setEndDate('')
+                      // Refocus the input
+                      e.target.focus()
+                    }
                   }
-                  setEndDate(selectedEndDate)
                 }}
                 min={startDate || today}
                 max="2099-12-31"
