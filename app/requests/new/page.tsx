@@ -214,10 +214,17 @@ export default function NewRequestPage() {
                 id="end_date"
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => {
+                  const selectedEndDate = e.target.value
+                  if (startDate && selectedEndDate < startDate) {
+                    alert('End date cannot be before start date')
+                    return
+                  }
+                  setEndDate(selectedEndDate)
+                }}
                 min={startDate || today}
                 className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
-                disabled={loading || !startDate}
+                disabled={loading}
               />
             </div>
 
@@ -266,8 +273,8 @@ export default function NewRequestPage() {
                 onChange={(e) => {
                   const count = parseInt(e.target.value) || 0
                   setNumberOfChildren(e.target.value)
-                  // Initialize or adjust children ages array
-                  if (count >= 2 && count <= 3) {
+                  // Initialize or adjust children ages array for any number of children
+                  if (count >= 1) {
                     setChildrenAges(prev => {
                       const newAges = [...prev]
                       while (newAges.length < count) {
@@ -279,19 +286,19 @@ export default function NewRequestPage() {
                     setChildrenAges([])
                   }
                 }}
-                placeholder="Enter number of children (0-3)"
+                placeholder="Enter number of children"
                 className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                 disabled={loading}
               />
             </div>
 
-            {/* Children Ages (only show if 2-3 children) */}
-            {parseInt(numberOfChildren) > 0 && parseInt(numberOfChildren) >= 2 && parseInt(numberOfChildren) <= 3 && (
+            {/* Children Ages (show if any children) */}
+            {parseInt(numberOfChildren) > 0 && (
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Children Ages (years)
+                  {parseInt(numberOfChildren) === 1 ? 'Child Age (years)' : 'Children Ages (years)'}
                 </label>
-                <div className="space-y-3">
+                <div className={`grid gap-3 ${parseInt(numberOfChildren) <= 3 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
                   {childrenAges.map((age, index) => (
                     <div key={index}>
                       <label className="block text-xs text-gray-400 mb-1">

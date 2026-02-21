@@ -953,7 +953,7 @@ LankaLux Team`
                         onChange={(e) => {
                           const count = parseInt(e.target.value) || 0
                           setNumberOfChildrenValue(e.target.value)
-                          if (count >= 2 && count <= 3) {
+                          if (count >= 1) {
                             setChildrenAgesValue(prev => {
                               const newAges = [...prev]
                               while (newAges.length < count) {
@@ -969,12 +969,12 @@ LankaLux Team`
                       />
                     </div>
                   </div>
-                  {parseInt(numberOfChildrenValue) > 0 && parseInt(numberOfChildrenValue) >= 2 && parseInt(numberOfChildrenValue) <= 3 && (
+                  {parseInt(numberOfChildrenValue) > 0 && (
                     <div>
                       <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                        Children Ages (years)
+                        {parseInt(numberOfChildrenValue) === 1 ? 'Child Age (years)' : 'Children Ages (years)'}
                       </label>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className={`grid gap-3 ${parseInt(numberOfChildrenValue) <= 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
                         {childrenAgesValue.map((age, index) => (
                           <div key={index}>
                             <label className="block text-xs text-gray-400 mb-1">
