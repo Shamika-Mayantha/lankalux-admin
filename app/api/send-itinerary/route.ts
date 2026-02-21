@@ -241,10 +241,6 @@ export async function POST(request: Request) {
               height: 80px;
               margin: 0 auto 20px;
               display: block;
-              border-radius: 50%;
-              background-color: #ffffff;
-              padding: 10px;
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             }
             .header h1 {
               color: #c8a45d;
@@ -309,6 +305,110 @@ export async function POST(request: Request) {
               font-size: 20px;
               font-weight: 600;
               margin-top: 8px;
+            }
+            .journey-overview {
+              background-color: #fafafa;
+              border: 1px solid #e0e0e0;
+              border-radius: 8px;
+              padding: 25px;
+              margin: 30px 0;
+            }
+            .journey-overview h3 {
+              color: #c8a45d;
+              font-size: 18px;
+              font-weight: 600;
+              margin-bottom: 15px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              border-bottom: 2px solid #c8a45d;
+              padding-bottom: 10px;
+            }
+            .day-section {
+              margin-bottom: 20px;
+              padding-bottom: 20px;
+              border-bottom: 1px solid #e0e0e0;
+            }
+            .day-section:last-child {
+              border-bottom: none;
+              margin-bottom: 0;
+              padding-bottom: 0;
+            }
+            .day-header {
+              display: flex;
+              align-items: center;
+              margin-bottom: 12px;
+            }
+            .day-number {
+              background-color: #c8a45d;
+              color: #ffffff;
+              width: 35px;
+              height: 35px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: 600;
+              font-size: 16px;
+              margin-right: 12px;
+            }
+            .day-title {
+              font-size: 16px;
+              font-weight: 600;
+              color: #2c2c2c;
+            }
+            .day-location {
+              font-size: 14px;
+              color: #666;
+              margin-left: 47px;
+              margin-top: -5px;
+              margin-bottom: 10px;
+            }
+            .activities-list {
+              margin-left: 47px;
+              margin-top: 10px;
+            }
+            .activity-item {
+              font-size: 14px;
+              color: #555;
+              margin-bottom: 8px;
+              padding-left: 20px;
+              position: relative;
+            }
+            .activity-item:before {
+              content: "•";
+              color: #c8a45d;
+              font-weight: bold;
+              position: absolute;
+              left: 0;
+            }
+            .what-to-expect {
+              background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+              border-left: 4px solid #c8a45d;
+              padding: 20px;
+              margin: 30px 0;
+              border-radius: 4px;
+            }
+            .what-to-expect h3 {
+              color: #c8a45d;
+              font-size: 16px;
+              font-weight: 600;
+              margin-bottom: 12px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .expect-item {
+              font-size: 14px;
+              color: #555;
+              margin-bottom: 8px;
+              padding-left: 20px;
+              position: relative;
+            }
+            .expect-item:before {
+              content: "✓";
+              color: #c8a45d;
+              font-weight: bold;
+              position: absolute;
+              left: 0;
             }
             .cta-section {
               text-align: center;
@@ -403,10 +503,55 @@ export async function POST(request: Request) {
                   <span class="info-label">Selected Journey</span>
                   <div class="journey-title">${selectedOption.title}</div>
                 </div>
+                ${requestData.duration ? `<div class="info-row">
+                  <span class="info-label">Duration</span>
+                  <span class="info-value">${requestData.duration} Days</span>
+                </div>` : ''}
+              </div>
+              
+              ${selectedOption.summary ? `
+              <div class="what-to-expect">
+                <h3>Journey Overview</h3>
+                <p style="font-size: 15px; color: #555; line-height: 1.8;">${selectedOption.summary}</p>
+              </div>
+              ` : ''}
+              
+              ${selectedOption.days && Array.isArray(selectedOption.days) && selectedOption.days.length > 0 ? `
+              <div class="journey-overview">
+                <h3>Your Journey Timeline</h3>
+                ${selectedOption.days.map((day: any, index: number) => {
+                  const activities = Array.isArray(day.activities) ? day.activities : [];
+                  return `
+                    <div class="day-section">
+                      <div class="day-header">
+                        <div class="day-number">${day.day || index + 1}</div>
+                        <div class="day-title">${day.title || `Day ${day.day || index + 1}`}</div>
+                      </div>
+                      ${day.location ? `<div class="day-location">📍 ${day.location}</div>` : ''}
+                      ${activities.length > 0 ? `
+                        <div class="activities-list">
+                          ${activities.map((activity: string) => `
+                            <div class="activity-item">${activity}</div>
+                          `).join('')}
+                        </div>
+                      ` : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+              ` : ''}
+              
+              <div class="what-to-expect">
+                <h3>What to Expect</h3>
+                <div class="expect-item">Personalized experiences tailored to your preferences</div>
+                <div class="expect-item">Expert local guides and seamless transportation</div>
+                <div class="expect-item">Authentic cultural encounters and breathtaking landscapes</div>
+                <div class="expect-item">Premium accommodations and dining experiences</div>
+                <div class="expect-item">24/7 support throughout your journey</div>
               </div>
               
               <div class="cta-section">
-                <a href="${itineraryUrl}" class="journey-link">View Your Journey</a>
+                <a href="${itineraryUrl}" class="journey-link">View Your Complete Journey</a>
               </div>
               
               <p class="closing-text">
@@ -431,15 +576,46 @@ export async function POST(request: Request) {
       </html>
     `
 
+    // Build plain text version with journey details
+    let journeyDetailsText = ''
+    if (selectedOption.summary) {
+      journeyDetailsText += `\n\nJOURNEY OVERVIEW:\n${selectedOption.summary}\n`
+    }
+    
+    if (selectedOption.days && Array.isArray(selectedOption.days) && selectedOption.days.length > 0) {
+      journeyDetailsText += `\n\nYOUR JOURNEY TIMELINE:\n`
+      selectedOption.days.forEach((day: any, index: number) => {
+        journeyDetailsText += `\nDay ${day.day || index + 1}: ${day.title || `Day ${day.day || index + 1}`}`
+        if (day.location) {
+          journeyDetailsText += `\n📍 Location: ${day.location}`
+        }
+        if (Array.isArray(day.activities) && day.activities.length > 0) {
+          day.activities.forEach((activity: string) => {
+            journeyDetailsText += `\n  • ${activity}`
+          })
+        }
+      })
+    }
+    
+    journeyDetailsText += `\n\nWHAT TO EXPECT:\n`
+    journeyDetailsText += `✓ Personalized experiences tailored to your preferences\n`
+    journeyDetailsText += `✓ Expert local guides and seamless transportation\n`
+    journeyDetailsText += `✓ Authentic cultural encounters and breathtaking landscapes\n`
+    journeyDetailsText += `✓ Premium accommodations and dining experiences\n`
+    journeyDetailsText += `✓ 24/7 support throughout your journey\n`
+    
     const emailText = `
 Dear ${requestData.client_name || 'Valued Client'},
 
 We are absolutely delighted to share your personalized Sri Lanka journey with you. Every detail has been carefully crafted to ensure an unforgettable experience.
 
+TRAVEL DETAILS:
 Travel Dates: ${startDateFormatted} - ${endDateFormatted}
 Selected Journey: ${selectedOption.title}
+${requestData.duration ? `Duration: ${requestData.duration} Days` : ''}
+${journeyDetailsText}
 
-View your journey here: ${itineraryUrl}
+View your complete journey here: ${itineraryUrl}
 
 This link provides access to your complete journey details. We've designed every moment to showcase the beauty, culture, and wonder of Sri Lanka. If you have any questions or would like to discuss any modifications, please don't hesitate to reach out—we're here to make your journey perfect.
 
