@@ -258,28 +258,65 @@ IMPORTANT RULES:
 - No explanations
 - Only valid JSON`
 
-    // Generate itinerary using OpenAI
+    // Generate itinerary using OpenAI with retry logic
     // Use higher temperature for more variety and creativity
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries with clear structure. Always generate FRESH, UNIQUE, and CREATIVE options that differ significantly from previous suggestions. Always respond with valid JSON only. Never use markdown. Never add explanations. Return only the JSON object.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.9, // Increased from 0.7 to 0.9 for more variety and creativity
-      max_tokens: 4000,
-      response_format: { type: 'json_object' },
-    })
+    let completion
+    let generatedContent = ''
+    const maxRetries = 3
+    let currentMaxTokens = 8000 // Start with 8000 tokens
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        completion = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries with clear structure. Always generate FRESH, UNIQUE, and CREATIVE options that differ significantly from previous suggestions. Always respond with valid JSON only. Never use markdown. Never add explanations. Return only the JSON object. Ensure the JSON is complete and valid.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: 0.9, // Increased from 0.7 to 0.9 for more variety and creativity
+          max_tokens: currentMaxTokens, // Dynamically increase if truncated
+          response_format: { type: 'json_object' },
+        })
 
-    const generatedContent =
-      completion.choices[0]?.message?.content?.trim() || ''
+        generatedContent = completion.choices[0]?.message?.content?.trim() || ''
+        
+        // Check if response was truncated (indicated by finish_reason)
+        const finishReason = completion.choices[0]?.finish_reason
+        if (finishReason === 'length') {
+          console.warn(`Response was truncated on attempt ${attempt}. Current max_tokens: ${currentMaxTokens}`)
+          if (attempt < maxRetries) {
+            // Increase max_tokens for retry (double it, up to 16000)
+            currentMaxTokens = Math.min(currentMaxTokens * 2, 16000)
+            console.log(`Retrying with max_tokens: ${currentMaxTokens}`)
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+            continue
+          } else {
+            console.error('Response still truncated after all retries')
+          }
+        }
+        
+        if (generatedContent) {
+          break // Success, exit retry loop
+        }
+      } catch (apiError) {
+        console.error(`OpenAI API error on attempt ${attempt}:`, apiError)
+        if (attempt === maxRetries) {
+          return NextResponse.json(
+            { success: false, error: 'Failed to generate itinerary after multiple attempts' },
+            { status: 500 }
+          )
+        }
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+      }
+    }
 
     if (!generatedContent) {
       return NextResponse.json(
@@ -306,6 +343,26 @@ IMPORTANT RULES:
       
       // Remove any leading/trailing whitespace or newlines
       cleanedContent = cleanedContent.trim()
+      
+      // Check if JSON might be incomplete (common if truncated)
+      const openBraces = (cleanedContent.match(/\{/g) || []).length
+      const closeBraces = (cleanedContent.match(/\}/g) || []).length
+      
+      if (openBraces !== closeBraces) {
+        console.warn('JSON appears incomplete - mismatched braces:', { openBraces, closeBraces })
+        // Try to fix incomplete JSON by closing braces
+        const missingBraces = openBraces - closeBraces
+        cleanedContent += '\n' + '}'.repeat(missingBraces)
+      }
+      
+      // Check for incomplete arrays
+      const openBrackets = (cleanedContent.match(/\[/g) || []).length
+      const closeBrackets = (cleanedContent.match(/\]/g) || []).length
+      if (openBrackets !== closeBrackets) {
+        console.warn('JSON appears incomplete - mismatched brackets:', { openBrackets, closeBrackets })
+        const missingBrackets = openBrackets - closeBrackets
+        cleanedContent += '\n' + ']'.repeat(missingBrackets)
+      }
       
       console.log('Attempting to parse JSON. Content length:', cleanedContent.length)
       console.log('First 200 chars:', cleanedContent.substring(0, 200))
