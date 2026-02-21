@@ -198,7 +198,7 @@ Day 6: Mirissa → Galle → Departure
       // Save to Supabase
       const { error } = await supabase
         .from('requests')
-        .update({ itinerary: generatedItinerary })
+        .update({ itinerary: generatedItinerary } as any)
         .eq('id', request.id)
 
       if (error) {
@@ -228,7 +228,7 @@ Day 6: Mirissa → Galle → Departure
 
       const { error } = await supabase
         .from('requests')
-        .update({ itinerary: editingItinerary || null })
+        .update({ itinerary: editingItinerary || null } as any)
         .eq('id', request.id)
 
       if (error) {
