@@ -292,10 +292,24 @@ IMPORTANT RULES:
     let itineraryOptions
     try {
       // Remove any markdown code blocks if present
-      let cleanedContent = generatedContent
-      if (cleanedContent.startsWith('```')) {
-        cleanedContent = cleanedContent.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+      let cleanedContent = generatedContent.trim()
+      
+      // Remove markdown code blocks (handle various formats)
+      cleanedContent = cleanedContent.replace(/^```(?:json|JSON)?\n?/gm, '').replace(/\n?```$/gm, '')
+      cleanedContent = cleanedContent.trim()
+      
+      // Try to extract JSON if there's extra text
+      const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        cleanedContent = jsonMatch[0]
       }
+      
+      // Remove any leading/trailing whitespace or newlines
+      cleanedContent = cleanedContent.trim()
+      
+      console.log('Attempting to parse JSON. Content length:', cleanedContent.length)
+      console.log('First 200 chars:', cleanedContent.substring(0, 200))
+      console.log('Last 200 chars:', cleanedContent.substring(Math.max(0, cleanedContent.length - 200)))
       
       itineraryOptions = JSON.parse(cleanedContent)
       
@@ -333,9 +347,29 @@ IMPORTANT RULES:
       }
     } catch (parseError) {
       console.error('Error parsing JSON:', parseError)
-      console.error('Generated content:', generatedContent)
+      console.error('Parse error details:', {
+        message: parseError instanceof Error ? parseError.message : String(parseError),
+        name: parseError instanceof Error ? parseError.name : 'Unknown'
+      })
+      console.error('Generated content length:', generatedContent.length)
+      console.error('Generated content (first 500 chars):', generatedContent.substring(0, 500))
+      console.error('Generated content (last 500 chars):', generatedContent.substring(Math.max(0, generatedContent.length - 500)))
+      
+      // Try to provide more helpful error message
+      let errorMessage = 'Failed to parse itinerary response'
+      if (parseError instanceof SyntaxError) {
+        errorMessage = `Invalid JSON format: ${parseError.message}. The AI response may not be in the correct format.`
+      }
+      
       return NextResponse.json(
-        { success: false, error: 'Failed to parse itinerary response' },
+        { 
+          success: false, 
+          error: errorMessage,
+          details: process.env.NODE_ENV === 'development' ? {
+            parseError: parseError instanceof Error ? parseError.message : String(parseError),
+            contentPreview: generatedContent.substring(0, 500)
+          } : undefined
+        },
         { status: 500 }
       )
     }
