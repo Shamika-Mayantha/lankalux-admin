@@ -1585,28 +1585,14 @@ LankaLux Team`
           )}
         </div>
 
-        {/* Sent Itinerary Section - Only show after it's been sent */}
+        {/* Sent Itinerary Section - Show if any options have been sent */}
         {(() => {
           const hasSentAt = !!request.sent_at
           const hasOptions = !!request.itinerary_options?.options
-          const hasLastSentOption = request.last_sent_option !== null && request.last_sent_option !== undefined
-          const shouldShow = hasSentAt && hasOptions && hasLastSentOption
-          
-          if (hasSentAt && !hasOptions) {
-            console.warn('Sent itinerary section: sent_at exists but no itinerary options', {
-              sent_at: request.sent_at,
-              itineraryoptions: request.itineraryoptions,
-              itinerary_options: request.itinerary_options,
-            })
-          }
+          const hasSentOptions = request.sent_options && Array.isArray(request.sent_options) && request.sent_options.length > 0
+          const shouldShow = hasSentAt && hasOptions && (hasSentOptions || request.last_sent_option !== null)
           
           if (!shouldShow) return null
-          
-          // Get the last sent option
-          const lastSentOptionIndex = request.last_sent_option!
-          const lastSentOption = request.itinerary_options?.options?.[lastSentOptionIndex]
-          
-          if (!lastSentOption) return null
           
           return (
             <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 md:p-6 mt-8">
@@ -1628,11 +1614,28 @@ LankaLux Team`
               </div>
 
               {/* List of All Sent Options - Show full details for each */}
-              {request.sent_options && Array.isArray(request.sent_options) && request.sent_options.length > 0 && (
+              {(() => {
+                // Get sent options from sent_options array, or fallback to last_sent_option if array is empty
+                let sentOptionsList: any[] = []
+                
+                if (request.sent_options && Array.isArray(request.sent_options) && request.sent_options.length > 0) {
+                  sentOptionsList = request.sent_options
+                } else if (request.last_sent_option !== null && request.last_sent_option !== undefined && request.sent_at) {
+                  // Fallback: if sent_options is empty but last_sent_option exists, create an entry
+                  sentOptionsList = [{
+                    option_index: request.last_sent_option,
+                    sent_at: request.last_sent_at || request.sent_at,
+                    option_title: null
+                  }]
+                }
+                
+                if (sentOptionsList.length === 0) return null
+                
+                return (
                 <div className="mb-6 mt-6 pt-6 border-t border-[#333]">
-                  <h3 className="text-lg font-semibold text-[#d4af37] mb-4">All Sent Options ({request.sent_options.length})</h3>
+                  <h3 className="text-lg font-semibold text-[#d4af37] mb-4">All Sent Options ({sentOptionsList.length})</h3>
                   <div className="space-y-6">
-                    {request.sent_options.map((sentOption: any, index: number) => {
+                    {sentOptionsList.map((sentOption: any, index: number) => {
                       // Ensure option_index is a valid number
                       const optionIndex = typeof sentOption.option_index === 'number' ? sentOption.option_index : null
                       if (optionIndex === null || optionIndex === undefined) {
@@ -1751,7 +1754,8 @@ LankaLux Team`
                     })}
                   </div>
                 </div>
-              )}
+                )
+              })()}
 
             </div>
           )
