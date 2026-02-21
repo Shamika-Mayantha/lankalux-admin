@@ -23,6 +23,8 @@ interface Request {
   end_date: string | null
   duration: number | null
   origin_country: string | null
+  passenger_count: number | null
+  child_age: number | null
   additional_preferences: string | null
   itineraryoptions: string | null
   itinerary_options?: ItineraryOptions | null
@@ -44,8 +46,18 @@ export default function RequestDetailsPage() {
   const [selectingOption, setSelectingOption] = useState<number | null>(null)
   const [editingStatus, setEditingStatus] = useState(false)
   const [editingNotes, setEditingNotes] = useState(false)
+  const [editingClientInfo, setEditingClientInfo] = useState(false)
   const [statusValue, setStatusValue] = useState('')
   const [notesValue, setNotesValue] = useState('')
+  const [clientNameValue, setClientNameValue] = useState('')
+  const [emailValue, setEmailValue] = useState('')
+  const [whatsappValue, setWhatsappValue] = useState('')
+  const [startDateValue, setStartDateValue] = useState('')
+  const [endDateValue, setEndDateValue] = useState('')
+  const [passengerCountValue, setPassengerCountValue] = useState('')
+  const [hasChildrenValue, setHasChildrenValue] = useState(false)
+  const [childAgeValue, setChildAgeValue] = useState('')
+  const [additionalPreferencesValue, setAdditionalPreferencesValue] = useState('')
   const [saving, setSaving] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [reopening, setReopening] = useState(false)
@@ -98,6 +110,15 @@ export default function RequestDetailsPage() {
         setRequest(requestData)
         setStatusValue(requestData.status || '')
         setNotesValue(requestData.notes || '')
+        setClientNameValue(requestData.client_name || '')
+        setEmailValue(requestData.email || '')
+        setWhatsappValue(requestData.whatsapp || '')
+        setStartDateValue(requestData.start_date || '')
+        setEndDateValue(requestData.end_date || '')
+        setPassengerCountValue(requestData.passenger_count?.toString() || '')
+        setHasChildrenValue(!!requestData.child_age)
+        setChildAgeValue(requestData.child_age?.toString() || '')
+        setAdditionalPreferencesValue(requestData.additional_preferences || '')
         setLoading(false)
       } catch (err) {
         console.error('Unexpected error fetching request:', err)
@@ -170,7 +191,74 @@ export default function RequestDetailsPage() {
       requestData.itinerary_options = null
     }
 
+    // Update local state values
+    if (requestData) {
+      setClientNameValue(requestData.client_name || '')
+      setEmailValue(requestData.email || '')
+      setWhatsappValue(requestData.whatsapp || '')
+      setStartDateValue(requestData.start_date || '')
+      setEndDateValue(requestData.end_date || '')
+      setPassengerCountValue(requestData.passenger_count?.toString() || '')
+      setHasChildrenValue(!!requestData.child_age)
+      setChildAgeValue(requestData.child_age?.toString() || '')
+      setAdditionalPreferencesValue(requestData.additional_preferences || '')
+      setStatusValue(requestData.status || '')
+      setNotesValue(requestData.notes || '')
+    }
+
     return requestData
+  }
+
+  const handleSaveClientInfo = async () => {
+    if (!request) return
+
+    try {
+      setSaving(true)
+
+      // Calculate duration if dates changed
+      let duration = request.duration
+      if (startDateValue && endDateValue) {
+        const start = new Date(startDateValue)
+        const end = new Date(endDateValue)
+        if (end >= start) {
+          const diffTime = Math.abs(end.getTime() - start.getTime())
+          duration = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        }
+      }
+
+      const { error } = await (supabase.from('requests') as any)
+        .update({
+          client_name: clientNameValue.trim() || null,
+          email: emailValue.trim() || null,
+          whatsapp: whatsappValue.trim() || null,
+          start_date: startDateValue || null,
+          end_date: endDateValue || null,
+          duration: duration || null,
+          passenger_count: passengerCountValue ? parseInt(passengerCountValue) : null,
+          child_age: hasChildrenValue && childAgeValue ? parseInt(childAgeValue) : null,
+          additional_preferences: additionalPreferencesValue.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+
+      if (error) {
+        console.error('Error updating client info:', error)
+        alert('Failed to save changes. Please try again.')
+        setSaving(false)
+        return
+      }
+
+      const updatedRequest = await fetchRequestData(request.id)
+      if (updatedRequest) {
+        setRequest(updatedRequest)
+      }
+      setEditingClientInfo(false)
+      setSaving(false)
+    } catch (err) {
+      console.error('Unexpected error saving client info:', err)
+      alert('An unexpected error occurred. Please try again.')
+      setSaving(false)
+    }
   }
 
   const handleGenerateItinerary = async () => {
@@ -620,81 +708,291 @@ LankaLux Team`
 
             {/* Client Information */}
             <div>
-              <h2 className="text-2xl font-semibold text-[#d4af37] mb-4">Client Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Client Name</p>
-                  <p className="text-white text-lg font-medium">
-                    {request.client_name || 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Email</p>
-                  <p className="text-gray-300">
-                    {request.email ? (
-                      <a
-                        href={`mailto:${request.email}`}
-                        className="text-[#d4af37] hover:text-[#b8941f] transition-colors duration-200"
-                      >
-                        {request.email}
-                      </a>
-                    ) : (
-                      'N/A'
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">WhatsApp</p>
-                  <p className="text-gray-300">
-                    {request.whatsapp ? (
-                      <a
-                        href={`https://wa.me/${request.whatsapp.replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#d4af37] hover:text-[#b8941f] transition-colors duration-200"
-                      >
-                        {request.whatsapp}
-                      </a>
-                    ) : (
-                      'N/A'
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Origin Country</p>
-                  <p className="text-gray-300">{request.origin_country || 'N/A'}</p>
-                </div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-semibold text-[#d4af37]">Client Information</h2>
+                {!editingClientInfo && (
+                  <button
+                    onClick={() => setEditingClientInfo(true)}
+                    className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                    Edit
+                  </button>
+                )}
               </div>
+              {editingClientInfo ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                        Client Name
+                      </label>
+                      <input
+                        type="text"
+                        value={clientNameValue}
+                        onChange={(e) => setClientNameValue(e.target.value)}
+                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={emailValue}
+                        onChange={(e) => setEmailValue(e.target.value)}
+                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                        WhatsApp
+                      </label>
+                      <input
+                        type="text"
+                        value={whatsappValue}
+                        onChange={(e) => setWhatsappValue(e.target.value)}
+                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                        Origin Country
+                      </label>
+                      <p className="text-gray-300 py-3">{request.origin_country || 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleSaveClientInfo}
+                      disabled={saving}
+                      className="px-6 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setClientNameValue(request.client_name || '')
+                        setEmailValue(request.email || '')
+                        setWhatsappValue(request.whatsapp || '')
+                        setStartDateValue(request.start_date || '')
+                        setEndDateValue(request.end_date || '')
+                        setPassengerCountValue(request.passenger_count?.toString() || '')
+                        setHasChildrenValue(!!request.child_age)
+                        setChildAgeValue(request.child_age?.toString() || '')
+                        setAdditionalPreferencesValue(request.additional_preferences || '')
+                        setEditingClientInfo(false)
+                      }}
+                      disabled={saving}
+                      className="px-6 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Client Name</p>
+                    <p className="text-white text-lg font-medium">
+                      {request.client_name || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Email</p>
+                    <p className="text-gray-300">
+                      {request.email ? (
+                        <a
+                          href={`mailto:${request.email}`}
+                          className="text-[#d4af37] hover:text-[#b8941f] transition-colors duration-200"
+                        >
+                          {request.email}
+                        </a>
+                      ) : (
+                        'N/A'
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">WhatsApp</p>
+                    <p className="text-gray-300">
+                      {request.whatsapp ? (
+                        <a
+                          href={`https://wa.me/${request.whatsapp.replace(/[^0-9]/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#d4af37] hover:text-[#b8941f] transition-colors duration-200"
+                        >
+                          {request.whatsapp}
+                        </a>
+                      ) : (
+                        'N/A'
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Origin Country</p>
+                    <p className="text-gray-300">{request.origin_country || 'N/A'}</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Travel Information */}
             <div className="pt-6 border-t border-[#333]">
               <h2 className="text-2xl font-semibold text-[#d4af37] mb-4">Travel Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Start Date</p>
-                  <p className="text-gray-300">{formatDate(request.start_date)}</p>
+              {editingClientInfo ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                        Start Date
+                      </label>
+                      <input
+                        type="date"
+                        value={startDateValue}
+                        onChange={(e) => setStartDateValue(e.target.value)}
+                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                        End Date
+                      </label>
+                      <input
+                        type="date"
+                        value={endDateValue}
+                        onChange={(e) => setEndDateValue(e.target.value)}
+                        min={startDateValue || undefined}
+                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Duration</p>
+                      <p className="text-gray-300 py-3">
+                        {startDateValue && endDateValue
+                          ? (() => {
+                              const start = new Date(startDateValue)
+                              const end = new Date(endDateValue)
+                              if (end >= start) {
+                                const diffTime = Math.abs(end.getTime() - start.getTime())
+                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                                return `${diffDays} days`
+                              }
+                              return 'Invalid'
+                            })()
+                          : request.duration
+                          ? `${request.duration} days`
+                          : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                        Number of Passengers
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={passengerCountValue}
+                        onChange={(e) => setPassengerCountValue(e.target.value)}
+                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-3 cursor-pointer mb-2">
+                        <input
+                          type="checkbox"
+                          checked={hasChildrenValue}
+                          onChange={(e) => {
+                            setHasChildrenValue(e.target.checked)
+                            if (!e.target.checked) {
+                              setChildAgeValue('')
+                            }
+                          }}
+                          className="w-5 h-5 bg-[#0a0a0a] border border-[#333] rounded text-[#d4af37] focus:ring-2 focus:ring-[#d4af37] focus:ring-offset-0"
+                        />
+                        <span className="text-xs text-gray-500 uppercase tracking-wide">Traveling with children</span>
+                      </label>
+                      {hasChildrenValue && (
+                        <input
+                          type="number"
+                          min="0"
+                          max="17"
+                          value={childAgeValue}
+                          onChange={(e) => setChildAgeValue(e.target.value)}
+                          placeholder="Child age (years)"
+                          className="w-full mt-2 px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        />
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">End Date</p>
-                  <p className="text-gray-300">{formatDate(request.end_date)}</p>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Start Date</p>
+                      <p className="text-gray-300">{formatDate(request.start_date)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">End Date</p>
+                      <p className="text-gray-300">{formatDate(request.end_date)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Duration</p>
+                      <p className="text-gray-300">{request.duration ? `${request.duration} days` : 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Number of Passengers</p>
+                      <p className="text-gray-300">{request.passenger_count || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Child Age</p>
+                      <p className="text-gray-300">
+                        {request.child_age ? `${request.child_age} years` : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Duration</p>
-                  <p className="text-gray-300">{request.duration ? `${request.duration} days` : 'N/A'}</p>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Additional Preferences */}
-            {request.additional_preferences && (
-              <div className="pt-6 border-t border-[#333]">
-                <h2 className="text-2xl font-semibold text-[#d4af37] mb-4">Additional Preferences</h2>
+            <div className="pt-6 border-t border-[#333]">
+              <h2 className="text-2xl font-semibold text-[#d4af37] mb-4">Additional Preferences</h2>
+              {editingClientInfo ? (
+                <textarea
+                  value={additionalPreferencesValue}
+                  onChange={(e) => setAdditionalPreferencesValue(e.target.value)}
+                  rows={6}
+                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y"
+                  placeholder="e.g., honeymoon, wildlife safari, luxury focus, train journeys, ayurveda retreat, family friendly, adventure"
+                />
+              ) : (
                 <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-4">
-                  <p className="text-gray-300 whitespace-pre-wrap">{request.additional_preferences}</p>
+                  <p className="text-gray-300 whitespace-pre-wrap">
+                    {request.additional_preferences || 'No preferences specified'}
+                  </p>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Notes */}
             <div className="pt-6 border-t border-[#333]">

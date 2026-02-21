@@ -191,36 +191,13 @@ export default function DashboardPage() {
               {activeRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 hover:border-[#d4af37] hover:shadow-lg hover:shadow-[#d4af37]/20 transition-all duration-200"
+                  onClick={() => router.push(`/requests/${request.id}`)}
+                  className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 hover:border-[#d4af37] hover:shadow-lg hover:shadow-[#d4af37]/20 transition-all duration-200 cursor-pointer"
                 >
                   <div className="mb-4">
-                    <div className="flex items-start justify-between mb-1">
-                      <h3 className="text-xl font-semibold text-white">
-                        {request.client_name || 'Unnamed Client'}
-                      </h3>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          router.push(`/requests/${request.id}`)
-                        }}
-                        className="ml-2 p-2 text-[#d4af37] hover:text-[#b8941f] hover:bg-[#333] rounded-md transition-colors duration-200"
-                        title="Edit Request"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
-                      </button>
-                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-1">
+                      {request.client_name || 'Unnamed Client'}
+                    </h3>
                     <p className="text-sm text-gray-500">
                       {formatDate(request.created_at)}
                     </p>
@@ -291,36 +268,13 @@ export default function DashboardPage() {
                 {cancelledRequests.map((request) => (
                   <div
                     key={request.id}
-                    className="bg-[#1a1a1a] border border-red-500/30 rounded-lg p-6 hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20 transition-all duration-200 opacity-75"
+                    onClick={() => router.push(`/requests/${request.id}`)}
+                    className="bg-[#1a1a1a] border border-red-500/30 rounded-lg p-6 hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20 transition-all duration-200 cursor-pointer opacity-75"
                   >
                     <div className="mb-4">
-                      <div className="flex items-start justify-between mb-1">
-                        <h3 className="text-xl font-semibold text-white">
-                          {request.client_name || 'Unnamed Client'}
-                        </h3>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            router.push(`/requests/${request.id}`)
-                          }}
-                          className="ml-2 p-2 text-[#d4af37] hover:text-[#b8941f] hover:bg-[#333] rounded-md transition-colors duration-200"
-                          title="Edit Request"
-                        >
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                            />
-                          </svg>
-                        </button>
-                      </div>
+                      <h3 className="text-xl font-semibold text-white mb-1">
+                        {request.client_name || 'Unnamed Client'}
+                      </h3>
                       <p className="text-sm text-gray-500">
                         {formatDate(request.created_at)}
                       </p>

@@ -81,6 +81,10 @@ export async function POST(request: Request) {
       ? new Date(requestData.end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
       : 'Not specified'
 
+    const passengerInfo = requestData.passenger_count 
+      ? `Number of Passengers: ${requestData.passenger_count}${requestData.child_age ? ` (including 1 child aged ${requestData.child_age} years)` : ''}`
+      : 'Not specified'
+
     const prompt = `You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Generate exactly 3 distinct, premium itinerary options for the following client:
 
 Client Name: ${requestData.client_name || 'Not specified'}
@@ -88,6 +92,7 @@ Origin Country: ${requestData.origin_country || 'Not specified'}
 Start Date: ${startDateFormatted}
 End Date: ${endDateFormatted}
 Duration: ${requestData.duration || 'Not specified'} days
+${passengerInfo}
 Additional Preferences: ${requestData.additional_preferences || 'None provided'}
 
 Requirements:
@@ -99,6 +104,8 @@ Requirements:
 - Emphasize luxury positioning and premium accommodations
 - Ensure logical travel flow between destinations
 - Make each option diverse (e.g., cultural heritage, wildlife & nature, beach & relaxation, adventure, wellness/ayurveda)
+${requestData.child_age ? `- IMPORTANT: Consider child-friendly activities and accommodations suitable for a ${requestData.child_age}-year-old child` : ''}
+${requestData.passenger_count && requestData.passenger_count > 2 ? `- Consider group activities and accommodations suitable for ${requestData.passenger_count} passengers` : ''}
 
 Format your response as a valid JSON object with this exact structure:
 {

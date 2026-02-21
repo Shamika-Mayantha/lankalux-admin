@@ -12,6 +12,9 @@ export default function NewRequestPage() {
   const [endDate, setEndDate] = useState('')
   const [duration, setDuration] = useState<number | null>(null)
   const [originCountry, setOriginCountry] = useState('')
+  const [passengerCount, setPassengerCount] = useState('')
+  const [hasChildren, setHasChildren] = useState(false)
+  const [childAge, setChildAge] = useState('')
   const [additionalPreferences, setAdditionalPreferences] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -69,6 +72,8 @@ export default function NewRequestPage() {
             end_date: endDate || null,
             duration: duration || null,
             origin_country: originCountry.trim() || null,
+            passenger_count: passengerCount ? parseInt(passengerCount) : null,
+            child_age: hasChildren && childAge ? parseInt(childAge) : null,
             additional_preferences: additionalPreferences.trim() || null,
             status: 'new',
           },
@@ -229,6 +234,62 @@ export default function NewRequestPage() {
                 disabled={true}
               />
             </div>
+
+            {/* Passenger Count */}
+            <div>
+              <label htmlFor="passenger_count" className="block text-sm font-medium text-gray-300 mb-2">
+                Number of Passengers
+              </label>
+              <input
+                id="passenger_count"
+                type="number"
+                min="1"
+                value={passengerCount}
+                onChange={(e) => setPassengerCount(e.target.value)}
+                placeholder="Enter number of passengers"
+                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Has Children */}
+            <div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hasChildren}
+                  onChange={(e) => {
+                    setHasChildren(e.target.checked)
+                    if (!e.target.checked) {
+                      setChildAge('')
+                    }
+                  }}
+                  className="w-5 h-5 bg-[#0a0a0a] border border-[#333] rounded text-[#d4af37] focus:ring-2 focus:ring-[#d4af37] focus:ring-offset-0"
+                  disabled={loading}
+                />
+                <span className="text-sm font-medium text-gray-300">Traveling with children</span>
+              </label>
+            </div>
+
+            {/* Child Age */}
+            {hasChildren && (
+              <div>
+                <label htmlFor="child_age" className="block text-sm font-medium text-gray-300 mb-2">
+                  Child Age (years)
+                </label>
+                <input
+                  id="child_age"
+                  type="number"
+                  min="0"
+                  max="17"
+                  value={childAge}
+                  onChange={(e) => setChildAge(e.target.value)}
+                  placeholder="Enter child age in years"
+                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                  disabled={loading}
+                />
+              </div>
+            )}
 
             {/* Origin Country */}
             <div>
