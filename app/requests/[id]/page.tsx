@@ -1819,7 +1819,19 @@ LankaLux Team`
                 // Use edited values when editing, otherwise use original values
                 const displayTitle = editingSentItinerary ? sentItineraryTitle : selectedOption.title
                 const displaySummary = editingSentItinerary ? sentItinerarySummary : selectedOption.summary
-                const displayDays = editingSentItinerary ? sentItineraryDays : selectedOption.days
+                // Format days properly - handle both array (new format) and string (old format)
+                let displayDays: string
+                if (editingSentItinerary) {
+                  displayDays = sentItineraryDays
+                } else if (Array.isArray(selectedOption.days)) {
+                  // New format: array of Day objects
+                  displayDays = selectedOption.days.map((day: any) => 
+                    `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities?.map((act: string) => `  • ${act}`).join('\n') || ''}`
+                  ).join('\n\n')
+                } else {
+                  // Old format: string
+                  displayDays = selectedOption.days || ''
+                }
 
                 return (
                   <div className="space-y-6">
