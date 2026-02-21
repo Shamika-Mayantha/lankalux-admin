@@ -137,19 +137,8 @@ export async function POST(request: Request) {
     }
 
     // Build itinerary URL with option index for unique links per option
-    // Use NEXT_PUBLIC_SITE_URL if available, otherwise construct from VERCEL_URL or use default
-    // The public URL should be the public-facing domain, not the admin panel
-    let baseUrl = process.env.NEXT_PUBLIC_SITE_URL
-    if (!baseUrl) {
-      if (process.env.VERCEL_URL) {
-        baseUrl = `https://${process.env.VERCEL_URL}`
-      } else {
-        // Default to public domain (not admin subdomain)
-        baseUrl = "https://lankalux.com"
-      }
-    }
-    // Ensure baseUrl doesn't have trailing slash
-    baseUrl = baseUrl.replace(/\/$/, '')
+    // Use admin.lankalux.com for all public itinerary links
+    const baseUrl = "https://admin.lankalux.com"
     // Include option index in URL so each option has a unique link
     const itineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}/${requestData.selected_option}`
     

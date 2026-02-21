@@ -542,7 +542,7 @@ export default function RequestDetailsPage() {
       return
     }
 
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+    const baseUrl = "https://admin.lankalux.com"
     const itineraryUrl = `${baseUrl}/itinerary/${request.public_token}/${request.selected_option}`
 
     const subject = encodeURIComponent('Your LankaLux Sri Lanka Itinerary')
@@ -570,7 +570,7 @@ LankaLux Team`
       return
     }
 
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+    const baseUrl = "https://admin.lankalux.com"
     const itineraryUrl = `${baseUrl}/itinerary/${request.public_token}/${request.selected_option}`
 
     const message = encodeURIComponent(
@@ -1674,7 +1674,8 @@ LankaLux Team`
                         itineraryUrl = sentOption.itinerary_url
                       } else if (request.public_token && typeof request.public_token === 'string') {
                         // Fallback: generate URL if not stored
-                        itineraryUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/itinerary/${request.public_token}/${optionIndex}`
+                        const baseUrl = "https://admin.lankalux.com"
+                        itineraryUrl = `${baseUrl}/itinerary/${request.public_token}/${optionIndex}`
                       }
 
                       return (
