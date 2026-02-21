@@ -215,9 +215,14 @@ Return ONLY the JSON object, no additional text before or after.`
     // Convert JSON object to string and save to itineraryoptions column
     const itineraryOptionsString = JSON.stringify(itineraryOptions)
     
+    // Clear selected_option when regenerating since new options will have different indices
     const { error: updateError } = await supabase
       .from('requests')
-      .update({ itineraryoptions: itineraryOptionsString })
+      .update({ 
+        itineraryoptions: itineraryOptionsString,
+        selected_option: null,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', requestId)
 
     if (updateError) {

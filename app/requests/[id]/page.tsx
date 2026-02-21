@@ -1305,7 +1305,7 @@ LankaLux Team`
         <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-semibold text-[#d4af37]">Itinerary Options</h2>
-            {itineraryOptions.length === 0 && !generatingItinerary && !isCancelled && (
+            {!generatingItinerary && !isCancelled && (
               <button
                 onClick={handleGenerateItinerary}
                 disabled={generatingItinerary}
@@ -1325,10 +1325,10 @@ LankaLux Team`
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Generate Itinerary Options
+                {itineraryOptions.length > 0 ? 'Regenerate Itinerary Options' : 'Generate Itinerary Options'}
               </button>
             )}
-            {isCancelled && itineraryOptions.length === 0 && (
+            {isCancelled && (
               <p className="text-sm text-gray-500 italic">Itinerary generation disabled for cancelled trips</p>
             )}
             {request.selected_option !== null && request.selected_option !== undefined && request.public_token ? (
@@ -1448,8 +1448,8 @@ LankaLux Team`
           )}
         </div>
 
-        {/* Sent Itinerary Section */}
-        {request.selected_option !== null && request.selected_option !== undefined && request.itinerary_options?.options && (
+        {/* Sent Itinerary Section - Only show after it's been sent */}
+        {request.sent_at && request.selected_option !== null && request.selected_option !== undefined && request.itinerary_options?.options && (
           <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8 mt-8">
             <div className="flex items-center justify-between mb-6">
               <div>
