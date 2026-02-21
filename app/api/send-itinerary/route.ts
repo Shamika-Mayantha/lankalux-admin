@@ -137,12 +137,7 @@ export async function POST(request: Request) {
     }
 
     // Build itinerary URL
-    let baseUrl = 'http://localhost:3000'
-    if (process.env.NEXT_PUBLIC_BASE_URL) {
-      baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-    } else if (process.env.VERCEL_URL) {
-      baseUrl = `https://${process.env.VERCEL_URL}`
-    }
+    const baseUrl = "https://admin.lankalux.com"
     const itineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}`
 
     // Create email transporter
