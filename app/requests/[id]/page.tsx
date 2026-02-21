@@ -215,6 +215,24 @@ export default function RequestDetailsPage() {
     }
   }
 
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return 'N/A'
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }) + ' at ' + date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      })
+    } catch {
+      return dateString
+    }
+  }
+
   const getStatusColor = (status: string | null) => {
     if (!status) return 'text-gray-400'
     const statusLower = status.toLowerCase()
@@ -1492,7 +1510,7 @@ LankaLux Team`
                   </button>
                   {request.sent_at && request.last_sent_at && (
                     <div className="flex items-center text-xs text-gray-400 px-2">
-                      Last sent: {formatDate(request.last_sent_at)}
+                      Last sent: {formatDateTime(request.last_sent_at)}
                     </div>
                   )}
                   {request.whatsapp && (
@@ -1601,12 +1619,12 @@ LankaLux Team`
                   <h2 className="text-2xl font-semibold text-[#d4af37]">Sent Itinerary</h2>
                   {request.sent_at && (
                     <p className="text-sm text-gray-400 mt-1">
-                      First sent: {formatDate(request.sent_at)}
+                      First sent: {formatDateTime(request.sent_at)}
                       {request.email_sent_count && request.email_sent_count > 1 && (
                         <span className="ml-2">• Sent {request.email_sent_count} time{request.email_sent_count > 1 ? 's' : ''}</span>
                       )}
                       {request.last_sent_at && (
-                        <span className="ml-2">• Last sent: {formatDate(request.last_sent_at)}</span>
+                        <span className="ml-2">• Last sent: {formatDateTime(request.last_sent_at)}</span>
                       )}
                     </p>
                   )}
@@ -1691,7 +1709,7 @@ LankaLux Team`
                                   <h4 className="text-xl font-semibold text-[#d4af37]">{String(optionTitle)}</h4>
                                   {sentAt && (
                                     <span className="text-xs text-gray-500">
-                                      Sent: {formatDate(sentAt)}
+                                      Sent: {formatDateTime(sentAt)}
                                     </span>
                                   )}
                                 </div>
