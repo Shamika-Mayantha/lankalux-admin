@@ -39,20 +39,24 @@ export async function POST(request: Request) {
     console.log("SMTP_HOST:", process.env.SMTP_HOST)
     console.log("SMTP_PORT:", process.env.SMTP_PORT)
     console.log("SMTP_USER:", process.env.SMTP_USER)
-    console.log("SMTP_PASS:", process.env.SMTP_PASS)
-    console.log("All ENV Keys:", Object.keys(process.env))
+    console.log("SMTP_PASS:", process.env.SMTP_PASS ? "***EXISTS***" : "MISSING")
+    console.log("SMTP_PASSWORD:", process.env.SMTP_PASSWORD ? "***EXISTS***" : "MISSING")
+    console.log("All ENV Keys:", Object.keys(process.env).filter(key => key.includes('SMTP')))
     console.log("=== ENV DEBUG END ===")
     
     const emailHost = process.env.SMTP_HOST
     const emailPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587
     const emailUser = process.env.SMTP_USER
-    const emailPass = process.env.SMTP_PASSWORD
+    const emailPass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD
     const emailFrom = process.env.SMTP_FROM || emailUser
 
     if (!emailHost || !emailUser || !emailPass) {
       console.error('Missing email configuration')
+      console.error('SMTP_HOST missing:', !emailHost)
+      console.error('SMTP_USER missing:', !emailUser)
+      console.error('SMTP_PASS/SMTP_PASSWORD missing:', !emailPass)
       return NextResponse.json(
-        { success: false, error: 'Email service not configured' },
+        { success: false, error: 'Email service not configured. Please check SMTP environment variables.' },
         { status: 500 }
       )
     }
