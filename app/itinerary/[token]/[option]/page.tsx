@@ -66,14 +66,27 @@ export default function PublicItineraryPage() {
       try {
         setLoading(true)
         // Access params - in Next.js App Router, nested dynamic routes use the folder name as the key
-        const token = params?.token as string || (params as any)?.token || ''
-        const optionParam = params?.option as string || (params as any)?.option || ''
+        let token = params?.token as string || (params as any)?.token || ''
+        let optionParam = params?.option as string || (params as any)?.option || ''
+
+        // Fallback: Parse from URL pathname if params are not available (mobile browsers sometimes have issues)
+        if (!token || !optionParam) {
+          if (typeof window !== 'undefined') {
+            const pathParts = window.location.pathname.split('/').filter(Boolean)
+            // Path should be: /itinerary/[token]/[option]
+            if (pathParts.length >= 3 && pathParts[0] === 'itinerary') {
+              token = token || pathParts[1] || ''
+              optionParam = optionParam || pathParts[2] || ''
+            }
+          }
+        }
 
         console.log('Itinerary page params:', { 
           token, 
           optionParam, 
           allParams: params,
-          paramsKeys: Object.keys(params || {})
+          paramsKeys: Object.keys(params || {}),
+          pathname: typeof window !== 'undefined' ? window.location.pathname : 'N/A'
         })
 
         if (!token) {
@@ -86,7 +99,7 @@ export default function PublicItineraryPage() {
         // Parse option index from URL parameter
         const optionIndex = optionParam ? parseInt(optionParam, 10) : null
         if (optionIndex === null || isNaN(optionIndex)) {
-          console.error('Invalid option index:', optionParam)
+          console.error('Invalid option index:', optionParam, 'from pathname:', typeof window !== 'undefined' ? window.location.pathname : 'N/A')
           setNotFound(true)
           setLoading(false)
           return
