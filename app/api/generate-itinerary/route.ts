@@ -125,9 +125,13 @@ Requirements:
 - Each option must have MINIMUM 6 days
 - Use consistent location names: Colombo, Sigiriya, Ella, Yala, Galle, Kandy, Nuwara Eliya
 - Include clear location field for each day
-- Activities must be an array of strings
+- Activities must be an array of strings (include 4-6 main activities per day)
+- Each day MUST include:
+  * "what_to_expect": A detailed paragraph (3-4 sentences) describing what the client will experience, see, and feel on this day. Include cultural context, highlights, and what makes this day special.
+  * "optional_activities": An array of 2-4 optional activities that clients can choose to add (e.g., spa treatments, additional tours, special dining experiences, adventure activities)
 - Keep tone elegant and premium
 - Ensure logical travel flow between destinations
+- Make activities detailed and specific (not generic)
 - Make each option diverse (e.g., cultural heritage, wildlife & nature, beach & relaxation, adventure, wellness/ayurveda)
 - VARY the themes, focus areas, and experiences significantly from any previous suggestions
 - Be creative and offer unique perspectives on Sri Lanka travel
@@ -162,6 +166,12 @@ Format your response as a valid JSON object with this exact structure:
             "Airport meet and greet",
             "Private transfer to hotel",
             "Relax and unwind"
+          ],
+          "what_to_expect": "A warm welcome upon arrival with personalized service. Your private chauffeur will assist with luggage and provide insights about your journey ahead. Settle into your luxury accommodation and prepare for an extraordinary experience.",
+          "optional_activities": [
+            "Sunset cruise in Colombo harbor",
+            "Evening spa treatment",
+            "Dinner at a fine dining restaurant"
           ]
         },
         {
@@ -172,6 +182,12 @@ Format your response as a valid JSON object with this exact structure:
             "City tour",
             "Visit local markets",
             "Evening at leisure"
+          ],
+          "what_to_expect": "Discover the vibrant capital city with its blend of colonial architecture and modern developments. Experience the local culture, cuisine, and shopping opportunities.",
+          "optional_activities": [
+            "Visit Gangaramaya Temple",
+            "Shopping at Odel or Barefoot",
+            "Cooking class experience"
           ]
         }
       ]
@@ -184,7 +200,9 @@ Format your response as a valid JSON object with this exact structure:
           "day": 1,
           "title": "Arrival",
           "location": "Colombo",
-          "activities": ["Activity 1", "Activity 2"]
+          "activities": ["Activity 1", "Activity 2"],
+          "what_to_expect": "Description of what to expect on this day",
+          "optional_activities": ["Optional activity 1", "Optional activity 2"]
         }
       ]
     },
@@ -196,7 +214,9 @@ Format your response as a valid JSON object with this exact structure:
           "day": 1,
           "title": "Arrival",
           "location": "Colombo",
-          "activities": ["Activity 1", "Activity 2"]
+          "activities": ["Activity 1", "Activity 2"],
+          "what_to_expect": "Description of what to expect on this day",
+          "optional_activities": ["Optional activity 1", "Optional activity 2"]
         }
       ]
     }

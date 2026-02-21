@@ -8,6 +8,8 @@ interface Day {
   title: string
   location: string
   activities: string[]
+  optional_activities?: string[]
+  what_to_expect?: string
 }
 
 interface ItineraryOption {
