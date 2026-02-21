@@ -137,8 +137,30 @@ export async function POST(request: Request) {
     }
 
     // Build itinerary URL
-    const baseUrl = "https://admin.lankalux.com"
+    // Use NEXT_PUBLIC_SITE_URL if available, otherwise construct from VERCEL_URL or use default
+    // The public URL should be the public-facing domain, not the admin panel
+    let baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+    if (!baseUrl) {
+      if (process.env.VERCEL_URL) {
+        baseUrl = `https://${process.env.VERCEL_URL}`
+      } else {
+        // Default to public domain (not admin subdomain)
+        baseUrl = "https://lankalux.com"
+      }
+    }
+    // Ensure baseUrl doesn't have trailing slash
+    baseUrl = baseUrl.replace(/\/$/, '')
     const itineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}`
+    
+    console.log('Itinerary URL generated:', {
+      baseUrl,
+      itineraryUrl,
+      publicToken: requestData.public_token,
+      envVars: {
+        NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+        VERCEL_URL: process.env.VERCEL_URL
+      }
+    })
 
     // Create email transporter
     // For Zoho Mail, ensure you're using an App Password, not your regular account password
