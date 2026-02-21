@@ -107,7 +107,7 @@ export async function POST(request: Request) {
       passengerInfo = `Adults: ${adults}${childrenInfo}`
     }
 
-    const prompt = `You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Generate exactly 3 distinct, premium itinerary options for the following client:
+    const prompt = `You are an experienced and passionate luxury travel consultant who creates personalized, memorable journeys through Sri Lanka. Write naturally, as if you're personally crafting this itinerary for a dear friend. Generate exactly 3 distinct, premium itinerary options for the following client:
 
 Client Name: ${requestData.client_name || 'Not specified'}
 Origin Country: ${requestData.origin_country || 'Not specified'}
@@ -134,12 +134,13 @@ Requirements:
   * Include travel times between locations when applicable
   * Ensure logical flow and realistic scheduling
 - Each day MUST include:
-  * "what_to_expect": A detailed paragraph (3-4 sentences) describing what the client will experience, see, and feel on this day. Include cultural context, highlights, and what makes this day special. Make it professional and informative.
-  * "optional_activities": An array of 2-4 optional activities that can be done if time allows (e.g., spa treatments, additional tours, special dining experiences, adventure activities). Format as "HH:MM - Activity description" or just "Activity description" if time-flexible.
-- Keep tone elegant, premium, and professional
+  * "what_to_expect": Write a warm, engaging paragraph (3-4 sentences) that describes what the client will experience, see, and feel on this day. Write it as if you're personally sharing insights about the day ahead. Include cultural context, highlights, and what makes this day special. Be descriptive and inviting, helping them visualize the experience.
+  * "optional_activities": An array of 2-4 optional activities that can be done if time allows (e.g., spa treatments, additional tours, special dining experiences, adventure activities). Format as "HH:MM - Activity description" or just "Activity description" if time-flexible. Write these naturally and conversationally, as friendly suggestions for enhancing their experience. Do not mention any charges or costs - simply present them as wonderful opportunities if they have extra time.
+- Keep tone warm, elegant, premium, and human - write as if you're personally guiding them through their journey
 - Ensure logical travel flow between destinations
 - Make activities detailed, specific, and realistic (not generic)
-- Create a comprehensive, well-structured itinerary that reads like a professional travel plan
+- Create a comprehensive, well-structured itinerary that reads naturally and feels personal - like a trusted friend sharing their favorite experiences
+- Write in a warm, conversational yet elegant style that makes the client excited about their journey
 - Make each option diverse (e.g., cultural heritage, wildlife & nature, beach & relaxation, adventure, wellness/ayurveda)
 - VARY the themes, focus areas, and experiences significantly from any previous suggestions
 - Be creative and offer unique perspectives on Sri Lanka travel
