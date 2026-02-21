@@ -241,6 +241,8 @@ export async function POST(request: Request) {
               height: 80px;
               margin: 0 auto 20px;
               display: block;
+              border-radius: 50%;
+              object-fit: cover;
             }
             .header h1 {
               color: #c8a45d;
@@ -509,47 +511,6 @@ export async function POST(request: Request) {
                 </div>` : ''}
               </div>
               
-              ${selectedOption.summary ? `
-              <div class="what-to-expect">
-                <h3>Journey Overview</h3>
-                <p style="font-size: 15px; color: #555; line-height: 1.8;">${selectedOption.summary}</p>
-              </div>
-              ` : ''}
-              
-              ${selectedOption.days && Array.isArray(selectedOption.days) && selectedOption.days.length > 0 ? `
-              <div class="journey-overview">
-                <h3>Your Journey Timeline</h3>
-                ${selectedOption.days.map((day: any, index: number) => {
-                  const activities = Array.isArray(day.activities) ? day.activities : [];
-                  return `
-                    <div class="day-section">
-                      <div class="day-header">
-                        <div class="day-number">${day.day || index + 1}</div>
-                        <div class="day-title">${day.title || `Day ${day.day || index + 1}`}</div>
-                      </div>
-                      ${day.location ? `<div class="day-location">📍 ${day.location}</div>` : ''}
-                      ${activities.length > 0 ? `
-                        <div class="activities-list">
-                          ${activities.map((activity: string) => `
-                            <div class="activity-item">${activity}</div>
-                          `).join('')}
-                        </div>
-                      ` : ''}
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-              ` : ''}
-              
-              <div class="what-to-expect">
-                <h3>What to Expect</h3>
-                <div class="expect-item">Personalized experiences tailored to your preferences</div>
-                <div class="expect-item">Expert local guides and seamless transportation</div>
-                <div class="expect-item">Authentic cultural encounters and breathtaking landscapes</div>
-                <div class="expect-item">Premium accommodations and dining experiences</div>
-                <div class="expect-item">24/7 support throughout your journey</div>
-              </div>
-              
               <div class="cta-section">
                 <a href="${itineraryUrl}" class="journey-link">View Your Complete Journey</a>
               </div>
@@ -576,34 +537,6 @@ export async function POST(request: Request) {
       </html>
     `
 
-    // Build plain text version with journey details
-    let journeyDetailsText = ''
-    if (selectedOption.summary) {
-      journeyDetailsText += `\n\nJOURNEY OVERVIEW:\n${selectedOption.summary}\n`
-    }
-    
-    if (selectedOption.days && Array.isArray(selectedOption.days) && selectedOption.days.length > 0) {
-      journeyDetailsText += `\n\nYOUR JOURNEY TIMELINE:\n`
-      selectedOption.days.forEach((day: any, index: number) => {
-        journeyDetailsText += `\nDay ${day.day || index + 1}: ${day.title || `Day ${day.day || index + 1}`}`
-        if (day.location) {
-          journeyDetailsText += `\n📍 Location: ${day.location}`
-        }
-        if (Array.isArray(day.activities) && day.activities.length > 0) {
-          day.activities.forEach((activity: string) => {
-            journeyDetailsText += `\n  • ${activity}`
-          })
-        }
-      })
-    }
-    
-    journeyDetailsText += `\n\nWHAT TO EXPECT:\n`
-    journeyDetailsText += `✓ Personalized experiences tailored to your preferences\n`
-    journeyDetailsText += `✓ Expert local guides and seamless transportation\n`
-    journeyDetailsText += `✓ Authentic cultural encounters and breathtaking landscapes\n`
-    journeyDetailsText += `✓ Premium accommodations and dining experiences\n`
-    journeyDetailsText += `✓ 24/7 support throughout your journey\n`
-    
     const emailText = `
 Dear ${requestData.client_name || 'Valued Client'},
 
@@ -613,7 +546,6 @@ TRAVEL DETAILS:
 Travel Dates: ${startDateFormatted} - ${endDateFormatted}
 Selected Journey: ${selectedOption.title}
 ${requestData.duration ? `Duration: ${requestData.duration} Days` : ''}
-${journeyDetailsText}
 
 View your complete journey here: ${itineraryUrl}
 
