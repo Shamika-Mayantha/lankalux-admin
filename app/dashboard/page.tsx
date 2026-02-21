@@ -147,13 +147,9 @@ export default function DashboardPage() {
         <div className="flex justify-between items-center mb-6 bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 shadow-lg animate-fade-in">
           <div className="flex items-center gap-4">
             <img 
-              src="/logo.png" 
+              src="/favicon.png" 
               alt="LankaLux Logo" 
               className="h-12 w-12 object-contain"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
             />
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-[#d4af37] to-[#b8941f] bg-clip-text text-transparent">

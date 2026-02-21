@@ -152,13 +152,9 @@ export default function PublicItineraryPage() {
           <div className="text-center">
             <div className="flex justify-center items-center gap-4 mb-4">
               <img 
-                src="/logo.png" 
+                src="/favicon.png" 
                 alt="LankaLux Logo" 
                 className="h-16 w-16 object-contain"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
               />
               <h1 className="text-4xl font-bold bg-gradient-to-r from-[#d4af37] to-[#b8941f] bg-clip-text text-transparent">
                 LankaLux

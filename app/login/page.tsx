@@ -65,14 +65,9 @@ export default function LoginPage() {
           <div className="flex justify-center mb-6">
             <div className="relative">
               <img 
-                src="/logo.png" 
+                src="/favicon.png" 
                 alt="LankaLux Logo" 
                 className="h-20 w-20 object-contain animate-fade-in"
-                onError={(e) => {
-                  // Fallback if logo doesn't exist
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
               />
             </div>
           </div>

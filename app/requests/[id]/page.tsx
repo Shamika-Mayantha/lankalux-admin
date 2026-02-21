@@ -793,8 +793,8 @@ LankaLux Team`
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-[#0a0a0a] to-black" style={{ zoom: 0.75 }}>
-      <div className="max-w-[98%] mx-auto px-3 sm:px-4 lg:px-6 py-4">
+    <div className="min-h-screen bg-gradient-to-br from-black via-[#0a0a0a] to-black">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
         <div className="mb-6 bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 shadow-lg animate-fade-in">
           <div className="flex items-center justify-between mb-4">
@@ -821,13 +821,9 @@ LankaLux Team`
           </div>
           <div className="flex items-center gap-4">
             <img 
-              src="/logo.png" 
+              src="/favicon.png" 
               alt="LankaLux Logo" 
               className="h-12 w-12 object-contain"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
             />
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-[#d4af37] to-[#b8941f] bg-clip-text text-transparent">
