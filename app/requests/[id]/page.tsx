@@ -14,6 +14,7 @@ interface Request {
   origin_country: string | null
   details: string | null
   status: string | null
+  itinerary: string | null
   created_at: string
 }
 
@@ -23,6 +24,11 @@ export default function RequestDetailsPage() {
   const [request, setRequest] = useState<Request | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [itinerary, setItinerary] = useState<string | null>(null)
+  const [editingItinerary, setEditingItinerary] = useState<string>('')
+  const [isEditing, setIsEditing] = useState(false)
+  const [generatingItinerary, setGeneratingItinerary] = useState(false)
+  const [savingItinerary, setSavingItinerary] = useState(false)
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -56,6 +62,8 @@ export default function RequestDetailsPage() {
         }
 
         setRequest(data)
+        setItinerary(data.itinerary || null)
+        setEditingItinerary(data.itinerary || '')
         setLoading(false)
       } catch (err) {
         console.error('Unexpected error fetching request:', err)
@@ -98,6 +106,156 @@ export default function RequestDetailsPage() {
     if (statusLower === 'approved' || statusLower === 'confirmed') return 'bg-green-900/30'
     if (statusLower === 'rejected' || statusLower === 'cancelled') return 'bg-red-900/30'
     return 'bg-gray-800'
+  }
+
+  const generateSampleItineraries = () => {
+    const option1 = `OPTION 1: CLASSIC SRI LANKA TOUR
+
+Day 1: Arrival in Colombo
+- Airport pickup and transfer to hotel
+- Welcome dinner at a local restaurant
+- Overnight in Colombo
+
+Day 2: Colombo City Tour → Kandy
+- Morning city tour of Colombo
+- Visit Gangaramaya Temple
+- Drive to Kandy (3 hours)
+- Evening: Cultural show with traditional dance
+- Overnight in Kandy
+
+Day 3: Kandy → Nuwara Eliya
+- Visit Temple of the Sacred Tooth Relic
+- Royal Botanical Gardens
+- Scenic train ride to Nuwara Eliya
+- Overnight in Nuwara Eliya
+
+Day 4: Nuwara Eliya → Yala
+- Visit tea plantations
+- Drive to Yala National Park
+- Evening safari (if time permits)
+- Overnight near Yala
+
+Day 5: Yala → Galle
+- Morning safari in Yala National Park
+- Drive to Galle (4 hours)
+- Explore Galle Fort
+- Overnight in Galle
+
+Day 6: Galle → Departure
+- Beach time in Unawatuna
+- Transfer to airport for departure`
+
+    const option2 = `OPTION 2: ADVENTURE & NATURE TOUR
+
+Day 1: Arrival in Colombo
+- Airport pickup and transfer
+- Briefing session
+- Overnight in Colombo
+
+Day 2: Colombo → Sigiriya
+- Early morning drive to Sigiriya (5 hours)
+- Afternoon: Climb Sigiriya Rock Fortress
+- Visit Dambulla Cave Temple
+- Overnight in Sigiriya
+
+Day 3: Sigiriya → Kandy
+- Morning: Minneriya National Park safari
+- Drive to Kandy
+- Visit Spice Garden
+- Overnight in Kandy
+
+Day 4: Kandy → Ella
+- Scenic train journey to Ella (one of the world's most beautiful train rides)
+- Visit Nine Arch Bridge
+- Hiking to Little Adam's Peak
+- Overnight in Ella
+
+Day 5: Ella → Mirissa
+- Drive to Mirissa
+- Whale watching tour (seasonal)
+- Beach relaxation
+- Overnight in Mirissa
+
+Day 6: Mirissa → Galle → Departure
+- Visit Galle Fort
+- Beach activities
+- Transfer to airport for departure`
+
+    return `${option1}\n\n${'='.repeat(60)}\n\n${option2}`
+  }
+
+  const handleGenerateItinerary = async () => {
+    if (!request) return
+
+    try {
+      setGeneratingItinerary(true)
+      
+      // Generate 2 sample itinerary options
+      const generatedItinerary = generateSampleItineraries()
+
+      // Save to Supabase
+      const { error } = await supabase
+        .from('requests')
+        .update({ itinerary: generatedItinerary })
+        .eq('id', request.id)
+
+      if (error) {
+        console.error('Error saving itinerary:', error)
+        alert('Failed to save itinerary. Please try again.')
+        setGeneratingItinerary(false)
+        return
+      }
+
+      // Update local state
+      setItinerary(generatedItinerary)
+      setEditingItinerary(generatedItinerary)
+      setRequest({ ...request, itinerary: generatedItinerary })
+      setGeneratingItinerary(false)
+    } catch (err) {
+      console.error('Unexpected error generating itinerary:', err)
+      alert('An unexpected error occurred. Please try again.')
+      setGeneratingItinerary(false)
+    }
+  }
+
+  const handleSaveItinerary = async () => {
+    if (!request) return
+
+    try {
+      setSavingItinerary(true)
+
+      const { error } = await supabase
+        .from('requests')
+        .update({ itinerary: editingItinerary || null })
+        .eq('id', request.id)
+
+      if (error) {
+        console.error('Error updating itinerary:', error)
+        alert('Failed to save changes. Please try again.')
+        setSavingItinerary(false)
+        return
+      }
+
+      // Update local state
+      setItinerary(editingItinerary || null)
+      setRequest({ ...request, itinerary: editingItinerary || null })
+      setIsEditing(false)
+      setSavingItinerary(false)
+    } catch (err) {
+      console.error('Unexpected error saving itinerary:', err)
+      alert('An unexpected error occurred. Please try again.')
+      setSavingItinerary(false)
+    }
+  }
+
+  const handleEditItinerary = () => {
+    setEditingItinerary(itinerary || '')
+    setIsEditing(true)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingItinerary(itinerary || '')
+    setIsEditing(false)
   }
 
   if (loading) {
@@ -253,6 +411,116 @@ export default function RequestDetailsPage() {
                 </div>
               </div>
             )}
+
+            {/* Itinerary Section */}
+            <div className="pt-6 border-t border-[#333]">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-semibold text-[#d4af37]">Itinerary</h2>
+                {!itinerary && !isEditing && (
+                  <button
+                    onClick={handleGenerateItinerary}
+                    disabled={generatingItinerary}
+                    className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {generatingItinerary ? (
+                      <>
+                        <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 4v16m8-8H4"
+                          />
+                        </svg>
+                        Generate Itinerary
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {generatingItinerary && !itinerary ? (
+                <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-8">
+                  <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#d4af37] mb-4"></div>
+                    <p className="text-gray-400">Generating itinerary options...</p>
+                  </div>
+                </div>
+              ) : isEditing ? (
+                <div className="space-y-4">
+                  <textarea
+                    value={editingItinerary}
+                    onChange={(e) => setEditingItinerary(e.target.value)}
+                    className="w-full h-96 bg-[#0a0a0a] border border-[#333] rounded-md p-4 text-gray-300 font-mono text-sm focus:outline-none focus:border-[#d4af37] transition-colors duration-200 resize-y"
+                    placeholder="Enter itinerary details..."
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleSaveItinerary}
+                      disabled={savingItinerary}
+                      className="px-6 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {savingItinerary ? (
+                        <>
+                          <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Changes'
+                      )}
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={savingItinerary}
+                      className="px-6 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : itinerary ? (
+                <div className="space-y-4">
+                  <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-4">
+                    <p className="text-gray-300 whitespace-pre-wrap font-mono text-sm">{itinerary}</p>
+                  </div>
+                  <button
+                    onClick={handleEditItinerary}
+                    className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                    Edit Itinerary
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-8">
+                  <p className="text-gray-400 text-center">No itinerary generated yet. Click "Generate Itinerary" to create one.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
