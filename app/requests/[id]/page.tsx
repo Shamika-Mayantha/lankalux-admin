@@ -571,11 +571,11 @@ LankaLux Team`
                       onChange={(e) => setStatusValue(e.target.value)}
                       className="px-3 py-1 bg-[#0a0a0a] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
                     >
-                      <option value="new">new</option>
-                      <option value="follow_up">follow_up</option>
-                      <option value="sold">sold</option>
-                      <option value="after_sales">after_sales</option>
-                      <option value="cancelled">cancelled</option>
+                      <option value="new">NEW</option>
+                      <option value="follow_up">FOLLOW_UP</option>
+                      <option value="sold">SOLD</option>
+                      <option value="after_sales">AFTER_SALES</option>
+                      <option value="cancelled">CANCELLED</option>
                     </select>
                     <button
                       onClick={handleSaveStatus}
