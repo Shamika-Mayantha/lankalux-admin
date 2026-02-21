@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import nodemailer from 'nodemailer'
+const nodemailer = require('nodemailer')
 
 export async function POST(request: Request) {
   try {
