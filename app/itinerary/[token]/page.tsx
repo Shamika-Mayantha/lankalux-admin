@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
 
 interface Day {
   day: number
@@ -75,24 +74,26 @@ export default function PublicItineraryPage() {
 
         // For backward compatibility: redirect to new format if selected_option exists
         // Otherwise, this route is for old links without option parameter
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        const supabase = createClient(supabaseUrl, supabaseAnonKey)
+        // Use public API endpoint to bypass RLS and allow unauthenticated access
+        const apiUrl = `/api/public-itinerary?token=${encodeURIComponent(token)}`
+        const response = await fetch(apiUrl)
 
-        const { data, error } = await supabase
-          .from('requests')
-          .select('id, client_name, start_date, end_date, duration, itineraryoptions, selected_option')
-          .eq('public_token', token)
-          .single()
-
-        if (error || !data) {
-          console.error('Error fetching itinerary:', error)
+        if (!response.ok) {
+          console.error('Error fetching itinerary from API:', response.status, response.statusText)
           setNotFound(true)
           setLoading(false)
           return
         }
 
-        const requestData = data as any
+        const apiData = await response.json()
+        const requestData = apiData.request
+
+        if (!requestData) {
+          console.error('No data found for token:', token)
+          setNotFound(true)
+          setLoading(false)
+          return
+        }
 
         // If selected_option exists, redirect to new URL format with option
         if (requestData.selected_option !== null && requestData.selected_option !== undefined) {
@@ -102,24 +103,22 @@ export default function PublicItineraryPage() {
           }
         }
 
-        // Parse itineraryoptions string to object if it exists
-        if (requestData.itineraryoptions && typeof requestData.itineraryoptions === 'string') {
-          try {
-            requestData.itinerary_options = JSON.parse(requestData.itineraryoptions)
-          } catch (parseError) {
-            console.error('Error parsing itineraryoptions:', parseError)
-            requestData.itinerary_options = null
-          }
-        } else {
-          requestData.itinerary_options = null
-        }
-
-        // Old format: use selected_option from database (backward compatibility)
-        if (!requestData.itinerary_options || requestData.selected_option === null || requestData.selected_option === undefined) {
+        // Parse itineraryoptions from API response
+        const itineraryOptions = apiData.itineraryOptions
+        if (!itineraryOptions || !itineraryOptions.options || itineraryOptions.options.length === 0) {
           setNotFound(true)
           setLoading(false)
           return
         }
+
+        // Old format: use selected_option from database (backward compatibility)
+        if (requestData.selected_option === null || requestData.selected_option === undefined) {
+          setNotFound(true)
+          setLoading(false)
+          return
+        }
+
+        requestData.itinerary_options = itineraryOptions
 
         // Get selected itinerary option
         const selectedOption = requestData.itinerary_options.options?.[requestData.selected_option]

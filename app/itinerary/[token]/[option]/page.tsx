@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
 
 interface Day {
   day: number
@@ -107,72 +106,37 @@ export default function PublicItineraryPage() {
 
         console.log('Fetching itinerary with token:', token, 'option:', optionIndex)
 
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        const supabase = createClient(supabaseUrl, supabaseAnonKey)
+        // Use public API endpoint to bypass RLS and allow unauthenticated access
+        const apiUrl = `/api/public-itinerary?token=${encodeURIComponent(token)}&option=${encodeURIComponent(optionIndex)}`
+        const response = await fetch(apiUrl)
 
-        const { data, error } = await supabase
-          .from('requests')
-          .select('id, client_name, start_date, end_date, duration, itineraryoptions, selected_option')
-          .eq('public_token', token)
-          .single()
-
-        if (error) {
-          console.error('Error fetching itinerary from database:', error)
+        if (!response.ok) {
+          console.error('Error fetching itinerary from API:', response.status, response.statusText)
           setNotFound(true)
           setLoading(false)
           return
         }
 
-        if (!data) {
-          console.error('No data found for token:', token)
+        const apiData = await response.json()
+        const requestData = apiData.request
+        const selectedItineraryOption = apiData.itinerary
+
+        if (!requestData || !selectedItineraryOption) {
+          console.error('No data found for token:', token, 'option:', optionIndex)
           setNotFound(true)
           setLoading(false)
           return
         }
 
-        const requestData = data as any
         console.log('Request data found:', { 
           id: requestData.id, 
-          hasItineraryOptions: !!requestData.itineraryoptions,
+          hasItinerary: !!selectedItineraryOption,
           selectedOption: requestData.selected_option
         })
 
-        // Parse itineraryoptions string to object if it exists
-        if (requestData.itineraryoptions && typeof requestData.itineraryoptions === 'string') {
-          try {
-            requestData.itinerary_options = JSON.parse(requestData.itineraryoptions)
-            console.log('Parsed itinerary options:', {
-              optionsCount: requestData.itinerary_options?.options?.length,
-              requestedOptionIndex: optionIndex
-            })
-          } catch (parseError) {
-            console.error('Error parsing itineraryoptions:', parseError)
-            requestData.itinerary_options = null
-          }
-        } else {
-          requestData.itinerary_options = null
-        }
-
-        if (!requestData.itinerary_options) {
-          console.error('No itinerary options found')
-          setNotFound(true)
-          setLoading(false)
-          return
-        }
-
-        // Get itinerary option from URL parameter (not from database selected_option)
-        const selectedOption = requestData.itinerary_options.options?.[optionIndex]
-        if (!selectedOption) {
-          console.error('Option not found at index:', optionIndex, 'Available options:', requestData.itinerary_options.options?.length)
-          setNotFound(true)
-          setLoading(false)
-          return
-        }
-
-        console.log('Successfully loaded itinerary option:', selectedOption.title)
+        console.log('Successfully loaded itinerary option:', selectedItineraryOption.title)
         setRequest(requestData)
-        setSelectedItinerary(selectedOption)
+        setSelectedItinerary(selectedItineraryOption)
         setLoading(false)
       } catch (err) {
         console.error('Unexpected error fetching itinerary:', err)
