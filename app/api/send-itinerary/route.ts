@@ -286,7 +286,7 @@ LankaLux Team
       })
       
       const emailResult = await transporter.sendMail({
-        from: emailFrom,
+        from: `"LankaLux" <${process.env.SMTP_USER}>`,
         to: requestData.email,
         subject: emailSubject,
         text: emailText,
