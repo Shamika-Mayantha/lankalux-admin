@@ -245,8 +245,20 @@ export default function NewRequestPage() {
                 id="start_date"
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                  const selectedStartDate = e.target.value
+                  // If end date is set and the new start date is after end date, clear end date
+                  if (endDate && selectedStartDate) {
+                    const isValidEndDate = /^\d{4}-\d{2}-\d{2}$/.test(endDate)
+                    const isValidStartDate = /^\d{4}-\d{2}-\d{2}$/.test(selectedStartDate)
+                    if (isValidEndDate && isValidStartDate && selectedStartDate > endDate) {
+                      setEndDate('')
+                    }
+                  }
+                  setStartDate(selectedStartDate)
+                }}
                 min={today}
+                max="2099-12-31"
                 className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
                 disabled={loading}
               />
@@ -263,13 +275,19 @@ export default function NewRequestPage() {
                 value={endDate}
                 onChange={(e) => {
                   const selectedEndDate = e.target.value
-                  if (startDate && selectedEndDate < startDate) {
+                  // Only validate if both dates are complete (valid date format: YYYY-MM-DD)
+                  // Check if the date string matches the expected format and is complete
+                  const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(selectedEndDate)
+                  const isStartDateValid = startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)
+                  
+                  if (isValidDate && isStartDateValid && selectedEndDate < startDate) {
                     alert('End date cannot be before start date')
                     return
                   }
                   setEndDate(selectedEndDate)
                 }}
                 min={startDate || today}
+                max="2099-12-31"
                 className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
                 disabled={loading}
               />
