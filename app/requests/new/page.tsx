@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -8,13 +8,30 @@ export default function NewRequestPage() {
   const [clientName, setClientName] = useState('')
   const [email, setEmail] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
-  const [travelDates, setTravelDates] = useState('')
-  const [duration, setDuration] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [duration, setDuration] = useState<number | null>(null)
   const [originCountry, setOriginCountry] = useState('')
-  const [details, setDetails] = useState('')
+  const [additionalPreferences, setAdditionalPreferences] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      if (end >= start) {
+        const diffTime = Math.abs(end.getTime() - start.getTime())
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        setDuration(diffDays)
+      } else {
+        setDuration(null)
+      }
+    } else {
+      setDuration(null)
+    }
+  }, [startDate, endDate])
 
   const handleSubmit = async () => {
     // Reset error state
@@ -48,10 +65,11 @@ export default function NewRequestPage() {
             client_name: clientName.trim(),
             email: email.trim(),
             whatsapp: whatsapp.trim() || null,
-            travel_dates: travelDates.trim() || null,
-            duration: duration.trim() || null,
+            start_date: startDate || null,
+            end_date: endDate || null,
+            duration: duration || null,
             origin_country: originCountry.trim() || null,
-            details: details.trim() || null,
+            additional_preferences: additionalPreferences.trim() || null,
             status: 'new',
           },
         ] as any)
@@ -162,17 +180,32 @@ export default function NewRequestPage() {
               />
             </div>
 
-            {/* Travel Dates */}
+            {/* Start Date */}
             <div>
-              <label htmlFor="travel_dates" className="block text-sm font-medium text-gray-300 mb-2">
-                Travel Dates
+              <label htmlFor="start_date" className="block text-sm font-medium text-gray-300 mb-2">
+                Start Date
               </label>
               <input
-                id="travel_dates"
-                type="text"
-                value={travelDates}
-                onChange={(e) => setTravelDates(e.target.value)}
-                placeholder="e.g., March 15-25, 2024"
+                id="start_date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                disabled={loading}
+              />
+            </div>
+
+            {/* End Date */}
+            <div>
+              <label htmlFor="end_date" className="block text-sm font-medium text-gray-300 mb-2">
+                End Date
+              </label>
+              <input
+                id="end_date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate || undefined}
                 className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                 disabled={loading}
               />
@@ -181,16 +214,15 @@ export default function NewRequestPage() {
             {/* Duration */}
             <div>
               <label htmlFor="duration" className="block text-sm font-medium text-gray-300 mb-2">
-                Duration
+                Duration (days)
               </label>
               <input
                 id="duration"
                 type="text"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                placeholder="e.g., 10 days"
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
-                disabled={loading}
+                value={duration !== null ? `${duration} days` : ''}
+                readOnly
+                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-gray-400 cursor-not-allowed"
+                disabled={true}
               />
             </div>
 
@@ -210,17 +242,17 @@ export default function NewRequestPage() {
               />
             </div>
 
-            {/* Details */}
+            {/* Additional Preferences */}
             <div>
-              <label htmlFor="details" className="block text-sm font-medium text-gray-300 mb-2">
-                Details
+              <label htmlFor="additional_preferences" className="block text-sm font-medium text-gray-300 mb-2">
+                Additional Preferences
               </label>
               <textarea
-                id="details"
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
+                id="additional_preferences"
+                value={additionalPreferences}
+                onChange={(e) => setAdditionalPreferences(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Enter additional details about the request..."
+                placeholder="e.g., honeymoon, wildlife safari, luxury focus, train journeys, ayurveda retreat, family friendly, adventure"
                 rows={6}
                 className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y"
                 disabled={loading}

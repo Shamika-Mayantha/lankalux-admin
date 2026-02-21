@@ -74,31 +74,54 @@ export async function POST(request: Request) {
     }
 
     // Build prompt for OpenAI
-    const prompt = `Generate 2-3 structured luxury travel itineraries for Sri Lanka based on the following request details:
+    const startDateFormatted = requestData.start_date 
+      ? new Date(requestData.start_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : 'Not specified'
+    const endDateFormatted = requestData.end_date 
+      ? new Date(requestData.end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : 'Not specified'
+
+    const prompt = `You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Generate exactly 3 distinct, premium itinerary options for the following client:
 
 Client Name: ${requestData.client_name || 'Not specified'}
-Travel Dates: ${requestData.travel_dates || 'Not specified'}
-Duration: ${requestData.duration || 'Not specified'}
 Origin Country: ${requestData.origin_country || 'Not specified'}
-Additional Details: ${requestData.details || 'None provided'}
+Start Date: ${startDateFormatted}
+End Date: ${endDateFormatted}
+Duration: ${requestData.duration || 'Not specified'} days
+Additional Preferences: ${requestData.additional_preferences || 'None provided'}
 
 Requirements:
-- Create 2-3 distinct luxury itinerary options
-- Each option should be clearly labeled as "OPTION 1:", "OPTION 2:", and optionally "OPTION 3:"
-- Include a day-by-day breakdown for each option
-- Focus on luxury experiences, premium accommodations, and exclusive activities
-- Consider the travel dates and duration provided
-- Include specific locations, activities, and recommendations
-- Format each day clearly with:
-  - Day number and location
-  - Morning activities
-  - Afternoon activities
-  - Evening experiences
-  - Recommended accommodations (luxury hotels/resorts)
-- Make the itineraries diverse (e.g., cultural, adventure, beach/relaxation, wildlife)
-- Use clear formatting with line breaks and sections
+- Generate EXACTLY 3 distinct luxury itinerary options
+- Each option must be premium, bespoke, and curated
+- Include day-by-day breakdown for each option
+- Suggest specific regions and locations
+- Highlight unique experience highlights
+- Emphasize luxury positioning and premium accommodations
+- Ensure logical travel flow between destinations
+- Make each option diverse (e.g., cultural heritage, wildlife & nature, beach & relaxation, adventure, wellness/ayurveda)
 
-Format the response as plain text with clear sections separated by line breaks.`
+Format your response as a valid JSON object with this exact structure:
+{
+  "options": [
+    {
+      "title": "Option title (e.g., 'Cultural Heritage & Hill Country Luxury')",
+      "days": "Day-by-day breakdown as a formatted string with clear day numbers, locations, activities, and accommodations",
+      "summary": "Brief summary highlighting key experiences, regions covered, and luxury positioning"
+    },
+    {
+      "title": "Option title (e.g., 'Wildlife Safari & Beach Retreat')",
+      "days": "Day-by-day breakdown as a formatted string with clear day numbers, locations, activities, and accommodations",
+      "summary": "Brief summary highlighting key experiences, regions covered, and luxury positioning"
+    },
+    {
+      "title": "Option title (e.g., 'Adventure & Wellness Journey')",
+      "days": "Day-by-day breakdown as a formatted string with clear day numbers, locations, activities, and accommodations",
+      "summary": "Brief summary highlighting key experiences, regions covered, and luxury positioning"
+    }
+  ]
+}
+
+Return ONLY the JSON object, no additional text before or after.`
 
     // Generate itinerary using OpenAI
     const completion = await openai.chat.completions.create({
@@ -107,7 +130,7 @@ Format the response as plain text with clear sections separated by line breaks.`
         {
           role: 'system',
           content:
-            'You are a luxury travel consultant specializing in Sri Lanka. Create detailed, well-structured itineraries with clear formatting.',
+            'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries with clear structure. Always respond with valid JSON only.',
         },
         {
           role: 'user',
@@ -115,23 +138,44 @@ Format the response as plain text with clear sections separated by line breaks.`
         },
       ],
       temperature: 0.7,
-      max_tokens: 2000,
+      max_tokens: 4000,
+      response_format: { type: 'json_object' },
     })
 
-    const generatedItinerary =
+    const generatedContent =
       completion.choices[0]?.message?.content?.trim() || ''
 
-    if (!generatedItinerary) {
+    if (!generatedContent) {
       return NextResponse.json(
         { success: false, error: 'Failed to generate itinerary' },
         { status: 500 }
       )
     }
 
-    // Save generated itinerary to database
+    // Parse JSON response
+    let itineraryOptions
+    try {
+      itineraryOptions = JSON.parse(generatedContent)
+      
+      // Validate structure
+      if (!itineraryOptions.options || !Array.isArray(itineraryOptions.options) || itineraryOptions.options.length !== 3) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid itinerary format: expected 3 options' },
+          { status: 500 }
+        )
+      }
+    } catch (parseError) {
+      console.error('Error parsing JSON:', parseError)
+      return NextResponse.json(
+        { success: false, error: 'Failed to parse itinerary response' },
+        { status: 500 }
+      )
+    }
+
+    // Save generated itinerary options to database
     const { error: updateError } = await supabase
       .from('requests')
-      .update({ itinerary: generatedItinerary })
+      .update({ itinerary_options: itineraryOptions })
       .eq('id', requestId)
 
     if (updateError) {

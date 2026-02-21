@@ -4,18 +4,33 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+interface ItineraryOption {
+  title: string
+  days: string
+  summary: string
+}
+
+interface ItineraryOptions {
+  options: ItineraryOption[]
+}
+
 interface Request {
   id: string
   client_name: string | null
   email: string | null
   whatsapp: string | null
-  travel_dates: string | null
-  duration: string | null
+  start_date: string | null
+  end_date: string | null
+  duration: number | null
   origin_country: string | null
-  details: string | null
+  additional_preferences: string | null
+  itinerary_options: ItineraryOptions | null
+  selected_option: number | null
+  public_token: string | null
   status: string | null
-  itinerary: string | null
+  notes: string | null
   created_at: string
+  updated_at: string | null
 }
 
 export default function RequestDetailsPage() {
@@ -24,11 +39,13 @@ export default function RequestDetailsPage() {
   const [request, setRequest] = useState<Request | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [itinerary, setItinerary] = useState<string | null>(null)
-  const [editingItinerary, setEditingItinerary] = useState<string>('')
-  const [isEditing, setIsEditing] = useState(false)
   const [generatingItinerary, setGeneratingItinerary] = useState(false)
-  const [savingItinerary, setSavingItinerary] = useState(false)
+  const [selectingOption, setSelectingOption] = useState<number | null>(null)
+  const [editingStatus, setEditingStatus] = useState(false)
+  const [editingNotes, setEditingNotes] = useState(false)
+  const [statusValue, setStatusValue] = useState('')
+  const [notesValue, setNotesValue] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -62,10 +79,9 @@ export default function RequestDetailsPage() {
         }
 
         const requestData = data as any
-
         setRequest(requestData)
-        setItinerary(requestData.itinerary || null)
-        setEditingItinerary(requestData.itinerary || '')
+        setStatusValue(requestData.status || '')
+        setNotesValue(requestData.notes || '')
         setLoading(false)
       } catch (err) {
         console.error('Unexpected error fetching request:', err)
@@ -84,8 +100,6 @@ export default function RequestDetailsPage() {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
       })
     } catch {
       return dateString
@@ -95,7 +109,7 @@ export default function RequestDetailsPage() {
   const getStatusColor = (status: string | null) => {
     if (!status) return 'text-gray-400'
     const statusLower = status.toLowerCase()
-    if (statusLower === 'pending') return 'text-yellow-400'
+    if (statusLower === 'pending' || statusLower === 'new') return 'text-yellow-400'
     if (statusLower === 'approved' || statusLower === 'confirmed') return 'text-green-400'
     if (statusLower === 'rejected' || statusLower === 'cancelled') return 'text-red-400'
     return 'text-gray-400'
@@ -104,7 +118,7 @@ export default function RequestDetailsPage() {
   const getStatusBgColor = (status: string | null) => {
     if (!status) return 'bg-gray-800'
     const statusLower = status.toLowerCase()
-    if (statusLower === 'pending') return 'bg-yellow-900/30'
+    if (statusLower === 'pending' || statusLower === 'new') return 'bg-yellow-900/30'
     if (statusLower === 'approved' || statusLower === 'confirmed') return 'bg-green-900/30'
     if (statusLower === 'rejected' || statusLower === 'cancelled') return 'bg-red-900/30'
     return 'bg-gray-800'
@@ -131,7 +145,6 @@ export default function RequestDetailsPage() {
     try {
       setGeneratingItinerary(true)
 
-      // Call the API to generate itinerary
       const response = await fetch('/api/generate-itinerary', {
         method: 'POST',
         headers: {
@@ -150,7 +163,6 @@ export default function RequestDetailsPage() {
         return
       }
 
-      // Refetch updated request from Supabase
       const updatedRequest = await fetchRequestData(request.id)
 
       if (!updatedRequest) {
@@ -159,10 +171,7 @@ export default function RequestDetailsPage() {
         return
       }
 
-      // Update local state with fetched data
       setRequest(updatedRequest)
-      setItinerary(updatedRequest.itinerary || null)
-      setEditingItinerary(updatedRequest.itinerary || '')
       setGeneratingItinerary(false)
     } catch (err) {
       console.error('Unexpected error generating itinerary:', err)
@@ -171,43 +180,156 @@ export default function RequestDetailsPage() {
     }
   }
 
-  const handleSaveItinerary = async () => {
+  const handleSelectOption = async (optionIndex: number) => {
     if (!request) return
 
     try {
-      setSavingItinerary(true)
+      setSelectingOption(optionIndex)
+
+      // Generate public token if it doesn't exist
+      let publicToken = request.public_token
+      if (!publicToken) {
+        publicToken = crypto.randomUUID()
+      }
 
       const { error } = await (supabase.from('requests') as any)
-        .update({ itinerary: editingItinerary || null })
+        .update({
+          selected_option: optionIndex,
+          public_token: publicToken,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', request.id)
 
       if (error) {
-        console.error('Error updating itinerary:', error)
-        alert('Failed to save changes. Please try again.')
-        setSavingItinerary(false)
+        console.error('Error selecting option:', error)
+        alert('Failed to select option. Please try again.')
+        setSelectingOption(null)
         return
       }
 
-      // Update local state
-      setItinerary(editingItinerary || null)
-      setRequest({ ...request, itinerary: editingItinerary || null })
-      setIsEditing(false)
-      setSavingItinerary(false)
+      const updatedRequest = await fetchRequestData(request.id)
+      if (updatedRequest) {
+        setRequest(updatedRequest)
+      }
+      setSelectingOption(null)
     } catch (err) {
-      console.error('Unexpected error saving itinerary:', err)
+      console.error('Unexpected error selecting option:', err)
       alert('An unexpected error occurred. Please try again.')
-      setSavingItinerary(false)
+      setSelectingOption(null)
     }
   }
 
-  const handleEditItinerary = () => {
-    setEditingItinerary(itinerary || '')
-    setIsEditing(true)
+  const handleSaveStatus = async () => {
+    if (!request) return
+
+    try {
+      setSaving(true)
+      const { error } = await (supabase.from('requests') as any)
+        .update({
+          status: statusValue || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+
+      if (error) {
+        console.error('Error updating status:', error)
+        alert('Failed to save status. Please try again.')
+        setSaving(false)
+        return
+      }
+
+      const updatedRequest = await fetchRequestData(request.id)
+      if (updatedRequest) {
+        setRequest(updatedRequest)
+      }
+      setEditingStatus(false)
+      setSaving(false)
+    } catch (err) {
+      console.error('Unexpected error saving status:', err)
+      alert('An unexpected error occurred. Please try again.')
+      setSaving(false)
+    }
   }
 
-  const handleCancelEdit = () => {
-    setEditingItinerary(itinerary || '')
-    setIsEditing(false)
+  const handleSaveNotes = async () => {
+    if (!request) return
+
+    try {
+      setSaving(true)
+      const { error } = await (supabase.from('requests') as any)
+        .update({
+          notes: notesValue || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+
+      if (error) {
+        console.error('Error updating notes:', error)
+        alert('Failed to save notes. Please try again.')
+        setSaving(false)
+        return
+      }
+
+      const updatedRequest = await fetchRequestData(request.id)
+      if (updatedRequest) {
+        setRequest(updatedRequest)
+      }
+      setEditingNotes(false)
+      setSaving(false)
+    } catch (err) {
+      console.error('Unexpected error saving notes:', err)
+      alert('An unexpected error occurred. Please try again.')
+      setSaving(false)
+    }
+  }
+
+  const handleSendLink = () => {
+    if (!request || !request.public_token) {
+      alert('Please select an itinerary option first to generate a shareable link.')
+      return
+    }
+
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+    const itineraryUrl = `${baseUrl}/itinerary/${request.public_token}`
+
+    const subject = encodeURIComponent('Your LankaLux Sri Lanka Itinerary')
+    const body = encodeURIComponent(
+      `Dear ${request.client_name || 'Valued Client'},
+
+We are delighted to share your personalized Sri Lanka itinerary with you.
+
+View your itinerary here: ${itineraryUrl}
+
+This link provides access to your selected itinerary option. If you have any questions or would like to discuss modifications, please don't hesitate to reach out.
+
+We look forward to creating an unforgettable experience for you in Sri Lanka.
+
+Best regards,
+LankaLux Team`
+    )
+
+    window.location.href = `mailto:${request.email || ''}?subject=${subject}&body=${body}`
+  }
+
+  const handleWhatsAppShare = () => {
+    if (!request || !request.public_token) {
+      alert('Please select an itinerary option first to generate a shareable link.')
+      return
+    }
+
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+    const itineraryUrl = `${baseUrl}/itinerary/${request.public_token}`
+
+    const message = encodeURIComponent(
+      `Your personalized LankaLux Sri Lanka itinerary is ready! View it here: ${itineraryUrl}`
+    )
+
+    const whatsappNumber = request.whatsapp?.replace(/[^0-9]/g, '') || ''
+    if (whatsappNumber) {
+      window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank')
+    } else {
+      alert('WhatsApp number not available for this client.')
+    }
   }
 
   if (loading) {
@@ -238,9 +360,11 @@ export default function RequestDetailsPage() {
     )
   }
 
+  const itineraryOptions = request.itinerary_options?.options || []
+
   return (
     <div className="min-h-screen bg-black">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <button
@@ -272,17 +396,55 @@ export default function RequestDetailsPage() {
         </div>
 
         {/* Request Details Card */}
-        <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8">
+        <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8 mb-8">
           <div className="space-y-6">
             {/* Status Badge */}
             <div className="flex items-center justify-between pb-6 border-b border-[#333]">
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Status</p>
-                <span
-                  className={`inline-block px-4 py-2 rounded-md font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current/20`}
-                >
-                  {request.status || 'Pending'}
-                </span>
+                {editingStatus ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={statusValue}
+                      onChange={(e) => setStatusValue(e.target.value)}
+                      className="px-3 py-1 bg-[#0a0a0a] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
+                      placeholder="e.g., pending, confirmed"
+                    />
+                    <button
+                      onClick={handleSaveStatus}
+                      disabled={saving}
+                      className="px-3 py-1 bg-[#d4af37] hover:bg-[#b8941f] text-black text-sm font-semibold rounded-md disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setStatusValue(request.status || '')
+                        setEditingStatus(false)
+                      }}
+                      className="px-3 py-1 bg-[#333] hover:bg-[#444] text-white text-sm font-semibold rounded-md"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-block px-4 py-2 rounded-md font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current/20`}
+                    >
+                      {request.status || 'Pending'}
+                    </span>
+                    <button
+                      onClick={() => setEditingStatus(true)}
+                      className="text-gray-400 hover:text-[#d4af37] transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Created At</p>
@@ -342,138 +504,203 @@ export default function RequestDetailsPage() {
             {/* Travel Information */}
             <div className="pt-6 border-t border-[#333]">
               <h2 className="text-2xl font-semibold text-[#d4af37] mb-4">Travel Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Travel Dates</p>
-                  <p className="text-gray-300">{request.travel_dates || 'N/A'}</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Start Date</p>
+                  <p className="text-gray-300">{formatDate(request.start_date)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">End Date</p>
+                  <p className="text-gray-300">{formatDate(request.end_date)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Duration</p>
-                  <p className="text-gray-300">{request.duration || 'N/A'}</p>
+                  <p className="text-gray-300">{request.duration ? `${request.duration} days` : 'N/A'}</p>
                 </div>
               </div>
             </div>
 
-            {/* Details */}
-            {request.details && (
+            {/* Additional Preferences */}
+            {request.additional_preferences && (
               <div className="pt-6 border-t border-[#333]">
-                <h2 className="text-2xl font-semibold text-[#d4af37] mb-4">Additional Details</h2>
+                <h2 className="text-2xl font-semibold text-[#d4af37] mb-4">Additional Preferences</h2>
                 <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-4">
-                  <p className="text-gray-300 whitespace-pre-wrap">{request.details}</p>
+                  <p className="text-gray-300 whitespace-pre-wrap">{request.additional_preferences}</p>
                 </div>
               </div>
             )}
 
-            {/* Itinerary Section */}
+            {/* Notes */}
             <div className="pt-6 border-t border-[#333]">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-semibold text-[#d4af37]">Itinerary</h2>
-                {!itinerary && !isEditing && (
-                  <button
-                    onClick={handleGenerateItinerary}
-                    disabled={generatingItinerary}
-                    className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {generatingItinerary ? (
-                      <>
-                        <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                        Generate Itinerary
-                      </>
-                    )}
-                  </button>
-                )}
+                <h2 className="text-2xl font-semibold text-[#d4af37]">Notes</h2>
               </div>
-
-              {generatingItinerary && !itinerary ? (
-                <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-8">
-                  <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#d4af37] mb-4"></div>
-                    <p className="text-gray-400">Generating itinerary options...</p>
-                  </div>
-                </div>
-              ) : isEditing ? (
-                <div className="space-y-4">
+              {editingNotes ? (
+                <div className="space-y-3">
                   <textarea
-                    value={editingItinerary}
-                    onChange={(e) => setEditingItinerary(e.target.value)}
-                    className="w-full h-96 bg-[#0a0a0a] border border-[#333] rounded-md p-4 text-gray-300 font-mono text-sm focus:outline-none focus:border-[#d4af37] transition-colors duration-200 resize-y"
-                    placeholder="Enter itinerary details..."
+                    value={notesValue}
+                    onChange={(e) => setNotesValue(e.target.value)}
+                    className="w-full h-32 bg-[#0a0a0a] border border-[#333] rounded-md p-4 text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#d4af37] resize-y"
+                    placeholder="Add internal notes..."
                   />
-                  <div className="flex gap-3">
+                  <div className="flex gap-2">
                     <button
-                      onClick={handleSaveItinerary}
-                      disabled={savingItinerary}
-                      className="px-6 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      onClick={handleSaveNotes}
+                      disabled={saving}
+                      className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md disabled:opacity-50"
                     >
-                      {savingItinerary ? (
-                        <>
-                          <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
-                          Saving...
-                        </>
-                      ) : (
-                        'Save Changes'
-                      )}
+                      Save
                     </button>
                     <button
-                      onClick={handleCancelEdit}
-                      disabled={savingItinerary}
-                      className="px-6 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => {
+                        setNotesValue(request.notes || '')
+                        setEditingNotes(false)
+                      }}
+                      className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md"
                     >
                       Cancel
                     </button>
                   </div>
                 </div>
-              ) : itinerary ? (
-                <div className="space-y-4">
-                  <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-4">
-                    <p className="text-gray-300 whitespace-pre-wrap font-mono text-sm">{itinerary}</p>
-                  </div>
-                  <button
-                    onClick={handleEditItinerary}
-                    className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                    Edit Itinerary
-                  </button>
-                </div>
               ) : (
-                <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-8">
-                  <p className="text-gray-400 text-center">No itinerary generated yet. Click "Generate Itinerary" to create one.</p>
+                <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-4">
+                  {request.notes ? (
+                    <p className="text-gray-300 whitespace-pre-wrap">{request.notes}</p>
+                  ) : (
+                    <p className="text-gray-500 italic">No notes added yet.</p>
+                  )}
+                  <button
+                    onClick={() => setEditingNotes(true)}
+                    className="mt-3 text-sm text-[#d4af37] hover:text-[#b8941f] transition-colors"
+                  >
+                    {request.notes ? 'Edit Notes' : 'Add Notes'}
+                  </button>
                 </div>
               )}
             </div>
           </div>
+        </div>
+
+        {/* Itinerary Options Section */}
+        <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-semibold text-[#d4af37]">Itinerary Options</h2>
+            {itineraryOptions.length === 0 && !generatingItinerary && (
+              <button
+                onClick={handleGenerateItinerary}
+                disabled={generatingItinerary}
+                className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                Generate Itinerary Options
+              </button>
+            )}
+            {request.public_token && request.selected_option !== null && (
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSendLink}
+                  className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Send Itinerary Link
+                </button>
+                {request.whatsapp && (
+                  <button
+                    onClick={handleWhatsAppShare}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                    </svg>
+                    WhatsApp
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {generatingItinerary ? (
+            <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-8">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#d4af37] mb-4"></div>
+                <p className="text-gray-400">Generating itinerary options...</p>
+              </div>
+            </div>
+          ) : itineraryOptions.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {itineraryOptions.map((option, index) => {
+                const isSelected = request.selected_option === index
+                return (
+                  <div
+                    key={index}
+                    className={`bg-[#0a0a0a] border rounded-lg p-6 flex flex-col ${
+                      isSelected
+                        ? 'border-[#d4af37] ring-2 ring-[#d4af37]'
+                        : 'border-[#333]'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 className="text-xl font-semibold text-[#d4af37] flex-1">
+                        {option.title}
+                      </h3>
+                      {isSelected && (
+                        <span className="ml-2 px-2 py-1 bg-[#d4af37] text-black text-xs font-semibold rounded">
+                          SELECTED
+                        </span>
+                      )}
+                    </div>
+                    <div className="mb-4 flex-1">
+                      <p className="text-sm text-gray-400 mb-3">{option.summary}</p>
+                      <div className="bg-[#1a1a1a] border border-[#333] rounded-md p-4 max-h-64 overflow-y-auto">
+                        <p className="text-gray-300 text-sm whitespace-pre-wrap font-mono">
+                          {option.days}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleSelectOption(index)}
+                      disabled={selectingOption !== null}
+                      className={`w-full py-2 px-4 rounded-md font-semibold transition-colors duration-200 ${
+                        isSelected
+                          ? 'bg-[#333] text-gray-400 cursor-not-allowed'
+                          : 'bg-[#d4af37] hover:bg-[#b8941f] text-black'
+                      } disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+                    >
+                      {selectingOption === index ? (
+                        <>
+                          <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current"></div>
+                          Selecting...
+                        </>
+                      ) : isSelected ? (
+                        'Selected'
+                      ) : (
+                        'Select This Option'
+                      )}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-8">
+              <p className="text-gray-400 text-center">No itinerary options generated yet. Click "Generate Itinerary Options" to create them.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
