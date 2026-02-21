@@ -36,6 +36,47 @@ export default function NewRequestPage() {
     }
   }, [startDate, endDate])
 
+  const generateNextRequestId = async (): Promise<string> => {
+    try {
+      // Fetch all existing request IDs
+      const { data, error } = await supabase
+        .from('requests')
+        .select('id')
+
+      if (error) {
+        console.error('Error fetching existing IDs:', error)
+        // Fallback to req-id-001 if there's an error
+        return 'req-id-001'
+      }
+
+      // Extract numbers from IDs matching pattern "req-id-XXX"
+      const idPattern = /^req-id-(\d+)$/
+      const existingNumbers: number[] = []
+
+      if (data) {
+        data.forEach((row: { id: string }) => {
+          const match = row.id.match(idPattern)
+          if (match) {
+            existingNumbers.push(parseInt(match[1], 10))
+          }
+        })
+      }
+
+      // Find the highest number or default to 0
+      const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0
+
+      // Generate next ID with zero-padding (001, 002, etc.)
+      const nextNumber = maxNumber + 1
+      const paddedNumber = nextNumber.toString().padStart(3, '0')
+
+      return `req-id-${paddedNumber}`
+    } catch (err) {
+      console.error('Error generating request ID:', err)
+      // Fallback to req-id-001 if there's an error
+      return 'req-id-001'
+    }
+  }
+
   const handleSubmit = async () => {
     // Reset error state
     setError(null)
@@ -61,10 +102,14 @@ export default function NewRequestPage() {
     setLoading(true)
 
     try {
+      // Generate the next sequential request ID
+      const requestId = await generateNextRequestId()
+
       const { data, error: insertError } = await supabase
         .from('requests')
         .insert([
           {
+            id: requestId,
             client_name: clientName.trim(),
             email: email.trim(),
             whatsapp: whatsapp.trim() || null,
