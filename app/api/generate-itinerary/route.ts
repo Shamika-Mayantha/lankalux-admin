@@ -121,17 +121,25 @@ IMPORTANT: Generate FRESH, UNIQUE, and CREATIVE itinerary options. Do NOT repeat
 
 Requirements:
 - Generate EXACTLY 3 distinct luxury itinerary options
-- Each option must be premium, bespoke, and curated
+- Each option must be premium, bespoke, and professionally curated
 - Each option must have MINIMUM 6 days
 - Use consistent location names: Colombo, Sigiriya, Ella, Yala, Galle, Kandy, Nuwara Eliya
 - Include clear location field for each day
 - Activities must be an array of strings (include 4-6 main activities per day)
+- CRITICAL: Each activity MUST include a timestamp in the format "HH:MM - Activity description" (e.g., "09:00 - Morning breakfast at hotel", "14:30 - Guided tour of ancient temple")
+- Create a proper, professional itinerary plan with realistic timing:
+  * Morning activities: 08:00-12:00
+  * Afternoon activities: 12:00-17:00
+  * Evening activities: 17:00-21:00
+  * Include travel times between locations when applicable
+  * Ensure logical flow and realistic scheduling
 - Each day MUST include:
-  * "what_to_expect": A detailed paragraph (3-4 sentences) describing what the client will experience, see, and feel on this day. Include cultural context, highlights, and what makes this day special.
-  * "optional_activities": An array of 2-4 optional activities that clients can choose to add (e.g., spa treatments, additional tours, special dining experiences, adventure activities)
-- Keep tone elegant and premium
+  * "what_to_expect": A detailed paragraph (3-4 sentences) describing what the client will experience, see, and feel on this day. Include cultural context, highlights, and what makes this day special. Make it professional and informative.
+  * "optional_activities": An array of 2-4 optional activities that can be done if time allows (e.g., spa treatments, additional tours, special dining experiences, adventure activities). Format as "HH:MM - Activity description" or just "Activity description" if time-flexible.
+- Keep tone elegant, premium, and professional
 - Ensure logical travel flow between destinations
-- Make activities detailed and specific (not generic)
+- Make activities detailed, specific, and realistic (not generic)
+- Create a comprehensive, well-structured itinerary that reads like a professional travel plan
 - Make each option diverse (e.g., cultural heritage, wildlife & nature, beach & relaxation, adventure, wellness/ayurveda)
 - VARY the themes, focus areas, and experiences significantly from any previous suggestions
 - Be creative and offer unique perspectives on Sri Lanka travel
@@ -163,15 +171,17 @@ Format your response as a valid JSON object with this exact structure:
           "title": "Arrival in Colombo",
           "location": "Colombo",
           "activities": [
-            "Airport meet and greet",
-            "Private transfer to hotel",
-            "Relax and unwind"
+            "14:00 - Airport meet and greet with private chauffeur",
+            "14:30 - Private transfer to luxury hotel in Colombo",
+            "15:30 - Hotel check-in and welcome refreshments",
+            "16:00 - Relax and unwind at hotel facilities",
+            "19:00 - Welcome dinner at hotel restaurant"
           ],
           "what_to_expect": "A warm welcome upon arrival with personalized service. Your private chauffeur will assist with luggage and provide insights about your journey ahead. Settle into your luxury accommodation and prepare for an extraordinary experience.",
           "optional_activities": [
-            "Sunset cruise in Colombo harbor",
-            "Evening spa treatment",
-            "Dinner at a fine dining restaurant"
+            "18:00 - Sunset cruise in Colombo harbor (if time allows)",
+            "20:00 - Evening spa treatment at hotel (if time allows)",
+            "19:30 - Dinner at a fine dining restaurant (if time allows)"
           ]
         },
         {
@@ -179,15 +189,18 @@ Format your response as a valid JSON object with this exact structure:
           "title": "Explore Colombo",
           "location": "Colombo",
           "activities": [
-            "City tour",
-            "Visit local markets",
-            "Evening at leisure"
+            "09:00 - Breakfast at hotel",
+            "10:00 - Guided city tour of Colombo's historic districts",
+            "12:30 - Lunch at a local restaurant",
+            "14:00 - Visit Pettah local markets for authentic shopping",
+            "16:00 - Return to hotel for rest",
+            "19:00 - Evening at leisure (dinner recommendations provided)"
           ],
           "what_to_expect": "Discover the vibrant capital city with its blend of colonial architecture and modern developments. Experience the local culture, cuisine, and shopping opportunities.",
           "optional_activities": [
-            "Visit Gangaramaya Temple",
-            "Shopping at Odel or Barefoot",
-            "Cooking class experience"
+            "15:00 - Visit Gangaramaya Temple (if time allows)",
+            "17:00 - Shopping at Odel or Barefoot (if time allows)",
+            "16:00 - Cooking class experience (if time allows)"
           ]
         }
       ]
@@ -200,9 +213,15 @@ Format your response as a valid JSON object with this exact structure:
           "day": 1,
           "title": "Arrival",
           "location": "Colombo",
-          "activities": ["Activity 1", "Activity 2"],
-          "what_to_expect": "Description of what to expect on this day",
-          "optional_activities": ["Optional activity 1", "Optional activity 2"]
+          "activities": [
+            "09:00 - Activity 1 with timestamp",
+            "14:00 - Activity 2 with timestamp"
+          ],
+          "what_to_expect": "Professional description of what to expect on this day (3-4 sentences with cultural context)",
+          "optional_activities": [
+            "16:00 - Optional activity 1 (if time allows)",
+            "18:00 - Optional activity 2 (if time allows)"
+          ]
         }
       ]
     },
@@ -214,9 +233,15 @@ Format your response as a valid JSON object with this exact structure:
           "day": 1,
           "title": "Arrival",
           "location": "Colombo",
-          "activities": ["Activity 1", "Activity 2"],
-          "what_to_expect": "Description of what to expect on this day",
-          "optional_activities": ["Optional activity 1", "Optional activity 2"]
+          "activities": [
+            "09:00 - Activity 1 with timestamp",
+            "14:00 - Activity 2 with timestamp"
+          ],
+          "what_to_expect": "Professional description of what to expect on this day (3-4 sentences with cultural context)",
+          "optional_activities": [
+            "16:00 - Optional activity 1 (if time allows)",
+            "18:00 - Optional activity 2 (if time allows)"
+          ]
         }
       ]
     }

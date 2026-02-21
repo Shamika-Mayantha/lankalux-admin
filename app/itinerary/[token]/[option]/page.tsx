@@ -350,7 +350,7 @@ export default function PublicItineraryPage() {
                           Optional Activities
                         </h4>
                         <p className="text-sm text-gray-600 mb-3 italic">
-                          Enhance your experience with these optional activities (additional charges may apply)
+                          If time allows, you can do these activities optionally
                         </p>
                         <ul className="space-y-3">
                           {day.optional_activities.map((activity, actIndex) => (
