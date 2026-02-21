@@ -372,14 +372,16 @@ LankaLux Team
         option_index: requestData.selected_option,
         sent_at: now,
         option_title: selectedOption.title,
+        itinerary_url: itineraryUrl, // Store the unique URL for this option
       })
     } else {
-      // Update the sent_at timestamp if option was already sent
+      // Update the sent_at timestamp and URL if option was already sent
       const existingIndex = sentOptions.findIndex(
         (item: any) => item.option_index === requestData.selected_option
       )
       if (existingIndex !== -1) {
         sentOptions[existingIndex].sent_at = now
+        sentOptions[existingIndex].itinerary_url = itineraryUrl // Update URL in case it changed
       }
     }
 

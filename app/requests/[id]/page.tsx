@@ -1668,9 +1668,14 @@ LankaLux Team`
                       }
 
                       const sentAt = typeof sentOption.sent_at === 'string' ? sentOption.sent_at : null
-                      const itineraryUrl = request.public_token && typeof request.public_token === 'string'
-                        ? `${typeof window !== 'undefined' ? window.location.origin : ''}/itinerary/${request.public_token}/${optionIndex}`
-                        : ''
+                      // Use stored URL if available, otherwise generate it
+                      let itineraryUrl = ''
+                      if (sentOption.itinerary_url && typeof sentOption.itinerary_url === 'string') {
+                        itineraryUrl = sentOption.itinerary_url
+                      } else if (request.public_token && typeof request.public_token === 'string') {
+                        // Fallback: generate URL if not stored
+                        itineraryUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/itinerary/${request.public_token}/${optionIndex}`
+                      }
 
                       return (
                         <div 
