@@ -259,17 +259,43 @@ LankaLux Team
 
     // Send email
     try {
-      await transporter.sendMail({
+      console.log('Attempting to send email...')
+      console.log('Email config:', {
+        host: emailHost,
+        port: emailPort,
+        user: emailUser,
+        from: emailFrom,
+        to: requestData.email,
+        secure: emailPort === 465,
+      })
+      
+      const emailResult = await transporter.sendMail({
         from: emailFrom,
         to: requestData.email,
         subject: emailSubject,
         text: emailText,
         html: emailHtml,
       })
+      
+      console.log('Email sent successfully:', {
+        messageId: emailResult.messageId,
+        response: emailResult.response,
+      })
     } catch (emailError) {
       console.error('Error sending email:', emailError)
+      console.error('Email error details:', {
+        message: emailError instanceof Error ? emailError.message : String(emailError),
+        code: (emailError as any)?.code,
+        command: (emailError as any)?.command,
+        response: (emailError as any)?.response,
+        responseCode: (emailError as any)?.responseCode,
+      })
       return NextResponse.json(
-        { success: false, error: 'Failed to send email' },
+        { 
+          success: false, 
+          error: 'Failed to send email',
+          details: emailError instanceof Error ? emailError.message : String(emailError),
+        },
         { status: 500 }
       )
     }
@@ -316,6 +342,11 @@ LankaLux Team
     })
   } catch (error) {
     console.error('Unexpected error sending itinerary:', error)
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    })
     return NextResponse.json(
       {
         success: false,
@@ -323,6 +354,9 @@ LankaLux Team
           error instanceof Error
             ? error.message
             : 'An unexpected error occurred',
+        details: process.env.NODE_ENV === 'development' 
+          ? (error instanceof Error ? error.stack : String(error))
+          : undefined,
       },
       { status: 500 }
     )
