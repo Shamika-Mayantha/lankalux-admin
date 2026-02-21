@@ -120,10 +120,11 @@ Additional Preferences: ${requestData.additional_preferences || 'None provided'}
 Requirements:
 - Generate EXACTLY 3 distinct luxury itinerary options
 - Each option must be premium, bespoke, and curated
-- Include day-by-day breakdown for each option
-- Suggest specific regions and locations
-- Highlight unique experience highlights
-- Emphasize luxury positioning and premium accommodations
+- Each option must have MINIMUM 6 days
+- Use consistent location names: Colombo, Sigiriya, Ella, Yala, Galle, Kandy, Nuwara Eliya
+- Include clear location field for each day
+- Activities must be an array of strings
+- Keep tone elegant and premium
 - Ensure logical travel flow between destinations
 - Make each option diverse (e.g., cultural heritage, wildlife & nature, beach & relaxation, adventure, wellness/ayurveda)
 ${requestData.number_of_children && requestData.number_of_children > 0 ? (() => {
@@ -140,28 +141,72 @@ ${requestData.number_of_children && requestData.number_of_children > 0 ? (() => 
 })() : ''}
 ${requestData.number_of_adults && requestData.number_of_adults + (requestData.number_of_children || 0) > 2 ? `- Consider group activities and accommodations suitable for ${(requestData.number_of_adults || 0) + (requestData.number_of_children || 0)} total passengers` : ''}
 
+CRITICAL: Return ONLY valid JSON. No markdown. No explanation. No code blocks. Only JSON.
+
 Format your response as a valid JSON object with this exact structure:
 {
   "options": [
     {
       "title": "Option title (e.g., 'Cultural Heritage & Hill Country Luxury')",
-      "days": "Day-by-day breakdown as a formatted string with clear day numbers, locations, activities, and accommodations",
-      "summary": "Brief summary highlighting key experiences, regions covered, and luxury positioning"
+      "summary": "Short elegant overview paragraph (3-4 lines)",
+      "days": [
+        {
+          "day": 1,
+          "title": "Arrival in Colombo",
+          "location": "Colombo",
+          "activities": [
+            "Airport meet and greet",
+            "Private transfer to hotel",
+            "Relax and unwind"
+          ]
+        },
+        {
+          "day": 2,
+          "title": "Explore Colombo",
+          "location": "Colombo",
+          "activities": [
+            "City tour",
+            "Visit local markets",
+            "Evening at leisure"
+          ]
+        }
+      ]
     },
     {
       "title": "Option title (e.g., 'Wildlife Safari & Beach Retreat')",
-      "days": "Day-by-day breakdown as a formatted string with clear day numbers, locations, activities, and accommodations",
-      "summary": "Brief summary highlighting key experiences, regions covered, and luxury positioning"
+      "summary": "Short elegant overview paragraph (3-4 lines)",
+      "days": [
+        {
+          "day": 1,
+          "title": "Arrival",
+          "location": "Colombo",
+          "activities": ["Activity 1", "Activity 2"]
+        }
+      ]
     },
     {
       "title": "Option title (e.g., 'Adventure & Wellness Journey')",
-      "days": "Day-by-day breakdown as a formatted string with clear day numbers, locations, activities, and accommodations",
-      "summary": "Brief summary highlighting key experiences, regions covered, and luxury positioning"
+      "summary": "Short elegant overview paragraph (3-4 lines)",
+      "days": [
+        {
+          "day": 1,
+          "title": "Arrival",
+          "location": "Colombo",
+          "activities": ["Activity 1", "Activity 2"]
+        }
+      ]
     }
   ]
 }
 
-Return ONLY the JSON object, no additional text before or after.`
+IMPORTANT RULES:
+- Minimum 6 days per option
+- Location names must be one of: Colombo, Sigiriya, Ella, Yala, Galle, Kandy, Nuwara Eliya
+- Activities must be an array of strings
+- Return ONLY the JSON object, no additional text before or after
+- No markdown formatting
+- No explanations
+- Only valid JSON`
 
     // Generate itinerary using OpenAI
     const completion = await openai.chat.completions.create({
@@ -170,7 +215,7 @@ Return ONLY the JSON object, no additional text before or after.`
         {
           role: 'system',
           content:
-            'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries with clear structure. Always respond with valid JSON only.',
+            'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries with clear structure. Always respond with valid JSON only. Never use markdown. Never add explanations. Return only the JSON object.',
         },
         {
           role: 'user',
@@ -195,7 +240,13 @@ Return ONLY the JSON object, no additional text before or after.`
     // Parse JSON response
     let itineraryOptions
     try {
-      itineraryOptions = JSON.parse(generatedContent)
+      // Remove any markdown code blocks if present
+      let cleanedContent = generatedContent
+      if (cleanedContent.startsWith('```')) {
+        cleanedContent = cleanedContent.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+      }
+      
+      itineraryOptions = JSON.parse(cleanedContent)
       
       // Validate structure
       if (!itineraryOptions.options || !Array.isArray(itineraryOptions.options) || itineraryOptions.options.length !== 3) {
@@ -204,8 +255,34 @@ Return ONLY the JSON object, no additional text before or after.`
           { status: 500 }
         )
       }
+
+      // Validate each option has the correct structure
+      for (const option of itineraryOptions.options) {
+        if (!option.title || !option.summary || !Array.isArray(option.days)) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid itinerary format: missing required fields' },
+            { status: 500 }
+          )
+        }
+        if (option.days.length < 6) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid itinerary format: minimum 6 days required' },
+            { status: 500 }
+          )
+        }
+        // Validate each day has required fields
+        for (const day of option.days) {
+          if (!day.day || !day.title || !day.location || !Array.isArray(day.activities)) {
+            return NextResponse.json(
+              { success: false, error: 'Invalid itinerary format: day structure invalid' },
+              { status: 500 }
+            )
+          }
+        }
+      }
     } catch (parseError) {
       console.error('Error parsing JSON:', parseError)
+      console.error('Generated content:', generatedContent)
       return NextResponse.json(
         { success: false, error: 'Failed to parse itinerary response' },
         { status: 500 }

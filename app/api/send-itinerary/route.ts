@@ -323,6 +323,7 @@ LankaLux Team
 
     const updateData: any = {
       last_sent_at: now,
+      last_sent_option: requestData.selected_option, // Save which option was sent
       email_sent_count: currentEmailCount + 1,
       status: 'follow_up',
       updated_at: now,
