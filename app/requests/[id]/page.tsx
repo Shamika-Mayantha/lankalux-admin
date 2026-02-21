@@ -72,10 +72,6 @@ export default function RequestDetailsPage() {
   const [sentItinerarySummary, setSentItinerarySummary] = useState('')
   const [sentItineraryDays, setSentItineraryDays] = useState('')
   const [savingSentItinerary, setSavingSentItinerary] = useState(false)
-  const [editingSentItinerary, setEditingSentItinerary] = useState(false)
-  const [sentItineraryTitle, setSentItineraryTitle] = useState('')
-  const [sentItinerarySummary, setSentItinerarySummary] = useState('')
-  const [sentItineraryDays, setSentItineraryDays] = useState('')
 
   useEffect(() => {
     const fetchRequest = async () => {
