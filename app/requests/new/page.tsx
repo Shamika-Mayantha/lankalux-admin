@@ -54,7 +54,7 @@ export default function NewRequestPage() {
             details: details.trim() || null,
             status: 'new',
           },
-        ])
+        ] as any)
         .select()
 
       if (insertError) {
