@@ -345,10 +345,49 @@ LankaLux Team
     const isFirstSend = !requestData.sent_at
     const currentEmailCount = requestData.email_sent_count || 0
 
+    // Get existing sent_options array or initialize as empty array
+    let sentOptions: any[] = []
+    if (requestData.sent_options) {
+      try {
+        sentOptions = typeof requestData.sent_options === 'string' 
+          ? JSON.parse(requestData.sent_options) 
+          : requestData.sent_options
+        if (!Array.isArray(sentOptions)) {
+          sentOptions = []
+        }
+      } catch (e) {
+        console.error('Error parsing sent_options:', e)
+        sentOptions = []
+      }
+    }
+
+    // Check if this option was already sent (to avoid duplicates)
+    const optionAlreadySent = sentOptions.some(
+      (item: any) => item.option_index === requestData.selected_option
+    )
+
+    // Add this sent option to the array if not already present
+    if (!optionAlreadySent) {
+      sentOptions.push({
+        option_index: requestData.selected_option,
+        sent_at: now,
+        option_title: selectedOption.title,
+      })
+    } else {
+      // Update the sent_at timestamp if option was already sent
+      const existingIndex = sentOptions.findIndex(
+        (item: any) => item.option_index === requestData.selected_option
+      )
+      if (existingIndex !== -1) {
+        sentOptions[existingIndex].sent_at = now
+      }
+    }
+
     const updateData: any = {
       last_sent_at: now,
       last_sent_option: requestData.selected_option, // Save which option was sent
       email_sent_count: currentEmailCount + 1,
+      sent_options: sentOptions, // Store all sent options
       status: 'follow_up',
       updated_at: now,
     }

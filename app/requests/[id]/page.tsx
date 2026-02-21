@@ -37,6 +37,7 @@ interface Request {
   last_sent_at: string | null
   last_sent_option: number | null
   email_sent_count: number | null
+  sent_options: any[] | null
   created_at: string
   updated_at: string | null
 }
@@ -117,6 +118,18 @@ export default function RequestDetailsPage() {
           }
         } else {
           requestData.itinerary_options = null
+        }
+
+        // Parse sent_options string to array if it exists
+        if (requestData.sent_options && typeof requestData.sent_options === 'string') {
+          try {
+            requestData.sent_options = JSON.parse(requestData.sent_options)
+          } catch (parseError) {
+            console.error('Error parsing sent_options:', parseError)
+            requestData.sent_options = []
+          }
+        } else if (!requestData.sent_options) {
+          requestData.sent_options = []
         }
         
         setRequest(requestData)
@@ -248,6 +261,18 @@ export default function RequestDetailsPage() {
       }
     } else {
       requestData.itinerary_options = null
+    }
+
+    // Parse sent_options string to array if it exists
+    if (requestData?.sent_options && typeof requestData.sent_options === 'string') {
+      try {
+        requestData.sent_options = JSON.parse(requestData.sent_options)
+      } catch (parseError) {
+        console.error('Error parsing sent_options:', parseError)
+        requestData.sent_options = []
+      }
+    } else if (!requestData?.sent_options) {
+      requestData.sent_options = []
     }
 
     // Auto-update status to follow_up if email_sent_count > 0
@@ -1520,7 +1545,12 @@ LankaLux Team`
                       <p className="text-sm text-gray-400 mb-3">{option.summary}</p>
                       <div className="bg-[#1a1a1a] border border-[#333] rounded-md p-4 max-h-64 overflow-y-auto">
                         <p className="text-gray-300 text-sm whitespace-pre-wrap font-mono">
-                          {option.days}
+                          {Array.isArray(option.days) 
+                            ? option.days.map((day: any) => 
+                                `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities?.map((act: string) => `  • ${act}`).join('\n') || ''}`
+                              ).join('\n\n')
+                            : (typeof option.days === 'string' ? option.days : '')
+                          }
                         </p>
                       </div>
                     </div>
@@ -1595,6 +1625,91 @@ LankaLux Team`
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* List of All Sent Options */}
+              {request.sent_options && Array.isArray(request.sent_options) && request.sent_options.length > 0 && (
+                <div className="mb-6 mt-6 pt-6 border-t border-[#333]">
+                  <h3 className="text-lg font-semibold text-[#d4af37] mb-4">All Sent Options</h3>
+                  <div className="space-y-3">
+                    {request.sent_options.map((sentOption: any, index: number) => {
+                      // Ensure option_index is a valid number
+                      const optionIndex = typeof sentOption.option_index === 'number' ? sentOption.option_index : null
+                      if (optionIndex === null || optionIndex === undefined) {
+                        return null
+                      }
+
+                      const option = request.itinerary_options?.options?.[optionIndex]
+                      // Safely get option title - ensure it's a string
+                      let optionTitle = `Option ${optionIndex + 1}`
+                      if (option && typeof option.title === 'string') {
+                        optionTitle = option.title
+                      } else if (sentOption.option_title && typeof sentOption.option_title === 'string') {
+                        optionTitle = sentOption.option_title
+                      }
+
+                      const sentAt = typeof sentOption.sent_at === 'string' ? sentOption.sent_at : null
+                      const itineraryUrl = request.public_token && typeof request.public_token === 'string'
+                        ? `${typeof window !== 'undefined' ? window.location.origin : ''}/itinerary/${request.public_token}/${optionIndex}`
+                        : ''
+
+                      return (
+                        <div 
+                          key={`sent-option-${index}-${optionIndex}`} 
+                          className="bg-[#0a0a0a] border border-[#333] rounded-lg p-4 hover:border-[#d4af37]/50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h4 className="text-white font-semibold">{String(optionTitle)}</h4>
+                                {sentAt && (
+                                  <span className="text-xs text-gray-500">
+                                    Sent: {formatDate(sentAt)}
+                                  </span>
+                                )}
+                              </div>
+                              {itineraryUrl && (
+                                <div className="flex items-center gap-2 mt-2">
+                                  <input
+                                    type="text"
+                                    readOnly
+                                    value={itineraryUrl}
+                                    className="flex-1 px-3 py-1.5 bg-[#1a1a1a] border border-[#333] rounded-md text-gray-300 text-xs font-mono"
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(itineraryUrl)
+                                      alert('Link copied to clipboard!')
+                                    }}
+                                    className="px-3 py-1.5 bg-[#333] hover:bg-[#444] text-white text-xs font-semibold rounded-md transition-colors duration-200 flex items-center gap-1"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                    Copy
+                                  </button>
+                                  <a
+                                    href={itineraryUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-3 py-1.5 bg-[#d4af37] hover:bg-[#b8941f] text-black text-xs font-semibold rounded-md transition-colors duration-200 flex items-center gap-1"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                    View
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2">
                 {!editingSentItinerary ? (
                   <>
