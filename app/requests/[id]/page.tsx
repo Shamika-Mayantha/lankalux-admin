@@ -793,36 +793,51 @@ LankaLux Team`
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-black via-[#0a0a0a] to-black" style={{ zoom: 0.75 }}>
+      <div className="max-w-[98%] mx-auto px-3 sm:px-4 lg:px-6 py-4">
         {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="mb-6 px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
+        <div className="mb-6 bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 shadow-lg animate-fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-all duration-200 flex items-center gap-2 hover:scale-105 active:scale-95"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-            Back to Dashboard
-          </button>
-          <h1 className="text-4xl font-bold text-[#d4af37] mb-2">
-            Request Details
-          </h1>
-          <p className="text-gray-400">
-            Request ID: <span className="text-gray-300 font-mono text-sm">{request.id}</span>
-          </p>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              Back to Dashboard
+            </button>
+          </div>
+          <div className="flex items-center gap-4">
+            <img 
+              src="/logo.png" 
+              alt="LankaLux Logo" 
+              className="h-12 w-12 object-contain"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-[#d4af37] to-[#b8941f] bg-clip-text text-transparent">
+                Request Details
+              </h1>
+              <p className="text-gray-400 text-sm">
+                Request ID: <span className="text-gray-300 font-mono">{request.id}</span>
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Cancelled Warning Banner */}
@@ -872,7 +887,7 @@ LankaLux Team`
         )}
 
         {/* Request Details Card */}
-        <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8 mb-8">
+        <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 md:p-6 mb-6">
           <div className="space-y-6">
             {/* Status Badge */}
             <div className="flex items-center justify-between pb-6 border-b border-[#333]">
@@ -1351,7 +1366,7 @@ LankaLux Team`
         )}
 
         {/* Itinerary Options Section */}
-        <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8">
+        <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 md:p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-semibold text-[#d4af37]">Itinerary Options</h2>
             {!generatingItinerary && !isCancelled && (
@@ -1513,7 +1528,7 @@ LankaLux Team`
           
           return shouldShow
         })() && (
-          <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-6 md:p-8 mt-8">
+          <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 md:p-6 mt-8">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-semibold text-[#d4af37]">Sent Itinerary</h2>

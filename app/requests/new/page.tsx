@@ -158,35 +158,52 @@ export default function NewRequestPage() {
   const today = new Date().toISOString().split('T')[0]
 
   return (
-    <div className="min-h-screen bg-black">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-black via-[#0a0a0a] to-black">
+      <div className="max-w-[95%] mx-auto px-3 sm:px-4 lg:px-6 py-4">
         {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="text-gray-400 hover:text-[#d4af37] mb-4 transition-colors duration-200 flex items-center gap-2"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        <div className="mb-6 bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 shadow-lg animate-fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="text-gray-400 hover:text-[#d4af37] transition-all duration-200 flex items-center gap-2 hover:scale-105 active:scale-95"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            Back to Dashboard
-          </button>
-          <h1 className="text-4xl font-bold text-[#d4af37] mb-2">New Request</h1>
-          <p className="text-gray-400">Create a new travel request</p>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Back to Dashboard
+            </button>
+          </div>
+          <div className="flex items-center gap-4">
+            <img 
+              src="/logo.png" 
+              alt="LankaLux Logo" 
+              className="h-12 w-12 object-contain"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-[#d4af37] to-[#b8941f] bg-clip-text text-transparent">
+                New Request
+              </h1>
+              <p className="text-gray-400 text-sm">Create a new travel request</p>
+            </div>
+          </div>
         </div>
 
         {/* Form Content */}
-        <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-8">
+        <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-6">
           <div className="space-y-6">
             {/* Client Name */}
             <div>

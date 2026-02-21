@@ -145,12 +145,25 @@ export default function PublicItineraryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-gradient-to-br from-black via-[#0a0a0a] to-black">
       {/* Header */}
-      <header className="border-b border-[#333] bg-[#1a1a1a]">
+      <header className="border-b border-[#333] bg-[#1a1a1a]/50 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-[#d4af37] mb-2">LankaLux</h1>
+            <div className="flex justify-center items-center gap-4 mb-4">
+              <img 
+                src="/logo.png" 
+                alt="LankaLux Logo" 
+                className="h-16 w-16 object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-[#d4af37] to-[#b8941f] bg-clip-text text-transparent">
+                LankaLux
+              </h1>
+            </div>
             <p className="text-gray-400 text-lg">Your Personalized Sri Lanka Itinerary</p>
           </div>
         </div>
@@ -187,7 +200,7 @@ export default function PublicItineraryPage() {
         </div>
 
         {/* Itinerary Card */}
-        <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-8 md:p-10">
+        <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-6 md:p-8">
           <div className="mb-6">
             <h3 className="text-3xl font-bold text-[#d4af37] mb-4">
               {selectedOption.title}
