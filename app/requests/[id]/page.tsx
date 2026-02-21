@@ -24,7 +24,8 @@ interface Request {
   duration: number | null
   origin_country: string | null
   additional_preferences: string | null
-  itinerary_options: ItineraryOptions | null
+  itineraryoptions: string | null
+  itinerary_options?: ItineraryOptions | null
   selected_option: number | null
   public_token: string | null
   status: string | null
@@ -81,6 +82,19 @@ export default function RequestDetailsPage() {
         }
 
         const requestData = data as any
+        
+        // Parse itineraryoptions string to object if it exists
+        if (requestData.itineraryoptions && typeof requestData.itineraryoptions === 'string') {
+          try {
+            requestData.itinerary_options = JSON.parse(requestData.itineraryoptions)
+          } catch (parseError) {
+            console.error('Error parsing itineraryoptions:', parseError)
+            requestData.itinerary_options = null
+          }
+        } else {
+          requestData.itinerary_options = null
+        }
+        
         setRequest(requestData)
         setStatusValue(requestData.status || '')
         setNotesValue(requestData.notes || '')
@@ -142,7 +156,21 @@ export default function RequestDetailsPage() {
       return null
     }
 
-    return data as any
+    const requestData = data as any
+    
+    // Parse itineraryoptions string to object if it exists
+    if (requestData?.itineraryoptions && typeof requestData.itineraryoptions === 'string') {
+      try {
+        requestData.itinerary_options = JSON.parse(requestData.itineraryoptions)
+      } catch (parseError) {
+        console.error('Error parsing itineraryoptions:', parseError)
+        requestData.itinerary_options = null
+      }
+    } else {
+      requestData.itinerary_options = null
+    }
+
+    return requestData
   }
 
   const handleGenerateItinerary = async () => {
@@ -436,6 +464,19 @@ LankaLux Team`
 
   const itineraryOptions = request.itinerary_options?.options || []
   const isCancelled = request.status?.toLowerCase() === 'cancelled'
+  
+  // Helper function to parse itineraryoptions safely
+  const parseItineraryOptions = (itineraryoptions: string | null): ItineraryOptions | null => {
+    if (!itineraryoptions || typeof itineraryoptions !== 'string') {
+      return null
+    }
+    try {
+      return JSON.parse(itineraryoptions)
+    } catch (error) {
+      console.error('Error parsing itineraryoptions:', error)
+      return null
+    }
+  }
 
   return (
     <div className="min-h-screen bg-black">

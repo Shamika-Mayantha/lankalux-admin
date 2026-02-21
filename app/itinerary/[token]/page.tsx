@@ -20,7 +20,8 @@ interface Request {
   start_date: string | null
   end_date: string | null
   duration: number | null
-  itinerary_options: ItineraryOptions | null
+  itineraryoptions: string | null
+  itinerary_options?: ItineraryOptions | null
   selected_option: number | null
 }
 
@@ -48,7 +49,7 @@ export default function PublicItineraryPage() {
 
         const { data, error } = await supabase
           .from('requests')
-          .select('id, client_name, start_date, end_date, duration, itinerary_options, selected_option')
+          .select('id, client_name, start_date, end_date, duration, itineraryoptions, selected_option')
           .eq('public_token', token)
           .single()
 
@@ -59,13 +60,27 @@ export default function PublicItineraryPage() {
           return
         }
 
-        if (!data.itinerary_options || data.selected_option === null) {
+        const requestData = data as any
+
+        // Parse itineraryoptions string to object if it exists
+        if (requestData.itineraryoptions && typeof requestData.itineraryoptions === 'string') {
+          try {
+            requestData.itinerary_options = JSON.parse(requestData.itineraryoptions)
+          } catch (parseError) {
+            console.error('Error parsing itineraryoptions:', parseError)
+            requestData.itinerary_options = null
+          }
+        } else {
+          requestData.itinerary_options = null
+        }
+
+        if (!requestData.itinerary_options || requestData.selected_option === null) {
           setNotFound(true)
           setLoading(false)
           return
         }
 
-        setRequest(data as any)
+        setRequest(requestData)
         setLoading(false)
       } catch (err) {
         console.error('Unexpected error fetching itinerary:', err)
