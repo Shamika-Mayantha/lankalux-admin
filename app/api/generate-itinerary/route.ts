@@ -117,6 +117,8 @@ Duration: ${requestData.duration || 'Not specified'} days
 ${passengerInfo}
 Additional Preferences: ${requestData.additional_preferences || 'None provided'}
 
+IMPORTANT: Generate FRESH, UNIQUE, and CREATIVE itinerary options. Do NOT repeat previous suggestions. Create completely new and different experiences each time. Vary the themes, locations, activities, and focus areas significantly.
+
 Requirements:
 - Generate EXACTLY 3 distinct luxury itinerary options
 - Each option must be premium, bespoke, and curated
@@ -127,6 +129,8 @@ Requirements:
 - Keep tone elegant and premium
 - Ensure logical travel flow between destinations
 - Make each option diverse (e.g., cultural heritage, wildlife & nature, beach & relaxation, adventure, wellness/ayurveda)
+- VARY the themes, focus areas, and experiences significantly from any previous suggestions
+- Be creative and offer unique perspectives on Sri Lanka travel
 ${requestData.number_of_children && requestData.number_of_children > 0 ? (() => {
   let childInfo = `- IMPORTANT: Consider child-friendly activities and accommodations suitable for ${requestData.number_of_children} child${requestData.number_of_children > 1 ? 'ren' : ''}`
   if (requestData.children_ages) {
@@ -209,20 +213,21 @@ IMPORTANT RULES:
 - Only valid JSON`
 
     // Generate itinerary using OpenAI
+    // Use higher temperature for more variety and creativity
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
           content:
-            'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries with clear structure. Always respond with valid JSON only. Never use markdown. Never add explanations. Return only the JSON object.',
+            'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries with clear structure. Always generate FRESH, UNIQUE, and CREATIVE options that differ significantly from previous suggestions. Always respond with valid JSON only. Never use markdown. Never add explanations. Return only the JSON object.',
         },
         {
           role: 'user',
           content: prompt,
         },
       ],
-      temperature: 0.7,
+      temperature: 0.9, // Increased from 0.7 to 0.9 for more variety and creativity
       max_tokens: 4000,
       response_format: { type: 'json_object' },
     })
@@ -292,12 +297,14 @@ IMPORTANT RULES:
     // Convert JSON object to string and save to itineraryoptions column
     const itineraryOptionsString = JSON.stringify(itineraryOptions)
     
-    // Clear selected_option when regenerating since new options will have different indices
+    // Clear selected_option and public_token when regenerating since new options will have different indices
+    // This ensures fresh links for new options and prevents using old selections
     const { error: updateError } = await supabase
       .from('requests')
       .update({ 
         itineraryoptions: itineraryOptionsString,
         selected_option: null,
+        public_token: null, // Clear public token so new one is generated when option is selected
         updated_at: new Date().toISOString()
       })
       .eq('id', requestId)
