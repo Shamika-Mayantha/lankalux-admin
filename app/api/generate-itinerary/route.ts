@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     })
 
     // Fetch request details from database
-    const { data: requestData, error: fetchError } = await supabase
+    const { data, error: fetchError } = await supabase
       .from('requests')
       .select('*')
       .eq('id', requestId)
@@ -45,6 +45,8 @@ export async function POST(request: Request) {
         { status: 404 }
       )
     }
+
+    const requestData = data as any
 
     if (!requestData) {
       return NextResponse.json(
@@ -109,8 +111,7 @@ Format the response as plain text with clear sections separated by line breaks.`
     }
 
     // Save generated itinerary to database
-    const { error: updateError } = await supabase
-      .from('requests')
+    const { error: updateError } = await (supabase.from('requests') as any)
       .update({ itinerary: generatedItinerary })
       .eq('id', requestId)
 
