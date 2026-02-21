@@ -374,6 +374,30 @@ export default function RequestDetailsPage() {
     try {
       setSelectingOption(optionIndex)
 
+      // If clicking the same option that's already selected, deselect it
+      if (request.selected_option === optionIndex) {
+        const { error } = await (supabase.from('requests') as any)
+          .update({
+            selected_option: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', request.id)
+
+        if (error) {
+          console.error('Error deselecting option:', error)
+          alert('Failed to deselect option. Please try again.')
+          setSelectingOption(null)
+          return
+        }
+
+        const updatedRequest = await fetchRequestData(request.id)
+        if (updatedRequest) {
+          setRequest(updatedRequest)
+        }
+        setSelectingOption(null)
+        return
+      }
+
       // Generate public token if it doesn't exist
       let publicToken = request.public_token
       if (!publicToken) {
@@ -1422,17 +1446,17 @@ LankaLux Team`
                       disabled={selectingOption !== null}
                       className={`w-full py-2 px-4 rounded-md font-semibold transition-colors duration-200 ${
                         isSelected
-                          ? 'bg-[#333] text-gray-400 cursor-not-allowed'
+                          ? 'bg-[#d4af37] hover:bg-[#b8941f] text-black'
                           : 'bg-[#d4af37] hover:bg-[#b8941f] text-black'
                       } disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
                     >
                       {selectingOption === index ? (
                         <>
                           <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current"></div>
-                          Selecting...
+                          {isSelected ? 'Deselecting...' : 'Selecting...'}
                         </>
                       ) : isSelected ? (
-                        'Selected'
+                        'Deselect Option'
                       ) : (
                         'Select This Option'
                       )}

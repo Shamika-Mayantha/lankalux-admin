@@ -116,6 +116,7 @@ End Date: ${endDateFormatted}
 Duration: ${requestData.duration || 'Not specified'} days
 ${passengerInfo}
 Additional Preferences: ${requestData.additional_preferences || 'None provided'}
+${requestData.notes ? `Internal Notes: ${requestData.notes}\n\nIMPORTANT: Use the information in the Internal Notes section to inform and enhance the itinerary options. Consider any specific requirements, preferences, or important details mentioned in the notes when creating the itineraries.` : ''}
 
 Requirements:
 - Generate EXACTLY 3 distinct luxury itinerary options
