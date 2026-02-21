@@ -66,6 +66,7 @@ export default function PublicItineraryPage() {
       try {
         setLoading(true)
         const token = params.token as string
+        const optionParam = params.option as string
 
         if (!token) {
           setNotFound(true)
@@ -73,8 +74,14 @@ export default function PublicItineraryPage() {
           return
         }
 
-        // For backward compatibility: redirect to new format if selected_option exists
-        // Otherwise, this route is for old links without option parameter
+        // Parse option index from URL parameter
+        const optionIndex = optionParam ? parseInt(optionParam, 10) : null
+        if (optionIndex === null || isNaN(optionIndex)) {
+          setNotFound(true)
+          setLoading(false)
+          return
+        }
+
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         const supabase = createClient(supabaseUrl, supabaseAnonKey)
@@ -94,14 +101,6 @@ export default function PublicItineraryPage() {
 
         const requestData = data as any
 
-        // If selected_option exists, redirect to new URL format with option
-        if (requestData.selected_option !== null && requestData.selected_option !== undefined) {
-          if (typeof window !== 'undefined') {
-            window.location.href = `/itinerary/${token}/${requestData.selected_option}`
-            return
-          }
-        }
-
         // Parse itineraryoptions string to object if it exists
         if (requestData.itineraryoptions && typeof requestData.itineraryoptions === 'string') {
           try {
@@ -114,15 +113,14 @@ export default function PublicItineraryPage() {
           requestData.itinerary_options = null
         }
 
-        // Old format: use selected_option from database (backward compatibility)
-        if (!requestData.itinerary_options || requestData.selected_option === null || requestData.selected_option === undefined) {
+        if (!requestData.itinerary_options) {
           setNotFound(true)
           setLoading(false)
           return
         }
 
-        // Get selected itinerary option
-        const selectedOption = requestData.itinerary_options.options?.[requestData.selected_option]
+        // Get itinerary option from URL parameter (not from database selected_option)
+        const selectedOption = requestData.itinerary_options.options?.[optionIndex]
         if (!selectedOption) {
           setNotFound(true)
           setLoading(false)
@@ -140,7 +138,7 @@ export default function PublicItineraryPage() {
     }
 
     fetchItinerary()
-  }, [params.token])
+  }, [params.token, params.option])
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A'

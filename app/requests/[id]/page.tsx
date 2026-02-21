@@ -512,13 +512,13 @@ export default function RequestDetailsPage() {
   }
 
   const handleSendLink = () => {
-    if (!request || !request.public_token) {
+    if (!request || !request.public_token || request.selected_option === null || request.selected_option === undefined) {
       alert('Please select an itinerary option first to generate a shareable link.')
       return
     }
 
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-    const itineraryUrl = `${baseUrl}/itinerary/${request.public_token}`
+    const itineraryUrl = `${baseUrl}/itinerary/${request.public_token}/${request.selected_option}`
 
     const subject = encodeURIComponent('Your LankaLux Sri Lanka Itinerary')
     const body = encodeURIComponent(
@@ -540,13 +540,13 @@ LankaLux Team`
   }
 
   const handleWhatsAppShare = () => {
-    if (!request || !request.public_token) {
+    if (!request || !request.public_token || request.selected_option === null || request.selected_option === undefined) {
       alert('Please select an itinerary option first to generate a shareable link.')
       return
     }
 
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-    const itineraryUrl = `${baseUrl}/itinerary/${request.public_token}`
+    const itineraryUrl = `${baseUrl}/itinerary/${request.public_token}/${request.selected_option}`
 
     const message = encodeURIComponent(
       `Your personalized LankaLux Sri Lanka itinerary is ready! View it here: ${itineraryUrl}`
@@ -1430,11 +1430,12 @@ LankaLux Team`
               <p className="text-sm text-gray-500 italic">Itinerary generation disabled for cancelled trips</p>
             )}
             {request.selected_option !== null && request.selected_option !== undefined && request.public_token ? (() => {
-              // Check if this is a new send (different option) or resend (same option)
-              const isNewSend = request.last_sent_option !== null && 
-                               request.last_sent_option !== undefined && 
-                               request.selected_option !== request.last_sent_option
-              const isResend = request.sent_at && !isNewSend
+              // Check if this is a resend (same option) or new send (different option or first time)
+              // It's a resend only if: sent_at exists AND last_sent_option matches selected_option
+              const isResend = request.sent_at && 
+                               request.last_sent_option !== null && 
+                               request.last_sent_option !== undefined &&
+                               request.selected_option === request.last_sent_option
               
               return (
                 <div className="flex gap-2 flex-wrap items-center">
@@ -1767,7 +1768,7 @@ LankaLux Team`
                   </div>
 
                   {/* Public Link */}
-                  {request.public_token && (
+                  {request.public_token && request.selected_option !== null && request.selected_option !== undefined && (
                     <div className="pt-4 border-t border-[#333]">
                       <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
                         Public Itinerary Link
@@ -1776,12 +1777,12 @@ LankaLux Team`
                         <input
                           type="text"
                           readOnly
-                          value={typeof window !== 'undefined' ? `${window.location.origin}/itinerary/${request.public_token}` : ''}
+                          value={typeof window !== 'undefined' ? `${window.location.origin}/itinerary/${request.public_token}/${request.selected_option}` : ''}
                           className="flex-1 px-4 py-2 bg-[#0a0a0a] border border-[#333] rounded-md text-gray-300 text-sm font-mono"
                         />
                         <button
                           onClick={() => {
-                            const url = typeof window !== 'undefined' ? `${window.location.origin}/itinerary/${request.public_token}` : ''
+                            const url = typeof window !== 'undefined' ? `${window.location.origin}/itinerary/${request.public_token}/${request.selected_option}` : ''
                             navigator.clipboard.writeText(url)
                             alert('Link copied to clipboard!')
                           }}

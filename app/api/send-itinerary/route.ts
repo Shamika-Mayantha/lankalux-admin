@@ -136,7 +136,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Build itinerary URL
+    // Build itinerary URL with option index for unique links per option
     // Use NEXT_PUBLIC_SITE_URL if available, otherwise construct from VERCEL_URL or use default
     // The public URL should be the public-facing domain, not the admin panel
     let baseUrl = process.env.NEXT_PUBLIC_SITE_URL
@@ -150,12 +150,14 @@ export async function POST(request: Request) {
     }
     // Ensure baseUrl doesn't have trailing slash
     baseUrl = baseUrl.replace(/\/$/, '')
-    const itineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}`
+    // Include option index in URL so each option has a unique link
+    const itineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}/${requestData.selected_option}`
     
     console.log('Itinerary URL generated:', {
       baseUrl,
       itineraryUrl,
       publicToken: requestData.public_token,
+      optionIndex: requestData.selected_option,
       envVars: {
         NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
         VERCEL_URL: process.env.VERCEL_URL
@@ -210,8 +212,8 @@ export async function POST(request: Request) {
         })
       : 'Not specified'
 
-    // Build email content
-    const emailSubject = 'Your LankaLux Sri Lanka Itinerary'
+    // Build email content with option-specific subject
+    const emailSubject = `Your LankaLux Sri Lanka Itinerary - ${selectedOption.title}`
     const emailHtml = `
       <!DOCTYPE html>
       <html>
