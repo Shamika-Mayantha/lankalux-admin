@@ -196,9 +196,8 @@ Day 6: Mirissa → Galle → Departure
       const generatedItinerary = generateSampleItineraries()
 
       // Save to Supabase
-      const { error } = await supabase
-        .from('requests')
-        .update({ itinerary: generatedItinerary } as any)
+      const { error } = await (supabase.from('requests') as any)
+        .update({ itinerary: generatedItinerary })
         .eq('id', request.id)
 
       if (error) {
@@ -226,9 +225,8 @@ Day 6: Mirissa → Galle → Departure
     try {
       setSavingItinerary(true)
 
-      const { error } = await supabase
-        .from('requests')
-        .update({ itinerary: editingItinerary || null } as any)
+      const { error } = await (supabase.from('requests') as any)
+        .update({ itinerary: editingItinerary || null })
         .eq('id', request.id)
 
       if (error) {
