@@ -1627,11 +1627,11 @@ LankaLux Team`
                 </div>
               </div>
 
-              {/* List of All Sent Options */}
+              {/* List of All Sent Options - Show full details for each */}
               {request.sent_options && Array.isArray(request.sent_options) && request.sent_options.length > 0 && (
                 <div className="mb-6 mt-6 pt-6 border-t border-[#333]">
-                  <h3 className="text-lg font-semibold text-[#d4af37] mb-4">All Sent Options</h3>
-                  <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-[#d4af37] mb-4">All Sent Options ({request.sent_options.length})</h3>
+                  <div className="space-y-6">
                     {request.sent_options.map((sentOption: any, index: number) => {
                       // Ensure option_index is a valid number
                       const optionIndex = typeof sentOption.option_index === 'number' ? sentOption.option_index : null
@@ -1642,8 +1642,24 @@ LankaLux Team`
                       const option = request.itinerary_options?.options?.[optionIndex]
                       // Safely get option title - ensure it's a string
                       let optionTitle = `Option ${optionIndex + 1}`
-                      if (option && typeof option.title === 'string') {
-                        optionTitle = option.title
+                      let optionSummary = ''
+                      let optionDays: string = ''
+                      
+                      if (option) {
+                        if (typeof option.title === 'string') {
+                          optionTitle = option.title
+                        }
+                        if (typeof option.summary === 'string') {
+                          optionSummary = option.summary
+                        }
+                        // Format days properly
+                        if (Array.isArray(option.days)) {
+                          optionDays = option.days.map((day: any) => 
+                            `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities?.map((act: string) => `  • ${act}`).join('\n') || ''}`
+                          ).join('\n\n')
+                        } else if (typeof option.days === 'string') {
+                          optionDays = option.days
+                        }
                       } else if (sentOption.option_title && typeof sentOption.option_title === 'string') {
                         optionTitle = sentOption.option_title
                       }
@@ -1656,34 +1672,61 @@ LankaLux Team`
                       return (
                         <div 
                           key={`sent-option-${index}-${optionIndex}`} 
-                          className="bg-[#0a0a0a] border border-[#333] rounded-lg p-4 hover:border-[#d4af37]/50 transition-colors"
+                          className="bg-[#0a0a0a] border border-[#333] rounded-lg p-6 hover:border-[#d4af37]/50 transition-colors"
                         >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h4 className="text-white font-semibold">{String(optionTitle)}</h4>
-                                {sentAt && (
-                                  <span className="text-xs text-gray-500">
-                                    Sent: {formatDate(sentAt)}
-                                  </span>
+                          <div className="space-y-4">
+                            {/* Header with title and sent date */}
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h4 className="text-xl font-semibold text-[#d4af37]">{String(optionTitle)}</h4>
+                                  {sentAt && (
+                                    <span className="text-xs text-gray-500">
+                                      Sent: {formatDate(sentAt)}
+                                    </span>
+                                  )}
+                                </div>
+                                {optionSummary && (
+                                  <p className="text-gray-300 text-sm mt-2">{optionSummary}</p>
                                 )}
                               </div>
-                              {itineraryUrl && (
-                                <div className="flex items-center gap-2 mt-2">
+                            </div>
+
+                            {/* Days/Details */}
+                            {optionDays && (
+                              <div>
+                                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                                  Day-by-Day Itinerary
+                                </label>
+                                <div className="bg-[#1a1a1a] border border-[#333] rounded-md p-4 max-h-64 overflow-y-auto">
+                                  <p className="text-gray-300 text-sm whitespace-pre-wrap font-mono">
+                                    {optionDays}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Public Link */}
+                            {itineraryUrl && (
+                              <div className="pt-4 border-t border-[#333]">
+                                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                                  Public Itinerary Link
+                                </label>
+                                <div className="flex items-center gap-2">
                                   <input
                                     type="text"
                                     readOnly
                                     value={itineraryUrl}
-                                    className="flex-1 px-3 py-1.5 bg-[#1a1a1a] border border-[#333] rounded-md text-gray-300 text-xs font-mono"
+                                    className="flex-1 px-4 py-2 bg-[#1a1a1a] border border-[#333] rounded-md text-gray-300 text-sm font-mono"
                                   />
                                   <button
                                     onClick={() => {
                                       navigator.clipboard.writeText(itineraryUrl)
                                       alert('Link copied to clipboard!')
                                     }}
-                                    className="px-3 py-1.5 bg-[#333] hover:bg-[#444] text-white text-xs font-semibold rounded-md transition-colors duration-200 flex items-center gap-1"
+                                    className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
                                   >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                     </svg>
                                     Copy
@@ -1692,16 +1735,16 @@ LankaLux Team`
                                     href={itineraryUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="px-3 py-1.5 bg-[#d4af37] hover:bg-[#b8941f] text-black text-xs font-semibold rounded-md transition-colors duration-200 flex items-center gap-1"
+                                    className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
                                   >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                     </svg>
                                     View
                                   </a>
                                 </div>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )
@@ -1710,221 +1753,6 @@ LankaLux Team`
                 </div>
               )}
 
-              <div className="flex gap-2">
-                {!editingSentItinerary ? (
-                  <>
-                    <button
-                      onClick={() => setEditingSentItinerary(true)}
-                      className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Edit Itinerary
-                    </button>
-                    {request.public_token && (
-                      <button
-                        onClick={handleResendFromSentSection}
-                        disabled={sendingItinerary}
-                        className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        {sendingItinerary ? (
-                          <>
-                            <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
-                            Sending...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            Resend to Client
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleSaveSentItinerary}
-                      disabled={savingSentItinerary}
-                      className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      {savingSentItinerary ? (
-                        <>
-                          <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Save Changes
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => {
-                        // Reset to original values from last_sent_option
-                        const optionIndex = request.last_sent_option !== null && request.last_sent_option !== undefined
-                          ? request.last_sent_option
-                          : (request.selected_option !== null && request.selected_option !== undefined 
-                            ? request.selected_option 
-                            : 0)
-                        if (request.itinerary_options?.options && request.itinerary_options.options[optionIndex]) {
-                          const selectedOption = request.itinerary_options.options[optionIndex]
-                          setSentItineraryTitle(selectedOption.title || '')
-                          setSentItinerarySummary(selectedOption.summary || '')
-                          // Handle both old format (string) and new format (array)
-                          if (Array.isArray(selectedOption.days)) {
-                            const daysText = selectedOption.days.map(day => 
-                              `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities.map((act: string) => `  • ${act}`).join('\n')}`
-                            ).join('\n\n')
-                            setSentItineraryDays(daysText)
-                          } else {
-                            setSentItineraryDays(selectedOption.days || '')
-                          }
-                        }
-                        setEditingSentItinerary(false)
-                      }}
-                      disabled={savingSentItinerary}
-                      className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {(() => {
-                // Use last_sent_option to show what was actually sent
-                const optionIndex = request.last_sent_option !== null && request.last_sent_option !== undefined
-                  ? request.last_sent_option
-                  : (request.selected_option !== null && request.selected_option !== undefined 
-                    ? request.selected_option 
-                    : 0)
-                
-                const selectedOption = request.itinerary_options?.options[optionIndex]
-                if (!selectedOption) {
-                  console.warn('No itinerary option found for sent itinerary')
-                  return (
-                    <div className="text-center py-8">
-                      <p className="text-gray-400">Itinerary was sent but option details are not available.</p>
-                    </div>
-                  )
-                }
-
-                // Use edited values when editing, otherwise use original values
-                const displayTitle = editingSentItinerary ? sentItineraryTitle : selectedOption.title
-                const displaySummary = editingSentItinerary ? sentItinerarySummary : selectedOption.summary
-                // Format days properly - handle both array (new format) and string (old format)
-                let displayDays: string
-                if (editingSentItinerary) {
-                  displayDays = sentItineraryDays
-                } else if (Array.isArray(selectedOption.days)) {
-                  // New format: array of Day objects
-                  displayDays = selectedOption.days.map((day: any) => 
-                    `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities?.map((act: string) => `  • ${act}`).join('\n') || ''}`
-                  ).join('\n\n')
-                } else {
-                  // Old format: string
-                  displayDays = selectedOption.days || ''
-                }
-
-                return (
-                  <div className="space-y-6">
-                  {/* Title */}
-                  <div>
-                    <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                      Itinerary Title
-                    </label>
-                    {editingSentItinerary ? (
-                      <input
-                        type="text"
-                        value={sentItineraryTitle}
-                        onChange={(e) => setSentItineraryTitle(e.target.value)}
-                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
-                        placeholder="Enter itinerary title"
-                      />
-                    ) : (
-                      <h3 className="text-xl font-semibold text-[#d4af37]">{displayTitle}</h3>
-                    )}
-                  </div>
-
-                  {/* Summary */}
-                  <div>
-                    <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                      Summary
-                    </label>
-                    {editingSentItinerary ? (
-                      <textarea
-                        value={sentItinerarySummary}
-                        onChange={(e) => setSentItinerarySummary(e.target.value)}
-                        rows={3}
-                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y"
-                        placeholder="Enter itinerary summary"
-                      />
-                    ) : (
-                      <p className="text-gray-300">{displaySummary}</p>
-                    )}
-                  </div>
-
-                  {/* Days/Details */}
-                  <div>
-                    <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                      Day-by-Day Itinerary
-                    </label>
-                    {editingSentItinerary ? (
-                      <textarea
-                        value={sentItineraryDays}
-                        onChange={(e) => setSentItineraryDays(e.target.value)}
-                        rows={15}
-                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y"
-                        placeholder="Enter day-by-day itinerary details"
-                      />
-                    ) : (
-                      <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-4 max-h-96 overflow-y-auto">
-                        <p className="text-gray-300 text-sm whitespace-pre-wrap font-mono">
-                          {displayDays}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Public Link */}
-                  {request.public_token && request.selected_option !== null && request.selected_option !== undefined && (
-                    <div className="pt-4 border-t border-[#333]">
-                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                        Public Itinerary Link
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          readOnly
-                          value={typeof window !== 'undefined' ? `${window.location.origin}/itinerary/${request.public_token}/${request.selected_option}` : ''}
-                          className="flex-1 px-4 py-2 bg-[#0a0a0a] border border-[#333] rounded-md text-gray-300 text-sm font-mono"
-                        />
-                        <button
-                          onClick={() => {
-                            const url = typeof window !== 'undefined' ? `${window.location.origin}/itinerary/${request.public_token}/${request.selected_option}` : ''
-                            navigator.clipboard.writeText(url)
-                            alert('Link copied to clipboard!')
-                          }}
-                          className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                          Copy
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  </div>
-                )
-              })()}
             </div>
           )
         })()}
