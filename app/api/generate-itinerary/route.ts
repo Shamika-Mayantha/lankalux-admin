@@ -472,14 +472,14 @@ IMPORTANT RULES:
     // Convert JSON object to string and save to itineraryoptions column
     const itineraryOptionsString = JSON.stringify(itineraryOptions)
     
-    // Clear selected_option and public_token when regenerating since new options will have different indices
-    // This ensures fresh links for new options and prevents using old selections
+    // Clear selected_option when regenerating since new options will have different indices
+    // Keep public_token so old sent links remain active (they use snapshot data from sent_options)
     const { error: updateError } = await supabase
       .from('requests')
       .update({ 
         itineraryoptions: itineraryOptionsString,
-        selected_option: null,
-        public_token: null, // Clear public token so new one is generated when option is selected
+        selected_option: null, // Clear selection so user must select a new option
+        // Keep public_token - don't clear it so old links continue to work
         updated_at: new Date().toISOString()
       })
       .eq('id', requestId)

@@ -629,6 +629,9 @@ Your journey to Sri Lanka begins here.
       (item: any) => item.option_index === requestData.selected_option
     )
 
+    // Store a full snapshot of the itinerary option data so links remain active even after regeneration
+    const itinerarySnapshot = JSON.parse(JSON.stringify(selectedOption)) // Deep copy
+    
     // Add this sent option to the array if not already present
     if (!optionAlreadySent) {
       sentOptions.push({
@@ -636,15 +639,17 @@ Your journey to Sri Lanka begins here.
         sent_at: now,
         option_title: selectedOption.title,
         itinerary_url: itineraryUrl, // Store the unique URL for this option
+        itinerary_data: itinerarySnapshot, // Store full snapshot of itinerary data
       })
     } else {
-      // Update the sent_at timestamp and URL if option was already sent
+      // Update the sent_at timestamp, URL, and snapshot if option was already sent
       const existingIndex = sentOptions.findIndex(
         (item: any) => item.option_index === requestData.selected_option
       )
       if (existingIndex !== -1) {
         sentOptions[existingIndex].sent_at = now
         sentOptions[existingIndex].itinerary_url = itineraryUrl // Update URL in case it changed
+        sentOptions[existingIndex].itinerary_data = itinerarySnapshot // Update snapshot in case data changed
       }
     }
 

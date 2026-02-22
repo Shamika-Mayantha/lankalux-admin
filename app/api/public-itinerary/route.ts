@@ -35,10 +35,10 @@ export async function GET(request: Request) {
       }
     })
 
-    // Fetch the request by public_token
+    // Fetch the request by public_token (include sent_options and status)
     const { data, error } = await supabase
       .from('requests')
-      .select('id, client_name, start_date, end_date, duration, itineraryoptions, selected_option')
+      .select('id, client_name, start_date, end_date, duration, itineraryoptions, selected_option, sent_options, status')
       .eq('public_token', token)
       .single()
 
@@ -50,7 +50,83 @@ export async function GET(request: Request) {
       )
     }
 
-    // Parse itineraryoptions if it's a string
+    // Check if trip is cancelled
+    if (data.status === 'cancelled') {
+      return NextResponse.json(
+        { error: 'This itinerary has been cancelled' },
+        { status: 410 } // 410 Gone - resource is no longer available
+      )
+    }
+
+    // If option parameter is provided, check sent_options first for snapshot data
+    if (option !== null) {
+      const optionIndex = parseInt(option, 10)
+      if (!isNaN(optionIndex)) {
+        // Check if this option was sent and has snapshot data
+        let sentOptions: any[] = []
+        if (data.sent_options) {
+          try {
+            sentOptions = typeof data.sent_options === 'string' 
+              ? JSON.parse(data.sent_options) 
+              : data.sent_options
+            if (!Array.isArray(sentOptions)) {
+              sentOptions = []
+            }
+          } catch (e) {
+            console.error('Error parsing sent_options:', e)
+            sentOptions = []
+          }
+        }
+
+        // Find the sent option with matching index
+        const sentOption = sentOptions.find((item: any) => item.option_index === optionIndex)
+        
+        // If found in sent_options, use the snapshot data (preserves old links even after regeneration)
+        if (sentOption && sentOption.itinerary_data) {
+          return NextResponse.json({
+            request: {
+              id: data.id,
+              client_name: data.client_name,
+              start_date: data.start_date,
+              end_date: data.end_date,
+              duration: data.duration,
+              selected_option: data.selected_option
+            },
+            itinerary: sentOption.itinerary_data
+          })
+        }
+
+        // Otherwise, try to get from current itineraryoptions
+        let itineraryOptions = data.itineraryoptions
+        if (typeof itineraryOptions === 'string') {
+          try {
+            itineraryOptions = JSON.parse(itineraryOptions)
+          } catch (e) {
+            console.error('Error parsing itineraryoptions:', e)
+            return NextResponse.json(
+              { error: 'Invalid itinerary data' },
+              { status: 500 }
+            )
+          }
+        }
+
+        if (itineraryOptions?.options?.[optionIndex]) {
+          return NextResponse.json({
+            request: {
+              id: data.id,
+              client_name: data.client_name,
+              start_date: data.start_date,
+              end_date: data.end_date,
+              duration: data.duration,
+              selected_option: data.selected_option
+            },
+            itinerary: itineraryOptions.options[optionIndex]
+          })
+        }
+      }
+    }
+
+    // Parse itineraryoptions if it's a string (for backward compatibility when no option specified)
     let itineraryOptions = data.itineraryoptions
     if (typeof itineraryOptions === 'string') {
       try {
@@ -61,24 +137,6 @@ export async function GET(request: Request) {
           { error: 'Invalid itinerary data' },
           { status: 500 }
         )
-      }
-    }
-
-    // If option parameter is provided, return that specific option
-    if (option !== null) {
-      const optionIndex = parseInt(option, 10)
-      if (!isNaN(optionIndex) && itineraryOptions?.options?.[optionIndex]) {
-        return NextResponse.json({
-          request: {
-            id: data.id,
-            client_name: data.client_name,
-            start_date: data.start_date,
-            end_date: data.end_date,
-            duration: data.duration,
-            selected_option: data.selected_option
-          },
-          itinerary: itineraryOptions.options[optionIndex]
-        })
       }
     }
 
