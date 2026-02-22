@@ -50,6 +50,7 @@ export default function RequestDetailsPage() {
   const [notFound, setNotFound] = useState(false)
   const [generatingItinerary, setGeneratingItinerary] = useState(false)
   const [generatingOption, setGeneratingOption] = useState<number | null>(null) // Track which option is being generated (0, 1, or 2)
+  const [generatingImages, setGeneratingImages] = useState<number | null>(null) // Track which option is generating images
   const [selectingOption, setSelectingOption] = useState<number | null>(null)
   const [editingStatus, setEditingStatus] = useState(false)
   const [editingNotes, setEditingNotes] = useState(false)
@@ -384,6 +385,64 @@ export default function RequestDetailsPage() {
       console.error('Unexpected error saving client info:', err)
       alert('An unexpected error occurred. Please try again.')
       setSaving(false)
+    }
+  }
+
+  const handleGenerateImages = async (optionIndex: number) => {
+    if (!request) return
+
+    try {
+      setGeneratingImages(optionIndex)
+
+      const response = await fetch('/api/generate-images', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: request.id, optionIndex }),
+      })
+
+      // Check if response is ok before trying to parse JSON
+      let result
+      try {
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          result = await response.json()
+        } else {
+          const text = await response.text()
+          throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`)
+        }
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError)
+        if (!response.ok) {
+          const errorMessage = response.status === 504 
+            ? 'Request timed out. Please try again.'
+            : `Server error (${response.status}). Please try again.`
+          alert(`Failed to generate images for option ${optionIndex + 1}: ${errorMessage}`)
+          setGeneratingImages(null)
+          return
+        }
+        throw parseError
+      }
+
+      if (!response.ok || !result.success) {
+        const errorMessage = result.error || 'Failed to generate images'
+        alert(`Failed to generate images for option ${optionIndex + 1}: ${errorMessage}`)
+        setGeneratingImages(null)
+        return
+      }
+
+      // Refresh request data to show the new images
+      const updatedRequest = await fetchRequestData(request.id)
+      if (updatedRequest) {
+        setRequest(updatedRequest)
+      }
+      setGeneratingImages(null)
+      alert(`Images generated successfully for option ${optionIndex + 1}!`)
+    } catch (err) {
+      console.error('Unexpected error generating images:', err)
+      alert(`An unexpected error occurred. Please try again.`)
+      setGeneratingImages(null)
     }
   }
 
@@ -1769,6 +1828,20 @@ LankaLux Team`
                         'Deselect Option'
                       ) : (
                         'Select This Option'
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleGenerateImages(index)}
+                      disabled={generatingImages !== null || generatingOption !== null || generatingItinerary || isCancelled}
+                      className="px-3 py-2 bg-[#4a5568] hover:bg-[#5a6578] text-white font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative"
+                      title="Generate AI images for this option"
+                    >
+                      {generatingImages === index ? (
+                        <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current"></div>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
                       )}
                     </button>
                     <button

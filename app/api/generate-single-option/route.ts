@@ -173,8 +173,8 @@ ${existingTitles ? `IMPORTANT: Already generated options: ${existingTitles}. Mak
 
 CRITICAL REQUIREMENTS:
 - Generate ONE premium, bespoke, professionally curated itinerary option
-- The option MUST have EXACTLY ${actualDuration || 'the specified number of'} days
-- The itinerary must span from ${startDateFormatted} to ${endDateFormatted}
+- **MANDATORY: The "days" array MUST contain EXACTLY ${actualDuration || requestData.duration || 'the specified number of'} day objects. Count carefully: ${actualDuration || requestData.duration || 'the specified number of'} days means ${actualDuration || requestData.duration || 'the specified number of'} items in the days array.**
+- The itinerary must span from ${startDateFormatted} to ${endDateFormatted} (${actualDuration || requestData.duration || 'the specified number of'} days total)
 - Use ALL the information provided: travel dates, duration, passenger info, and additional preferences
 - Use consistent location names: Colombo, Sigiriya, Ella, Yala, Galle, Kandy, Nuwara Eliya
 - Activities must be an array of strings (include 4-6 main activities per day)
@@ -187,7 +187,7 @@ CRITICAL REQUIREMENTS:
 - Make activities detailed, specific, and realistic
 ${requestData.number_of_children && requestData.number_of_children > 0 ? `- IMPORTANT: Consider child-friendly activities for ${requestData.number_of_children} child${requestData.number_of_children > 1 ? 'ren' : ''}` : ''}
 
-Return ONLY valid JSON in this format:
+Return ONLY valid JSON in this format (NOTE: The "days" array must have EXACTLY ${actualDuration || requestData.duration || 'the specified number of'} objects):
 {
   "title": "Option title",
   "summary": "Short elegant overview paragraph (3-4 lines)",
@@ -200,9 +200,21 @@ Return ONLY valid JSON in this format:
       "activities": ["09:00 - Activity with timestamp"],
       "what_to_expect": "Description paragraph",
       "optional_activities": ["Optional activity"]
+    },
+    {
+      "day": 2,
+      "title": "Day title",
+      "location": "Location name",
+      "image": "/images/location.jpg",
+      "activities": ["09:00 - Activity with timestamp"],
+      "what_to_expect": "Description paragraph",
+      "optional_activities": ["Optional activity"]
     }
+    ... continue for ALL ${actualDuration || requestData.duration || 'the specified number of'} days
   ]
-}`
+}
+
+REMINDER: The days array must contain EXACTLY ${actualDuration || requestData.duration || 'the specified number of'} day objects. No more, no less.`
 
     // Generate single option (optimized for speed - single attempt, lower tokens)
     let completion

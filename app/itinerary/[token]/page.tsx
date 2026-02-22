@@ -65,7 +65,6 @@ export default function PublicItineraryPage() {
   const [showContactModal, setShowContactModal] = useState(false)
   const [contactName, setContactName] = useState('')
   const [contactEmail, setContactEmail] = useState('')
-  const [contactWhatsApp, setContactWhatsApp] = useState('')
   const [contactMessage, setContactMessage] = useState('')
 
   useEffect(() => {
@@ -215,7 +214,6 @@ export default function PublicItineraryPage() {
     
     if (contactName) message += `👤 My Name: ${contactName}\n`
     if (contactEmail) message += `📧 My Email: ${contactEmail}\n`
-    if (contactWhatsApp) message += `📱 My WhatsApp: ${contactWhatsApp}\n`
     if (contactMessage) message += `\n💬 My Message:\n${contactMessage}\n`
     
     // WhatsApp number - update this with your business number (format: country code + number without +)
@@ -226,7 +224,6 @@ export default function PublicItineraryPage() {
     // Reset form and close modal
     setContactName('')
     setContactEmail('')
-    setContactWhatsApp('')
     setContactMessage('')
     setShowContactModal(false)
   }
@@ -348,19 +345,6 @@ export default function PublicItineraryPage() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    WhatsApp Number
-                  </label>
-                  <input
-                    type="text"
-                    value={contactWhatsApp}
-                    onChange={(e) => setContactWhatsApp(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#c8a45d]"
-                    placeholder="Enter your WhatsApp number"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Message (Optional)
                   </label>
                   <textarea
@@ -454,27 +438,23 @@ export default function PublicItineraryPage() {
           </h2>
           <div className="space-y-12">
             {selectedItinerary.days.map((day, index) => {
-              // Use AI-suggested image if available, otherwise fall back to location-based image
-              const imagePath = day.image || getLocationImage(day.location)
               return (
                 <div key={index} className="print-shadow">
-                  {/* Location Image */}
-                  <div className="mb-6 rounded-lg overflow-hidden">
-                    <img 
-                      src={imagePath}
-                      alt={day.location}
-                      className="w-full h-64 object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement
-                        // Try fallback to location image, then placeholder
-                        if (target.src !== getLocationImage(day.location)) {
-                          target.src = getLocationImage(day.location)
-                        } else {
-                          target.src = "/images/placeholder.jpg"
-                        }
-                      }}
-                    />
-                  </div>
+                  {/* Day Image - Show if available */}
+                  {day.image && (
+                    <div className="mb-6 rounded-lg overflow-hidden">
+                      <img 
+                        src={day.image}
+                        alt={day.title || day.location}
+                        className="w-full h-64 object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          // Hide image if it fails to load
+                          target.style.display = 'none'
+                        }}
+                      />
+                    </div>
+                  )}
                   
                   {/* Day Card */}
                   <div className="bg-white border-2 border-[#c8a45d] rounded-lg p-8 shadow-lg print-shadow">
