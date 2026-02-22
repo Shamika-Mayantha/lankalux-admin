@@ -198,8 +198,28 @@ ${requestData.additional_preferences && requestData.additional_preferences.trim(
 - **MANDATORY: The "days" array MUST contain exactly that many day objects - one day for each day from start date to end date, inclusive.**
 - Day 1 must correspond to ${startDateFormatted}
 - The last day must correspond to ${endDateFormatted}
+- **ROUTE PLANNING - CRITICAL RULES:**
+
+1. **NO BACKTRACKING.**
+   - The travel route must flow geographically in one direction.
+   - Do not move north → south → north again.
+   - Each destination must follow a realistic driving path.
+   - Once you leave a region, do not return to it later in the itinerary.
+
+2. **PROPER PACING.**
+   - No rushing through destinations.
+   - No more than 1 major location transfer per day.
+   - Include rest time between activities and travel.
+   - Avoid 1-night stays in far destinations unless it's an airport transit day.
+   - Safari destinations should not exceed 1 night unless absolutely necessary for the itinerary.
+
+3. **REALISTIC ROUTING EXAMPLE FLOWS:**
+   - Colombo → Sigiriya → Kandy → Nuwara Eliya → Ella → Yala → Galle → Airport
+   - OR South Coast first → Hill Country → Cultural Triangle → Airport
+   - Plan the route that makes the most geographic and logical sense for the duration available.
+
 - Use ALL the information provided: travel dates, passenger info, and additional preferences
-- Use consistent location names: Colombo, Sigiriya, Ella, Yala, Galle, Kandy, Nuwara Eliya
+- Plan locations naturally based on the route - use appropriate location names that fit the geographic flow
 - Activities must be an array of strings (include 4-6 main activities per day)
 - CRITICAL: Each activity MUST include a timestamp in the format "HH:MM - Activity description"
 - Each day MUST include:
@@ -214,6 +234,7 @@ Return ONLY valid JSON in this format. Calculate the number of days from ${start
 {
   "title": "Option title",
   "summary": "Short elegant overview paragraph (3-4 lines)",
+  "total_kilometers": <number>,
   "days": [
     {
       "day": 1,
@@ -234,8 +255,21 @@ Return ONLY valid JSON in this format. Calculate the number of days from ${start
       "optional_activities": ["Optional activity"]
     }
     ... continue creating day objects until you reach the day corresponding to ${endDateFormatted}
-  ]
+  ],
+  "total_kilometers": <number>
 }
+
+**IMPORTANT: Calculate "total_kilometers" as follows:**
+1. The journey starts in Colombo and ends in Colombo.
+2. For transfer days (days with major location change/move to a different city):
+   - Calculate realistic ROAD distance between cities (NOT straight-line distance).
+   - Use actual driving distances (e.g., Colombo to Sigiriya ≈ 170km, Sigiriya to Kandy ≈ 100km, Kandy to Nuwara Eliya ≈ 80km, etc.)
+   - Sum all transfer distances throughout the itinerary.
+3. For non-transfer days (same city, no major move):
+   - Add only 90km per day (for local exploration within the city/area).
+4. Add the return journey from the last location back to Colombo (realistic road distance).
+5. Sum all values: (all transfer distances) + (90km × number of non-transfer days) + (return to Colombo distance) = total_kilometers
+6. Return the total as a number (e.g., 1250, not "1250 km")
 
 REMINDER: Count the days from ${startDateFormatted} to ${endDateFormatted} (inclusive). Create exactly that many day objects in the days array.`
 

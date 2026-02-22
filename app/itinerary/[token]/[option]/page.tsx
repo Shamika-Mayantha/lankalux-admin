@@ -393,7 +393,7 @@ export default function PublicItineraryPage() {
               <img 
                 src="/favicon.png" 
                 alt="LankaLux Logo" 
-                className="h-20 w-20 object-cover mx-auto mb-6"
+                className="h-20 w-20 rounded-full object-cover mx-auto mb-6"
               />
             </div>
             <h1 className="text-5xl font-serif font-bold text-[#2c2c2c] mb-4">

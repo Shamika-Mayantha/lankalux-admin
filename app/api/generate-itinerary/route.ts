@@ -182,7 +182,30 @@ ${requestData.additional_preferences && requestData.additional_preferences.trim(
 - Use ALL the information provided: travel dates, duration, passenger info, and additional preferences
 - Do NOT default to 6 days - use the ACTUAL duration from the client's request
 - Plan activities and locations based on the actual number of days available
-- Use consistent location names: Colombo, Sigiriya, Ella, Yala, Galle, Kandy, Nuwara Eliya
+- **ROUTE PLANNING - CRITICAL RULES (APPLY TO EACH OF THE 3 OPTIONS):**
+
+1. **NO BACKTRACKING.**
+   - The travel route must flow geographically in one direction.
+   - Do not move north → south → north again.
+   - Each destination must follow a realistic driving path.
+   - Once you leave a region, do not return to it later in the itinerary.
+   - Each of the 3 options can have different routes, but each individual option must flow logically without backtracking.
+
+2. **PROPER PACING.**
+   - No rushing through destinations.
+   - No more than 1 major location transfer per day.
+   - Include rest time between activities and travel.
+   - Avoid 1-night stays in far destinations unless it's an airport transit day.
+   - Safari destinations should not exceed 1 night unless absolutely necessary for the itinerary.
+
+3. **REALISTIC ROUTING EXAMPLE FLOWS:**
+   - Colombo → Sigiriya → Kandy → Nuwara Eliya → Ella → Yala → Galle → Airport
+   - OR South Coast first → Hill Country → Cultural Triangle → Airport
+   - Plan routes that make the most geographic and logical sense for the duration available.
+   - The 3 options can explore different regions or follow different paths, but each must be a logical, one-direction flow.
+
+- Use ALL the information provided: travel dates, duration, passenger info, and additional preferences
+- Plan locations naturally based on the route - use appropriate location names that fit the geographic flow
 - Include clear location field for each day
 - Activities must be an array of strings (include 4-6 main activities per day)
 - CRITICAL: Each activity MUST include a timestamp in the format "HH:MM - Activity description" (e.g., "09:00 - Morning breakfast at hotel", "14:30 - Guided tour of ancient temple")
@@ -224,6 +247,7 @@ Format your response as a valid JSON object with this exact structure:
 {
   "options": [
     {
+      "total_kilometers": <number>,
       "title": "Option title (e.g., 'Cultural Heritage & Hill Country Luxury')",
       "summary": "Short elegant overview paragraph (3-4 lines)",
       "days": [
@@ -308,10 +332,23 @@ Format your response as a valid JSON object with this exact structure:
             "18:00 - Optional activity 2 (if time allows)"
           ]
         }
-      ]
+      ],
+      "total_kilometers": <number>
     }
   ]
 }
+
+**IMPORTANT: Calculate "total_kilometers" for EACH option as follows:**
+1. The journey starts in Colombo and ends in Colombo.
+2. For transfer days (days with major location change/move to a different city):
+   - Calculate realistic ROAD distance between cities (NOT straight-line distance).
+   - Use actual driving distances (e.g., Colombo to Sigiriya ≈ 170km, Sigiriya to Kandy ≈ 100km, Kandy to Nuwara Eliya ≈ 80km, Nuwara Eliya to Ella ≈ 50km, Ella to Yala ≈ 120km, Yala to Galle ≈ 200km, Galle to Colombo ≈ 120km, etc.)
+   - Sum all transfer distances throughout the itinerary.
+3. For non-transfer days (same city, no major move):
+   - Add only 90km per day (for local exploration within the city/area).
+4. Add the return journey from the last location back to Colombo (realistic road distance).
+5. Sum all values: (all transfer distances) + (90km × number of non-transfer days) + (return to Colombo distance) = total_kilometers
+6. Return the total as a number (e.g., 1250, not "1250 km")
 
 IMPORTANT RULES:
 - Each option MUST have EXACTLY ${actualDuration || 'the specified number of'} days - use the duration provided in the client information above (${actualDuration || requestData.duration || 'Not specified'} days from ${startDateFormatted} to ${endDateFormatted})
@@ -350,7 +387,15 @@ You MUST create a COMPLETELY DIFFERENT itinerary that:
 - Has a unique title that clearly distinguishes it from the existing options
 - Do NOT repeat similar activities, locations, or themes from the existing options**` : ''}
 ${requestData.additional_preferences && requestData.additional_preferences.trim() ? `**MANDATORY: You MUST incorporate the client's additional preferences: "${requestData.additional_preferences}" in this itinerary. These preferences should be reflected in activities, locations, and experiences.**` : ''}
-Return JSON in this format: { "title": "...", "summary": "...", "days": [...] }`
+Return JSON in this format: { "title": "...", "summary": "...", "total_kilometers": <number>, "days": [...] }
+
+**IMPORTANT: Include "total_kilometers" field calculated as:**
+1. The journey starts in Colombo and ends in Colombo.
+2. For transfer days: Calculate realistic ROAD distance between cities (NOT straight-line). Use actual driving distances.
+3. For non-transfer days: Add only 90km per day (local exploration).
+4. Add return journey from last location to Colombo (realistic road distance).
+5. Sum: (all transfer distances) + (90km × non-transfer days) + (return to Colombo) = total_kilometers
+6. Return as a number (e.g., 1250)`
 
       let completion
       let generatedContent = ''

@@ -1749,6 +1749,17 @@ LankaLux Team`
                         }
                       </p>
                     </div>
+                    {/* Total Kilometers - Admin Only */}
+                    {typeof option.total_kilometers === 'number' && (
+                      <div className="mt-3 bg-[#1a1a1a] border border-[#333] rounded-md p-3">
+                        <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          Total Kilometers
+                        </label>
+                        <p className="text-[#d4af37] text-lg font-semibold">
+                          {option.total_kilometers.toLocaleString()} km
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -1927,6 +1938,20 @@ LankaLux Team`
                                 <div className="bg-[#1a1a1a] border border-[#333] rounded-md p-4 max-h-64 overflow-y-auto">
                                   <p className="text-gray-300 text-sm whitespace-pre-wrap font-mono">
                                     {optionDays}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Total Kilometers - Admin Only */}
+                            {option && typeof option.total_kilometers === 'number' && (
+                              <div className="pt-4 border-t border-[#333]">
+                                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                                  Total Kilometers
+                                </label>
+                                <div className="bg-[#1a1a1a] border border-[#333] rounded-md p-3">
+                                  <p className="text-[#d4af37] text-lg font-semibold">
+                                    {option.total_kilometers.toLocaleString()} km
                                   </p>
                                 </div>
                               </div>
