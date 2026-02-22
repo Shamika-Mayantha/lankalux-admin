@@ -202,7 +202,7 @@ export async function POST(request: Request) {
       : 'Not specified'
 
     // Build email content with option-specific subject
-    const emailSubject = `Your LankaLux Sri Lanka Journey - ${selectedOption.title}`
+    const emailSubject = `LankaLux Journey - ${selectedOption.title}`
     const logoUrl = `${baseUrl}/favicon.png`
     const emailHtml = `
       <!DOCTYPE html>
@@ -210,6 +210,21 @@ export async function POST(request: Request) {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <!-- Preheader text for email preview -->
+          <style type="text/css">
+            .preheader {
+              display: none !important;
+              visibility: hidden;
+              opacity: 0;
+              color: transparent;
+              height: 0;
+              width: 0;
+              font-size: 1px;
+              line-height: 1px;
+              max-height: 0;
+              max-width: 0;
+            }
+          </style>
           <style>
             * {
               margin: 0;
@@ -483,9 +498,13 @@ export async function POST(request: Request) {
           </style>
         </head>
         <body>
+          <!-- Preheader text - shown in email preview instead of first line -->
+          <div class="preheader">Your personalized Sri Lanka journey awaits. View your complete itinerary details.</div>
           <div class="email-container">
             <div class="header">
-              <img src="${logoUrl}" alt="LankaLux Logo" class="logo" />
+              <a href="https://lankalux.com" style="text-decoration: none; display: block;">
+                <img src="${logoUrl}" alt="LankaLux Logo" class="logo" />
+              </a>
               <h1>LankaLux</h1>
               <div class="subtitle">Journey</div>
             </div>
