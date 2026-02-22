@@ -7,6 +7,7 @@ interface Day {
   day: number
   title: string
   location: string
+  image?: string
   activities: string[]
   optional_activities?: string[]
   what_to_expect?: string
@@ -292,7 +293,8 @@ export default function PublicItineraryPage() {
           </h2>
           <div className="space-y-12">
             {selectedItinerary.days.map((day, index) => {
-              const imagePath = getLocationImage(day.location)
+              // Use AI-suggested image if available, otherwise fall back to location-based image
+              const imagePath = day.image || getLocationImage(day.location)
               return (
                 <div key={index} className="print-shadow">
                   {/* Location Image */}
@@ -303,7 +305,12 @@ export default function PublicItineraryPage() {
                       className="w-full h-64 object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement
-                        target.src = "/images/placeholder.jpg"
+                        // Try fallback to location image, then placeholder
+                        if (target.src !== getLocationImage(day.location)) {
+                          target.src = getLocationImage(day.location)
+                        } else {
+                          target.src = "/images/placeholder.jpg"
+                        }
                       }}
                     />
                   </div>

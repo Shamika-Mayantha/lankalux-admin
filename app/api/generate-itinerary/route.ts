@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@supabase/supabase-js'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 export async function POST(request: Request) {
   try {
@@ -107,6 +109,40 @@ export async function POST(request: Request) {
       passengerInfo = `Adults: ${adults}${childrenInfo}`
     }
 
+    // Read photo mapping file to help AI select appropriate images
+    let photoMappingInfo = ''
+    try {
+      const photoMappingPath = join(process.cwd(), 'public', 'images', 'photo-mapping.json')
+      const photoMappingContent = readFileSync(photoMappingPath, 'utf-8')
+      const photoMapping = JSON.parse(photoMappingContent)
+      
+      // Format photo mapping for AI prompt
+      photoMappingInfo = `\n\nAVAILABLE PHOTOS FOR ITINERARY:\n`
+      photoMappingInfo += `Use these photo paths when generating your itinerary. Match photos to locations and activities intelligently:\n\n`
+      
+      // Add location photos
+      photoMappingInfo += `LOCATION PHOTOS:\n`
+      Object.entries(photoMapping.locations).forEach(([location, data]: [string, any]) => {
+        photoMappingInfo += `- ${location}: Primary: ${data.primary_image}, Alternatives: ${data.alternative_images.join(', ')}\n`
+      })
+      
+      // Add activity photos
+      photoMappingInfo += `\nACTIVITY PHOTOS:\n`
+      Object.entries(photoMapping.activities).forEach(([activity, data]: [string, any]) => {
+        photoMappingInfo += `- ${activity}: ${data.images.join(', ')}\n`
+      })
+      
+      photoMappingInfo += `\nDefault placeholder: ${photoMapping.default_placeholder}\n`
+      photoMappingInfo += `\nINSTRUCTIONS: For each day, select the most appropriate image based on:\n`
+      photoMappingInfo += `1. Location name (use primary_image for that location)\n`
+      photoMappingInfo += `2. Main activities (match keywords to activity photos)\n`
+      photoMappingInfo += `3. Day title/theme (choose alternative images if they better match the day's focus)\n`
+      photoMappingInfo += `Include the selected image path in the "image" field for each day.\n`
+    } catch (error) {
+      console.warn('Could not read photo mapping file:', error)
+      // Continue without photo mapping - images will use default location-based mapping
+    }
+
     const prompt = `You are an experienced and passionate luxury travel consultant who creates personalized, memorable journeys through Sri Lanka. Write naturally, as if you're personally crafting this itinerary for a dear friend. Generate exactly 3 distinct, premium itinerary options for the following client:
 
 Client Name: ${requestData.client_name || 'Not specified'}
@@ -116,6 +152,7 @@ End Date: ${endDateFormatted}
 Duration: ${requestData.duration || 'Not specified'} days
 ${passengerInfo}
 Additional Preferences: ${requestData.additional_preferences || 'None provided'}
+${photoMappingInfo}
 
 IMPORTANT: Generate FRESH, UNIQUE, and CREATIVE itinerary options. Do NOT repeat previous suggestions. Create completely new and different experiences each time. Vary the themes, locations, activities, and focus areas significantly.
 
@@ -134,6 +171,7 @@ Requirements:
   * Include travel times between locations when applicable
   * Ensure logical flow and realistic scheduling
 - Each day MUST include:
+  * "image": Select the most appropriate image path from the available photos based on location and activities. Use the primary location image as default, but choose alternative images if they better match the day's theme or main activities. If no suitable image is found, use the location's primary_image.
   * "what_to_expect": Write a warm, engaging paragraph (3-4 sentences) that describes what the client will experience, see, and feel on this day. Write it as if you're personally sharing insights about the day ahead. Include cultural context, highlights, and what makes this day special. Be descriptive and inviting, helping them visualize the experience.
   * "optional_activities": An array of 2-4 optional activities that can be done if time allows (e.g., spa treatments, additional tours, special dining experiences, adventure activities). Format as "HH:MM - Activity description" or just "Activity description" if time-flexible. Write these naturally and conversationally, as friendly suggestions for enhancing their experience. Do not mention any charges or costs - simply present them as wonderful opportunities if they have extra time.
 - Keep tone warm, elegant, premium, and human - write as if you're personally guiding them through their journey
@@ -171,6 +209,7 @@ Format your response as a valid JSON object with this exact structure:
           "day": 1,
           "title": "Arrival in Colombo",
           "location": "Colombo",
+          "image": "/images/colombo.jpg",
           "activities": [
             "14:00 - Airport meet and greet with private chauffeur",
             "14:30 - Private transfer to luxury hotel in Colombo",
@@ -189,6 +228,7 @@ Format your response as a valid JSON object with this exact structure:
           "day": 2,
           "title": "Explore Colombo",
           "location": "Colombo",
+          "image": "/images/colombo-city.jpg",
           "activities": [
             "09:00 - Breakfast at hotel",
             "10:00 - Guided city tour of Colombo's historic districts",
