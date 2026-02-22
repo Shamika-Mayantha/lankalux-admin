@@ -278,9 +278,13 @@ Return ONLY valid JSON in this format:
     }
     
     const expectedDays = actualDuration || requestData.duration
-    if (expectedDays && newOption.days.length !== expectedDays) {
+    // Convert to number to ensure proper comparison
+    const expectedDaysNum = expectedDays ? Number(expectedDays) : null
+    const actualDaysNum = newOption.days.length
+    
+    if (expectedDaysNum !== null && actualDaysNum !== expectedDaysNum) {
       return NextResponse.json(
-        { success: false, error: `Invalid option format: expected ${expectedDays} days but got ${newOption.days.length} days` },
+        { success: false, error: `Invalid option format: expected ${expectedDaysNum} days but got ${actualDaysNum} days` },
         { status: 500 }
       )
     }
