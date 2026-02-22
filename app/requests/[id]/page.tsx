@@ -1713,7 +1713,11 @@ LankaLux Team`
                 )
               }
               
-              // Display generated option
+              // Display generated option (option is guaranteed to exist at this point)
+              if (!option) {
+                return null // Safety check
+              }
+              
               return (
                 <div
                   key={index}
