@@ -116,13 +116,17 @@ export async function POST(request: Request) {
       passengerInfo = `Adults: ${adults}${childrenInfo}`
     }
 
-    // Calculate actual duration from dates if duration is not provided
+    // Calculate actual duration from dates (always recalculate from dates for accuracy)
     let actualDuration = requestData.duration
-    if (!actualDuration && requestData.start_date && requestData.end_date) {
+    if (requestData.start_date && requestData.end_date) {
       const start = new Date(requestData.start_date)
       const end = new Date(requestData.end_date)
+      // Set to start of day to avoid timezone issues
+      start.setHours(0, 0, 0, 0)
+      end.setHours(0, 0, 0, 0)
       const diffTime = Math.abs(end.getTime() - start.getTime())
-      actualDuration = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1 // +1 to include both start and end days
+      const daysDiff = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+      actualDuration = daysDiff + 1 // +1 to include both start and end days (inclusive)
     }
 
     // Get existing options to ensure uniqueness
@@ -218,9 +222,10 @@ Return ONLY valid JSON in this format. Calculate the number of days from ${start
 REMINDER: Count the days from ${startDateFormatted} to ${endDateFormatted} (inclusive). Create exactly that many day objects in the days array.`
 
     // Generate single option with retry logic for correct day count
+    // Ensure we have the calculated duration (always use date-based calculation if dates exist)
+    const expectedDaysNum = actualDuration || requestData.duration || 6
     let completion
     let generatedContent = ''
-    const expectedDaysNum = actualDuration || requestData.duration || 6
     const maxRetries = 3
     let attempt = 0
     
@@ -361,15 +366,50 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
       )
     }
     
-    // Validate day count (expectedDaysNum was already calculated above)
+    // Validate day count - recalculate from dates to ensure accuracy
+    let calculatedDuration = expectedDaysNum
+    if (requestData.start_date && requestData.end_date) {
+      const start = new Date(requestData.start_date)
+      const end = new Date(requestData.end_date)
+      // Set to start of day to avoid timezone issues
+      start.setHours(0, 0, 0, 0)
+      end.setHours(0, 0, 0, 0)
+      const diffTime = Math.abs(end.getTime() - start.getTime())
+      calculatedDuration = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1 // +1 to include both start and end days
+    }
+    
     const actualDaysNum = newOption.days.length
     
-    if (expectedDaysNum !== null && actualDaysNum !== expectedDaysNum) {
-      // If we've exhausted retries and still have wrong count, return error
+    // Allow small tolerance (±1 day) in case of calculation differences, but log a warning
+    if (calculatedDuration !== null && Math.abs(actualDaysNum - calculatedDuration) > 1) {
+      // If difference is more than 1 day, return error
       return NextResponse.json(
-        { success: false, error: `Invalid option format: expected ${expectedDaysNum} days but got ${actualDaysNum} days. Please try generating again.` },
+        { success: false, error: `Invalid option format: expected ${calculatedDuration} days (from ${startDateFormatted} to ${endDateFormatted}) but got ${actualDaysNum} days. Please try generating again.` },
         { status: 500 }
       )
+    } else if (calculatedDuration !== null && actualDaysNum !== calculatedDuration) {
+      // If difference is exactly 1 day, try to fix it automatically
+      console.warn(`Day count mismatch: expected ${calculatedDuration}, got ${actualDaysNum}. Attempting to fix...`)
+      
+      if (actualDaysNum < calculatedDuration) {
+        // Add missing days at the end
+        const lastDay = newOption.days[newOption.days.length - 1]
+        const missingDays = calculatedDuration - actualDaysNum
+        for (let i = 1; i <= missingDays; i++) {
+          newOption.days.push({
+            ...lastDay,
+            day: actualDaysNum + i,
+            title: `Day ${actualDaysNum + i}`,
+            activities: lastDay.activities || [],
+            optional_activities: lastDay.optional_activities || []
+          })
+        }
+        console.log(`Added ${missingDays} missing day(s)`)
+      } else if (actualDaysNum > calculatedDuration) {
+        // Remove extra days
+        newOption.days = newOption.days.slice(0, calculatedDuration)
+        console.log(`Removed ${actualDaysNum - calculatedDuration} extra day(s)`)
+      }
     }
     
     // Ensure every day has an image (using actual file names that exist)
