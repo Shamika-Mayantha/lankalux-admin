@@ -290,15 +290,15 @@ Return ONLY valid JSON in this format:
       )
     }
     
-    // Ensure every day has an image
+    // Ensure every day has an image (using actual file names that exist)
     const locationImageMap: Record<string, string> = {
-      "Colombo": "/images/colombo.jpg",
-      "Sigiriya": "/images/sigiriya.jpg",
-      "Ella": "/images/ella.jpg",
-      "Yala": "/images/yala.jpg",
+      "Colombo": "/images/arrivalincolombo.jpg",
+      "Sigiriya": "/images/sigirya.jpg",
+      "Ella": "/images/damrotea.jpg",
+      "Yala": "/images/leopard.jpg",
       "Galle": "/images/galle.jpg",
       "Kandy": "/images/kandy.jpg",
-      "Nuwara Eliya": "/images/nuwara-eliya.jpg"
+      "Nuwara Eliya": "/images/damrotea.jpg"
     }
     
     for (const day of newOption.days) {

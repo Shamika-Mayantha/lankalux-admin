@@ -2,67 +2,55 @@
   "description": "Photo mapping file for LankaLux itineraries. The AI will use this to match photos to locations and activities.",
   "locations": {
     "Colombo": {
-      "primary_image": "/images/colombo.jpg",
+      "primary_image": "/images/arrivalincolombo.jpg",
       "alternative_images": [
-        "/images/colombo-city.jpg",
-        "/images/colombo-beach.jpg",
-        "/images/colombo-temple.jpg"
+        "/images/atamasthana.jpg",
+        "/images/stclairs.jpg"
       ],
-      "keywords": ["colombo", "capital", "city", "urban", "colonial", "shopping", "dining"]
+      "keywords": ["colombo", "capital", "city", "urban", "colonial", "shopping", "dining", "arrival"]
     },
     "Sigiriya": {
-      "primary_image": "/images/sigiriya.jpg",
-      "alternative_images": [
-        "/images/sigiriya-rock.jpg",
-        "/images/sigiriya-frescoes.jpg",
-        "/images/sigiriya-view.jpg"
-      ],
-      "keywords": ["sigiriya", "rock", "fortress", "ancient", "unesco", "frescoes", "lion rock"]
+      "primary_image": "/images/sigirya.jpg",
+      "alternative_images": [],
+      "keywords": ["sigiriya", "sigirya", "rock", "fortress", "ancient", "unesco", "frescoes", "lion rock"]
     },
     "Ella": {
-      "primary_image": "/images/ella.jpg",
+      "primary_image": "/images/damrotea.jpg",
       "alternative_images": [
-        "/images/ella-train.jpg",
-        "/images/ella-tea.jpg",
-        "/images/ella-mountains.jpg"
+        "/images/gregorylake.jpg"
       ],
-      "keywords": ["ella", "hill country", "tea", "mountains", "train", "hiking", "nine arch bridge"]
+      "keywords": ["ella", "hill country", "tea", "mountains", "train", "hiking", "nine arch bridge", "damro"]
     },
     "Yala": {
-      "primary_image": "/images/yala.jpg",
+      "primary_image": "/images/leopard.jpg",
       "alternative_images": [
-        "/images/yala-safari.jpg",
-        "/images/yala-leopard.jpg",
-        "/images/yala-elephant.jpg"
+        "/images/elephant.jpg",
+        "/images/wilpattubear.jpg"
       ],
-      "keywords": ["yala", "safari", "wildlife", "leopard", "elephant", "national park", "jungle"]
+      "keywords": ["yala", "safari", "wildlife", "leopard", "elephant", "national park", "jungle", "bear"]
     },
     "Galle": {
       "primary_image": "/images/galle.jpg",
       "alternative_images": [
-        "/images/galle-fort.jpg",
-        "/images/galle-beach.jpg",
-        "/images/galle-lighthouse.jpg"
+        "/images/gallefort.jpg",
+        "/images/unawatuna.jpg",
+        "/images/coconuttreehillmirissa.jpg"
       ],
-      "keywords": ["galle", "fort", "colonial", "beach", "lighthouse", "dutch", "historic"]
+      "keywords": ["galle", "fort", "colonial", "beach", "lighthouse", "dutch", "historic", "unawatuna", "mirissa"]
     },
     "Kandy": {
       "primary_image": "/images/kandy.jpg",
       "alternative_images": [
-        "/images/kandy-temple.jpg",
-        "/images/kandy-lake.jpg",
-        "/images/kandy-dance.jpg"
+        "/images/atamasthana.jpg"
       ],
       "keywords": ["kandy", "temple", "tooth relic", "cultural", "lake", "dance", "spiritual"]
     },
     "Nuwara Eliya": {
-      "primary_image": "/images/nuwara-eliya.jpg",
+      "primary_image": "/images/damrotea.jpg",
       "alternative_images": [
-        "/images/nuwara-eliya-tea.jpg",
-        "/images/nuwara-eliya-golf.jpg",
-        "/images/nuwara-eliya-waterfall.jpg"
+        "/images/gregorylake.jpg"
       ],
-      "keywords": ["nuwara eliya", "tea", "golf", "waterfall", "cool climate", "little england", "hills"]
+      "keywords": ["nuwara eliya", "tea", "golf", "waterfall", "cool climate", "little england", "hills", "damro", "gregory"]
     }
   },
   "activities": {
