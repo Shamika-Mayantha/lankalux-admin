@@ -143,18 +143,28 @@ export async function POST(request: Request) {
       } catch {}
     }
 
-    // Read photo mapping file (simplified for speed)
+    // Read photo mapping file with full details for unique assignment
     let photoMappingInfo = ''
     try {
       const photoMappingPath = join(process.cwd(), 'public', 'images', 'photo-mapping.json')
       const photoMappingContent = readFileSync(photoMappingPath, 'utf-8')
       const photoMapping = JSON.parse(photoMappingContent)
       
-      // Simplified format to reduce prompt size
-      photoMappingInfo = `\nAVAILABLE PHOTOS (use most appropriate for each day):\n`
+      // Build comprehensive photo mapping info
+      photoMappingInfo = `\n═══════════════════════════════════════════════════════════════\nPHOTO MAPPING - CRITICAL RULES:\n═══════════════════════════════════════════════════════════════\n\n**MANDATORY: Each day MUST have a UNIQUE photo - NO REPEATS within this itinerary!**\n\n**PHOTO SELECTION PROCESS FOR EACH DAY:**\n1. Identify the day's MAIN HIGHLIGHT (the primary experience/attraction from the day title)\n2. Match the highlight to the most appropriate photo:\n   - If highlight is location-based → Use location primary or alternative image\n   - If highlight is activity-based → Use activity-specific image\n   - If highlight matches keywords → Use matching photo\n3. Track which photos you've already used - NEVER use the same photo twice\n4. If primary image is already used, use alternative_images from that location/activity\n\n**AVAILABLE LOCATION PHOTOS:**\n`
       Object.entries(photoMapping.locations).forEach(([location, data]: [string, any]) => {
-        photoMappingInfo += `${location}: ${data.primary_image}\n`
+        photoMappingInfo += `${location}:\n  Primary: ${data.primary_image}\n`
+        if (data.alternative_images && data.alternative_images.length > 0) {
+          photoMappingInfo += `  Alternatives: ${data.alternative_images.join(', ')}\n`
+        }
       })
+      
+      photoMappingInfo += `\n**AVAILABLE ACTIVITY PHOTOS:**\n`
+      Object.entries(photoMapping.activities).forEach(([activity, data]: [string, any]) => {
+        photoMappingInfo += `${activity}: ${data.images.join(', ')}\n`
+      })
+      
+      photoMappingInfo += `\n**ALL AVAILABLE IMAGES (use different ones for each day):**\n${photoMapping.all_available_images?.join(', ') || 'See location and activity photos above'}\n\n**REMEMBER:**\n- Map photos to the day's HIGHLIGHT (main experience), not just location\n- Each day gets ONE unique photo - track your usage\n- Prefer activity-specific photos when the highlight is activity-based\n- Only use placeholder.jpg as absolute last resort\n\n═══════════════════════════════════════════════════════════════\n`
     } catch (error) {
       console.warn('Could not read photo mapping file:', error)
     }
@@ -193,7 +203,7 @@ ${requestData.additional_preferences && requestData.additional_preferences.trim(
 - Activities must be an array of strings (include 4-6 main activities per day)
 - CRITICAL: Each activity MUST include a timestamp in the format "HH:MM - Activity description"
 - Each day MUST include:
-  * "image": MANDATORY - Select the most appropriate image path from available photos based on location and activities
+  * "image": MANDATORY - Select the most appropriate UNIQUE image path based on the day's MAIN HIGHLIGHT (the primary experience/attraction). Each day must have a DIFFERENT photo - NO REPEATS. Match the photo to what makes this day special (the highlight from the day title), not just the location.
   * "what_to_expect": Write a warm, engaging paragraph (3-4 sentences)
   * "optional_activities": An array of 2-4 optional activities
 - Keep tone warm, elegant, premium, and human

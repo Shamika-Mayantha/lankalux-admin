@@ -1,5 +1,5 @@
 {
-  "description": "Photo mapping file for LankaLux itineraries. The AI will use this to match photos to locations and activities.",
+  "description": "Photo mapping file for LankaLux itineraries. The AI will use this to match photos to locations and activities. IMPORTANT: Each day must have a UNIQUE photo - no repeats within the same itinerary.",
   "locations": {
     "Colombo": {
       "primary_image": "/images/arrivalincolombo.jpg",
@@ -7,7 +7,7 @@
         "/images/atamasthana.jpg",
         "/images/stclairs.jpg"
       ],
-      "keywords": ["colombo", "capital", "city", "urban", "colonial", "shopping", "dining", "arrival"]
+      "keywords": ["colombo", "capital", "city", "urban", "colonial", "shopping", "dining", "arrival", "departure"]
     },
     "Sigiriya": {
       "primary_image": "/images/sigirya.jpg",
@@ -51,42 +51,91 @@
         "/images/gregorylake.jpg"
       ],
       "keywords": ["nuwara eliya", "tea", "golf", "waterfall", "cool climate", "little england", "hills", "damro", "gregory"]
+    },
+    "Arugam Bay": {
+      "primary_image": "/images/arugambay.jpg",
+      "alternative_images": [
+        "/images/surfing.jpg"
+      ],
+      "keywords": ["arugam bay", "surfing", "beach", "waves", "east coast", "surf"]
+    },
+    "Mirissa": {
+      "primary_image": "/images/coconuttreehillmirissa.jpg",
+      "alternative_images": [
+        "/images/unawatuna.jpg"
+      ],
+      "keywords": ["mirissa", "beach", "whale watching", "coconut", "south coast"]
+    },
+    "Unawatuna": {
+      "primary_image": "/images/unawatuna.jpg",
+      "alternative_images": [
+        "/images/coconuttreehillmirissa.jpg"
+      ],
+      "keywords": ["unawatuna", "beach", "snorkeling", "south coast", "relaxation"]
     }
   },
   "activities": {
     "safari": {
-      "images": ["/images/yala-safari.jpg", "/images/safari-jeep.jpg"],
-      "keywords": ["safari", "wildlife", "jeep", "national park", "animals"]
+      "images": ["/images/leopard.jpg", "/images/elephant.jpg", "/images/wilpattubear.jpg"],
+      "keywords": ["safari", "wildlife", "jeep", "national park", "animals", "leopard", "elephant", "bear", "yala"]
     },
     "temple": {
-      "images": ["/images/kandy-temple.jpg", "/images/temple-visit.jpg"],
-      "keywords": ["temple", "religious", "buddhist", "sacred", "tooth relic", "spiritual"]
+      "images": ["/images/kandy.jpg", "/images/atamasthana.jpg"],
+      "keywords": ["temple", "religious", "buddhist", "sacred", "tooth relic", "spiritual", "kandy"]
     },
     "beach": {
-      "images": ["/images/galle-beach.jpg", "/images/beach-relaxation.jpg"],
-      "keywords": ["beach", "ocean", "coast", "swimming", "relaxation", "sunset"]
+      "images": ["/images/galle.jpg", "/images/unawatuna.jpg", "/images/coconuttreehillmirissa.jpg", "/images/arugambay.jpg"],
+      "keywords": ["beach", "ocean", "coast", "swimming", "relaxation", "sunset", "galle", "mirissa", "unawatuna"]
     },
     "tea": {
-      "images": ["/images/ella-tea.jpg", "/images/tea-plantation.jpg"],
-      "keywords": ["tea", "plantation", "factory", "cameron", "hill country"]
+      "images": ["/images/damrotea.jpg", "/images/gregorylake.jpg"],
+      "keywords": ["tea", "plantation", "factory", "cameron", "hill country", "ella", "nuwara eliya"]
     },
     "train": {
-      "images": ["/images/ella-train.jpg", "/images/train-journey.jpg"],
-      "keywords": ["train", "railway", "journey", "scenic", "nine arch"]
+      "images": ["/images/gregorylake.jpg", "/images/damrotea.jpg"],
+      "keywords": ["train", "railway", "journey", "scenic", "nine arch", "ella"]
     },
     "hiking": {
-      "images": ["/images/ella-mountains.jpg", "/images/hiking-trail.jpg"],
-      "keywords": ["hiking", "trekking", "mountain", "trail", "adventure"]
+      "images": ["/images/sigirya.jpg", "/images/gregorylake.jpg"],
+      "keywords": ["hiking", "trekking", "mountain", "trail", "adventure", "ella", "sigiriya"]
     },
     "dining": {
-      "images": ["/images/dining-experience.jpg", "/images/restaurant.jpg"],
-      "keywords": ["dining", "restaurant", "food", "cuisine", "meal", "dinner"]
+      "images": ["/images/seafoodplatter.jpg", "/images/arrivalincolombo.jpg"],
+      "keywords": ["dining", "restaurant", "food", "cuisine", "meal", "dinner", "seafood"]
     },
-    "spa": {
-      "images": ["/images/spa-treatment.jpg", "/images/wellness.jpg"],
-      "keywords": ["spa", "wellness", "massage", "relaxation", "treatment", "ayurveda"]
+    "surfing": {
+      "images": ["/images/surfing.jpg", "/images/arugambay.jpg"],
+      "keywords": ["surfing", "surf", "waves", "arugam bay", "beach", "water sports"]
+    },
+    "departure": {
+      "images": ["/images/depart.jpg", "/images/arrivalincolombo.jpg"],
+      "keywords": ["departure", "depart", "leaving", "airport", "colombo"]
+    },
+    "arrival": {
+      "images": ["/images/arrivalincolombo.jpg", "/images/atamasthana.jpg"],
+      "keywords": ["arrival", "arrive", "airport", "colombo", "welcome"]
     }
   },
+  "all_available_images": [
+    "/images/arrivalincolombo.jpg",
+    "/images/arugambay.jpg",
+    "/images/atamasthana.jpg",
+    "/images/coconuttreehillmirissa.jpg",
+    "/images/damrotea.jpg",
+    "/images/depart.jpg",
+    "/images/elephant.jpg",
+    "/images/galle.jpg",
+    "/images/gallefort.jpg",
+    "/images/gregorylake.jpg",
+    "/images/kandy.jpg",
+    "/images/leopard.jpg",
+    "/images/seafoodplatter.jpg",
+    "/images/sigirya.jpg",
+    "/images/stclairs.jpg",
+    "/images/surfing.jpg",
+    "/images/unawatuna.jpg",
+    "/images/wilpattubear.jpg"
+  ],
   "default_placeholder": "/images/placeholder.jpg",
-  "instructions": "When generating itineraries, match photos based on: 1) Location name (primary match), 2) Activity keywords, 3) Day title keywords. Use the most appropriate image from the available options."
+  "instructions": "CRITICAL PHOTO ASSIGNMENT RULES:\n1. Each day MUST have a unique photo - NO REPEATS within the same itinerary\n2. Match photos to the day's MAIN HIGHLIGHT (the primary experience/attraction)\n3. Priority order: Day title highlight > Location > Activity keywords\n4. Use alternative_images if primary is already used\n5. Track used images to ensure uniqueness\n6. If a day's highlight is unclear, use the location's primary_image\n7. Only use placeholder.jpg as absolute last resort\n\nWhen generating itineraries:\n- Analyze each day's title to identify the highlight\n- Match the highlight to the most appropriate photo\n- Ensure no photo is used twice in the same itinerary\n- Prefer activity-specific photos over generic location photos when the highlight is activity-based"
 }
