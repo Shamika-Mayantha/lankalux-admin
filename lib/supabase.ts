@@ -19,7 +19,14 @@ function getSupabaseClient() {
       throw new Error('Missing Supabase environment variables')
     }
     
-    client = createClient(supabaseUrl, supabaseAnonKey)
+    client = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      },
+    })
   }
   return client
 }

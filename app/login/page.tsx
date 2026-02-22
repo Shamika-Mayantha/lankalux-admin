@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -10,6 +10,34 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          // User is already logged in, redirect to dashboard
+          router.push('/dashboard')
+        }
+      } catch (err) {
+        console.error('Error checking session:', err)
+      }
+    }
+
+    checkSession()
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        router.push('/dashboard')
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [router])
 
   const handleLogin = async () => {
     // Reset error state
