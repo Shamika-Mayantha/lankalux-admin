@@ -117,27 +117,27 @@ export async function POST(request: Request) {
       const photoMapping = JSON.parse(photoMappingContent)
       
       // Format photo mapping for AI prompt
-      photoMappingInfo = `\n\nAVAILABLE PHOTOS FOR ITINERARY:\n`
-      photoMappingInfo += `Use these photo paths when generating your itinerary. Match photos to locations and activities intelligently:\n\n`
+      photoMappingInfo = `\n\n═══════════════════════════════════════════════════════════════\nCRITICAL: PHOTO SELECTION FOR ITINERARY DAYS\n═══════════════════════════════════════════════════════════════\n\nEVERY SINGLE DAY MUST HAVE AN IMAGE that showcases the day's highlight and main experience. This is MANDATORY - no exceptions.\n\nAnalyze each day carefully:\n1. Read the day's title, location, and ALL activities\n2. Identify the PRIMARY HIGHLIGHT or main experience of that day\n3. Select the image that BEST REPRESENTS what the client will see and experience\n4. Choose images that visually showcase the day's most exciting or memorable moments\n\nAVAILABLE PHOTOS:\n\nLOCATION PHOTOS (Primary + Alternatives):\n`
       
-      // Add location photos
-      photoMappingInfo += `LOCATION PHOTOS:\n`
+      // Add location photos with more detail
       Object.entries(photoMapping.locations).forEach(([location, data]: [string, any]) => {
-        photoMappingInfo += `- ${location}: Primary: ${data.primary_image}, Alternatives: ${data.alternative_images.join(', ')}\n`
+        photoMappingInfo += `\n📍 ${location}:\n`
+        photoMappingInfo += `   Primary: ${data.primary_image}\n`
+        if (data.alternative_images && data.alternative_images.length > 0) {
+          photoMappingInfo += `   Alternatives: ${data.alternative_images.join(', ')}\n`
+        }
+        photoMappingInfo += `   Keywords: ${data.keywords.join(', ')}\n`
       })
       
-      // Add activity photos
-      photoMappingInfo += `\nACTIVITY PHOTOS:\n`
+      // Add activity photos with more detail
+      photoMappingInfo += `\n\nACTIVITY-SPECIFIC PHOTOS:\n`
       Object.entries(photoMapping.activities).forEach(([activity, data]: [string, any]) => {
-        photoMappingInfo += `- ${activity}: ${data.images.join(', ')}\n`
+        photoMappingInfo += `\n🎯 ${activity.toUpperCase()}:\n`
+        photoMappingInfo += `   Images: ${data.images.join(', ')}\n`
+        photoMappingInfo += `   Keywords: ${data.keywords.join(', ')}\n`
       })
       
-      photoMappingInfo += `\nDefault placeholder: ${photoMapping.default_placeholder}\n`
-      photoMappingInfo += `\nINSTRUCTIONS: For each day, select the most appropriate image based on:\n`
-      photoMappingInfo += `1. Location name (use primary_image for that location)\n`
-      photoMappingInfo += `2. Main activities (match keywords to activity photos)\n`
-      photoMappingInfo += `3. Day title/theme (choose alternative images if they better match the day's focus)\n`
-      photoMappingInfo += `Include the selected image path in the "image" field for each day.\n`
+      photoMappingInfo += `\n\n═══════════════════════════════════════════════════════════════\nPHOTO SELECTION STRATEGY:\n═══════════════════════════════════════════════════════════════\n\nFor EACH day, follow this process:\n\nSTEP 1: Identify the Day's Highlight\n- What is the MAIN experience or attraction?\n- What will be the most memorable moment?\n- What visual best represents the day's essence?\n\nSTEP 2: Match to Available Photos\n- If the highlight is location-based → Use location primary or alternative image\n- If the highlight is activity-based → Use activity-specific image\n- If multiple highlights → Choose the image that best represents the PRIMARY experience\n\nSTEP 3: Select the Best Image\n- Safari/wildlife day → Use safari or wildlife images\n- Temple/cultural day → Use temple or cultural images\n- Beach/relaxation day → Use beach images\n- Tea plantation day → Use tea plantation images\n- Train journey day → Use train images\n- Hiking/adventure day → Use hiking/mountain images\n- Dining/food day → Use dining/restaurant images\n- Spa/wellness day → Use spa/wellness images\n\nSTEP 4: Ensure Every Day Has an Image\n- EVERY day MUST have an "image" field\n- NO day should be without a photo\n- If unsure, use the location's primary_image as fallback\n- Default placeholder: ${photoMapping.default_placeholder} (only if absolutely no match)\n\nREMEMBER: The image should make the client EXCITED about that day. It should visually represent what they'll experience and see. Choose images that showcase the highlight of each day!\n\n═══════════════════════════════════════════════════════════════\n`
     } catch (error) {
       console.warn('Could not read photo mapping file:', error)
       // Continue without photo mapping - images will use default location-based mapping
@@ -170,8 +170,8 @@ Requirements:
   * Evening activities: 17:00-21:00
   * Include travel times between locations when applicable
   * Ensure logical flow and realistic scheduling
-- Each day MUST include:
-  * "image": Select the most appropriate image path from the available photos based on location and activities. Use the primary location image as default, but choose alternative images if they better match the day's theme or main activities. If no suitable image is found, use the location's primary_image.
+- Each day MUST include (ALL ARE REQUIRED - NO EXCEPTIONS):
+  * "image": MANDATORY - Every day must have an image that showcases the day's highlight. Analyze the day's title, location, and activities to identify the PRIMARY experience. Select the image that best visually represents what the client will see and experience on that day. Choose from location photos (primary or alternatives) or activity-specific photos. The image should make the client excited about that day. This field is REQUIRED for every single day - no exceptions.
   * "what_to_expect": Write a warm, engaging paragraph (3-4 sentences) that describes what the client will experience, see, and feel on this day. Write it as if you're personally sharing insights about the day ahead. Include cultural context, highlights, and what makes this day special. Be descriptive and inviting, helping them visualize the experience.
   * "optional_activities": An array of 2-4 optional activities that can be done if time allows (e.g., spa treatments, additional tours, special dining experiences, adventure activities). Format as "HH:MM - Activity description" or just "Activity description" if time-flexible. Write these naturally and conversationally, as friendly suggestions for enhancing their experience. Do not mention any charges or costs - simply present them as wonderful opportunities if they have extra time.
 - Keep tone warm, elegant, premium, and human - write as if you're personally guiding them through their journey
@@ -254,6 +254,7 @@ Format your response as a valid JSON object with this exact structure:
           "day": 1,
           "title": "Arrival",
           "location": "Colombo",
+          "image": "/images/colombo.jpg",
           "activities": [
             "09:00 - Activity 1 with timestamp",
             "14:00 - Activity 2 with timestamp"
@@ -274,6 +275,7 @@ Format your response as a valid JSON object with this exact structure:
           "day": 1,
           "title": "Arrival",
           "location": "Colombo",
+          "image": "/images/colombo.jpg",
           "activities": [
             "09:00 - Activity 1 with timestamp",
             "14:00 - Activity 2 with timestamp"
@@ -293,6 +295,9 @@ IMPORTANT RULES:
 - Minimum 6 days per option
 - Location names must be one of: Colombo, Sigiriya, Ella, Yala, Galle, Kandy, Nuwara Eliya
 - Activities must be an array of strings
+- CRITICAL: EVERY day MUST have an "image" field - this is MANDATORY. No day should be without a photo.
+- The "image" field must contain a valid image path from the available photos list
+- Analyze each day's highlight and select the image that best showcases what the client will experience
 - Return ONLY the JSON object, no additional text before or after
 - No markdown formatting
 - No explanations
@@ -313,7 +318,7 @@ IMPORTANT RULES:
             {
               role: 'system',
               content:
-                'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries with clear structure. Always generate FRESH, UNIQUE, and CREATIVE options that differ significantly from previous suggestions. Always respond with valid JSON only. Never use markdown. Never add explanations. Return only the JSON object. Ensure the JSON is complete and valid.',
+                'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries with clear structure. Always generate FRESH, UNIQUE, and CREATIVE options that differ significantly from previous suggestions. CRITICAL: Every single day MUST include an "image" field that showcases the day\'s highlight - analyze each day\'s activities and theme to select the most appropriate photo. Always respond with valid JSON only. Never use markdown. Never add explanations. Return only the JSON object. Ensure the JSON is complete and valid. Every day must have an image - no exceptions.',
             },
             {
               role: 'user',
@@ -438,13 +443,28 @@ IMPORTANT RULES:
             { status: 500 }
           )
         }
-        // Validate each day has required fields
+        // Validate each day has required fields including image
         for (const day of option.days) {
           if (!day.day || !day.title || !day.location || !Array.isArray(day.activities)) {
             return NextResponse.json(
               { success: false, error: 'Invalid itinerary format: day structure invalid' },
               { status: 500 }
             )
+          }
+          // Ensure every day has an image - if missing, use location-based fallback
+          if (!day.image || typeof day.image !== 'string') {
+            console.warn(`Day ${day.day} (${day.title}) is missing image field. Adding fallback.`)
+            // Use location-based image as fallback
+            const locationImageMap: Record<string, string> = {
+              "Colombo": "/images/colombo.jpg",
+              "Sigiriya": "/images/sigiriya.jpg",
+              "Ella": "/images/ella.jpg",
+              "Yala": "/images/yala.jpg",
+              "Galle": "/images/galle.jpg",
+              "Kandy": "/images/kandy.jpg",
+              "Nuwara Eliya": "/images/nuwara-eliya.jpg"
+            }
+            day.image = locationImageMap[day.location] || "/images/placeholder.jpg"
           }
         }
       }

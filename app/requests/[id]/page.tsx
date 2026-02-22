@@ -1658,6 +1658,12 @@ LankaLux Team`
                 
                 if (request.sent_options && Array.isArray(request.sent_options) && request.sent_options.length > 0) {
                   sentOptionsList = request.sent_options
+                  // Sort by sent_at (most recent first) to ensure proper display order
+                  sentOptionsList.sort((a: any, b: any) => {
+                    const dateA = new Date(a.sent_at || 0).getTime()
+                    const dateB = new Date(b.sent_at || 0).getTime()
+                    return dateB - dateA // Most recent first
+                  })
                 } else if (request.last_sent_option !== null && request.last_sent_option !== undefined && request.sent_at) {
                   // Fallback: if sent_options is empty but last_sent_option exists, create an entry
                   sentOptionsList = [{
@@ -1669,9 +1675,17 @@ LankaLux Team`
                 
                 if (sentOptionsList.length === 0) return null
                 
+                // Show note if there are 10 or more entries (indicating we're showing the most recent 10)
+                const showLimitNote = sentOptionsList.length >= 10
+                
                 return (
                 <div className="mb-6 mt-6 pt-6 border-t border-[#333]">
-                  <h3 className="text-lg font-semibold text-[#d4af37] mb-4">All Sent Options ({sentOptionsList.length})</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-[#d4af37]">All Sent Options ({sentOptionsList.length})</h3>
+                    {showLimitNote && (
+                      <span className="text-xs text-gray-500">Showing most recent 10</span>
+                    )}
+                  </div>
                   <div className="space-y-6">
                     {sentOptionsList.map((sentOption: any, index: number) => {
                       // Ensure option_index is a valid number

@@ -624,33 +624,30 @@ Your journey to Sri Lanka begins here.
       }
     }
 
-    // Check if this option was already sent (to avoid duplicates)
-    const optionAlreadySent = sentOptions.some(
-      (item: any) => item.option_index === requestData.selected_option
-    )
-
     // Store a full snapshot of the itinerary option data so links remain active even after regeneration
     const itinerarySnapshot = JSON.parse(JSON.stringify(selectedOption)) // Deep copy
     
-    // Add this sent option to the array if not already present
-    if (!optionAlreadySent) {
-      sentOptions.push({
-        option_index: requestData.selected_option,
-        sent_at: now,
-        option_title: selectedOption.title,
-        itinerary_url: itineraryUrl, // Store the unique URL for this option
-        itinerary_data: itinerarySnapshot, // Store full snapshot of itinerary data
-      })
-    } else {
-      // Update the sent_at timestamp, URL, and snapshot if option was already sent
-      const existingIndex = sentOptions.findIndex(
-        (item: any) => item.option_index === requestData.selected_option
-      )
-      if (existingIndex !== -1) {
-        sentOptions[existingIndex].sent_at = now
-        sentOptions[existingIndex].itinerary_url = itineraryUrl // Update URL in case it changed
-        sentOptions[existingIndex].itinerary_data = itinerarySnapshot // Update snapshot in case data changed
-      }
+    // Always add a new entry to track all sends (including resends of the same option)
+    // This creates a complete history of all sent options
+    sentOptions.push({
+      option_index: requestData.selected_option,
+      sent_at: now,
+      option_title: selectedOption.title,
+      itinerary_url: itineraryUrl, // Store the unique URL for this option
+      itinerary_data: itinerarySnapshot, // Store full snapshot of itinerary data
+    })
+    
+    // Sort by sent_at (most recent first) and keep only the most recent 10 entries
+    // This prevents the array from growing too large while keeping recent history
+    sentOptions.sort((a: any, b: any) => {
+      const dateA = new Date(a.sent_at || 0).getTime()
+      const dateB = new Date(b.sent_at || 0).getTime()
+      return dateB - dateA // Most recent first
+    })
+    
+    // Keep only the most recent 10 sent options
+    if (sentOptions.length > 10) {
+      sentOptions = sentOptions.slice(0, 10)
     }
 
     const updateData: any = {
