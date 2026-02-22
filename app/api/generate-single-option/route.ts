@@ -164,7 +164,6 @@ CLIENT INFORMATION:
 - Origin Country: ${requestData.origin_country || 'Not specified'}
 - Travel Start Date: ${startDateFormatted}
 - Travel End Date: ${endDateFormatted}
-- Total Duration: ${actualDuration || 'Not specified'} days
 ${passengerInfo}
 - Additional Preferences: ${requestData.additional_preferences || 'None provided'}
 ${photoMappingInfo}
@@ -173,9 +172,11 @@ ${existingTitles ? `IMPORTANT: Already generated options: ${existingTitles}. Mak
 
 CRITICAL REQUIREMENTS:
 - Generate ONE premium, bespoke, professionally curated itinerary option
-- **MANDATORY: The "days" array MUST contain EXACTLY ${actualDuration || requestData.duration || 'the specified number of'} day objects. Count carefully: ${actualDuration || requestData.duration || 'the specified number of'} days means ${actualDuration || requestData.duration || 'the specified number of'} items in the days array.**
-- The itinerary must span from ${startDateFormatted} to ${endDateFormatted} (${actualDuration || requestData.duration || 'the specified number of'} days total)
-- Use ALL the information provided: travel dates, duration, passenger info, and additional preferences
+- **CALCULATE THE DURATION: Count the number of days from ${startDateFormatted} (Day 1 - START) to ${endDateFormatted} (LAST DAY - END), inclusive. The journey starts on ${startDateFormatted} and ends on ${endDateFormatted}. Calculate how many days this spans (including both start and end dates).**
+- **MANDATORY: The "days" array MUST contain exactly that many day objects - one day for each day from start date to end date, inclusive.**
+- Day 1 must correspond to ${startDateFormatted}
+- The last day must correspond to ${endDateFormatted}
+- Use ALL the information provided: travel dates, passenger info, and additional preferences
 - Use consistent location names: Colombo, Sigiriya, Ella, Yala, Galle, Kandy, Nuwara Eliya
 - Activities must be an array of strings (include 4-6 main activities per day)
 - CRITICAL: Each activity MUST include a timestamp in the format "HH:MM - Activity description"
@@ -187,14 +188,14 @@ CRITICAL REQUIREMENTS:
 - Make activities detailed, specific, and realistic
 ${requestData.number_of_children && requestData.number_of_children > 0 ? `- IMPORTANT: Consider child-friendly activities for ${requestData.number_of_children} child${requestData.number_of_children > 1 ? 'ren' : ''}` : ''}
 
-Return ONLY valid JSON in this format (NOTE: The "days" array must have EXACTLY ${actualDuration || requestData.duration || 'the specified number of'} objects):
+Return ONLY valid JSON in this format. Calculate the number of days from ${startDateFormatted} to ${endDateFormatted} (inclusive) and create that many day objects:
 {
   "title": "Option title",
   "summary": "Short elegant overview paragraph (3-4 lines)",
   "days": [
     {
       "day": 1,
-      "title": "Day title",
+      "title": "Day title for ${startDateFormatted}",
       "location": "Location name",
       "image": "/images/location.jpg",
       "activities": ["09:00 - Activity with timestamp"],
@@ -210,41 +211,111 @@ Return ONLY valid JSON in this format (NOTE: The "days" array must have EXACTLY 
       "what_to_expect": "Description paragraph",
       "optional_activities": ["Optional activity"]
     }
-    ... continue for ALL ${actualDuration || requestData.duration || 'the specified number of'} days
+    ... continue creating day objects until you reach the day corresponding to ${endDateFormatted}
   ]
 }
 
-REMINDER: The days array must contain EXACTLY ${actualDuration || requestData.duration || 'the specified number of'} day objects. No more, no less.`
+REMINDER: Count the days from ${startDateFormatted} to ${endDateFormatted} (inclusive). Create exactly that many day objects in the days array.`
 
-    // Generate single option (optimized for speed - single attempt, lower tokens)
+    // Generate single option with retry logic for correct day count
     let completion
     let generatedContent = ''
+    const expectedDaysNum = actualDuration || requestData.duration || 6
+    const maxRetries = 3
+    let attempt = 0
     
-    try {
-      // Calculate max_tokens based on duration (roughly 800 tokens per day)
-      const estimatedDays = actualDuration || requestData.duration || 6
-      const calculatedMaxTokens = Math.min(Math.max(estimatedDays * 800, 3000), 5000)
-      
-      completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a luxury travel consultant. Create premium Sri Lanka itineraries. CRITICAL: Every day MUST include an "image" field. Always respond with valid JSON only. Never use markdown. Return only the JSON object.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.9,
-        max_tokens: calculatedMaxTokens,
-        response_format: { type: 'json_object' },
-      })
+    while (attempt < maxRetries) {
+      try {
+        attempt++
+        // Calculate max_tokens based on duration (roughly 800 tokens per day)
+        const calculatedMaxTokens = Math.min(Math.max(expectedDaysNum * 800, 3000), 5000)
+        
+        // Make prompt even more explicit on retry
+        let currentPrompt = prompt
+        if (attempt > 1) {
+          currentPrompt = `${prompt}
 
-      generatedContent = completion.choices[0]?.message?.content?.trim() || ''
-    } catch (apiError) {
-      console.error('OpenAI API error:', apiError)
+CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. You MUST generate EXACTLY ${expectedDaysNum} days. Count each day object in the "days" array. The array must have ${expectedDaysNum} items, numbered from day 1 to day ${expectedDaysNum}. This is non-negotiable.`
+        }
+        
+        completion = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a luxury travel consultant. Create premium Sri Lanka itineraries. CRITICAL RULES: 
+1. Every day MUST include an "image" field.
+2. Calculate the number of days from the start date to the end date (inclusive) - count each day including both start and end dates.
+3. The "days" array MUST contain exactly that calculated number of day objects - one for each day from start to end date.
+4. Always respond with valid JSON only. Never use markdown. Return only the JSON object.
+5. Day 1 corresponds to the start date, and the last day corresponds to the end date.`,
+            },
+            {
+              role: 'user',
+              content: currentPrompt,
+            },
+          ],
+          temperature: attempt === 1 ? 0.9 : 0.7, // Lower temperature on retry for more consistency
+          max_tokens: calculatedMaxTokens,
+          response_format: { type: 'json_object' },
+        })
+
+        generatedContent = completion.choices[0]?.message?.content?.trim() || ''
+        
+        // Parse and check day count immediately
+        if (generatedContent) {
+          try {
+            let cleanedContent = generatedContent.trim()
+            cleanedContent = cleanedContent.replace(/^```(?:json|JSON)?\n?/gm, '').replace(/\n?```$/gm, '').trim()
+            const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/)
+            if (jsonMatch) cleanedContent = jsonMatch[0]
+            
+            const openBraces = (cleanedContent.match(/\{/g) || []).length
+            const closeBraces = (cleanedContent.match(/\}/g) || []).length
+            if (openBraces > closeBraces) {
+              cleanedContent += '}'.repeat(openBraces - closeBraces)
+            }
+            
+            const testOption = JSON.parse(cleanedContent)
+            if (testOption.days && Array.isArray(testOption.days)) {
+              const actualDaysCount = testOption.days.length
+              if (actualDaysCount === expectedDaysNum) {
+                // Correct number of days, break out of retry loop
+                break
+              } else {
+                console.warn(`Attempt ${attempt}: Generated ${actualDaysCount} days, expected ${expectedDaysNum}. Retrying...`)
+                if (attempt === maxRetries) {
+                  // Last attempt failed, we'll validate again later but continue
+                  break
+                }
+                // Continue to retry
+                continue
+              }
+            }
+          } catch (parseTestError) {
+            // If we can't parse, continue to retry
+            if (attempt < maxRetries) {
+              continue
+            }
+          }
+        }
+        
+        // If we get here and it's the first attempt, break (success or will validate later)
+        if (attempt === 1) break
+        
+      } catch (apiError) {
+        console.error(`OpenAI API error on attempt ${attempt}:`, apiError)
+        if (attempt === maxRetries) {
+          return NextResponse.json(
+            { success: false, error: 'Failed to generate option after multiple attempts' },
+            { status: 500 }
+          )
+        }
+        // Continue to retry
+      }
+    }
+    
+    if (!generatedContent) {
       return NextResponse.json(
         { success: false, error: 'Failed to generate option' },
         { status: 500 }
@@ -290,14 +361,13 @@ REMINDER: The days array must contain EXACTLY ${actualDuration || requestData.du
       )
     }
     
-    const expectedDays = actualDuration || requestData.duration
-    // Convert to number to ensure proper comparison
-    const expectedDaysNum = expectedDays ? Number(expectedDays) : null
+    // Validate day count (expectedDaysNum was already calculated above)
     const actualDaysNum = newOption.days.length
     
     if (expectedDaysNum !== null && actualDaysNum !== expectedDaysNum) {
+      // If we've exhausted retries and still have wrong count, return error
       return NextResponse.json(
-        { success: false, error: `Invalid option format: expected ${expectedDaysNum} days but got ${actualDaysNum} days` },
+        { success: false, error: `Invalid option format: expected ${expectedDaysNum} days but got ${actualDaysNum} days. Please try generating again.` },
         { status: 500 }
       )
     }
