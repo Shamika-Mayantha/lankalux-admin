@@ -133,7 +133,8 @@ export async function POST(request: Request) {
           ? JSON.parse(requestData.itineraryoptions) 
           : requestData.itineraryoptions
         if (parsed?.options && Array.isArray(parsed.options)) {
-          existingOptions = parsed.options
+          // Filter out null values to prevent errors when accessing properties
+          existingOptions = parsed.options.filter((opt: any) => opt !== null && opt !== undefined)
         }
       } catch {}
     }
@@ -154,7 +155,7 @@ export async function POST(request: Request) {
       console.warn('Could not read photo mapping file:', error)
     }
 
-    const existingTitles = existingOptions.map((opt: any) => opt.title).filter(Boolean).join(', ')
+    const existingTitles = existingOptions.filter((opt: any) => opt && opt.title).map((opt: any) => opt.title).join(', ')
     
     const prompt = `You are an experienced and passionate luxury travel consultant who creates personalized, memorable journeys through Sri Lanka. Generate ONE distinct, premium itinerary option for the following client:
 
