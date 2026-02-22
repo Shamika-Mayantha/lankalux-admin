@@ -108,8 +108,12 @@ export async function POST(request: Request) {
     // Generate AI images for each day based on descriptions
     const generateDayImage = async (day: any): Promise<string> => {
       try {
-        // Create a descriptive prompt for image generation
-        const imagePrompt = `A beautiful, professional travel photograph of ${day.location}, Sri Lanka. ${day.title}. ${day.what_to_expect || ''} ${day.activities?.slice(0, 2).join(', ') || ''}. Stunning landscape, high quality, travel photography style, vibrant colors, luxury travel aesthetic.`
+        // Identify the main highlight/activity for the day
+        const mainActivities = day.activities?.slice(0, 3).join(', ') || ''
+        const dayHighlight = `${day.title} in ${day.location}, Sri Lanka. ${mainActivities}`
+        
+        // Create a realistic, documentary-style prompt for image generation
+        const imagePrompt = `A genuine documentary-style photograph of ${dayHighlight}. Real location in Sri Lanka. Shot in natural daylight using a telephoto lens, documentary-style, no dramatic colors, no cinematic effects, no artificial sharpening, no stylization. Looks like a genuine camera photograph taken by a wildlife photographer in Sri Lanka. Landscape style, authentic travel photography, realistic lighting, natural colors, professional travel documentation.`
         
         const imageResponse = await openai.images.generate({
           model: 'dall-e-3',
