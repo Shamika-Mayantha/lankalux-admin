@@ -212,9 +212,9 @@ export default function PublicItineraryPage() {
     message += `👤 Prepared for: ${clientName}\n`
     message += `📅 Travel Dates: ${startDate} to ${endDate}\n\n`
     
-    if (contactName) message += `👤 My Name: ${contactName}\n`
-    if (contactEmail) message += `📧 My Email: ${contactEmail}\n`
-    if (contactMessage) message += `\n💬 My Message:\n${contactMessage}\n`
+    if (contactName) message += `👤 My Name: *${contactName}*\n`
+    if (contactEmail) message += `📧 My Email: *${contactEmail}*\n`
+    if (contactMessage) message += `\n💬 My Message:\n*${contactMessage}*\n`
     
     // WhatsApp number - update this with your business number (format: country code + number without +)
     // Example: 94771234567 for Sri Lanka
