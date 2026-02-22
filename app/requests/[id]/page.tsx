@@ -8,6 +8,7 @@ interface ItineraryOption {
   title: string
   days: string
   summary: string
+  total_kilometers?: number
 }
 
 interface ItineraryOptions {
