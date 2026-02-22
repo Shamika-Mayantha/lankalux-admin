@@ -164,12 +164,19 @@ CLIENT INFORMATION:
 - Travel End Date: ${endDateFormatted}
 - Total Duration: ${actualDuration || 'Not specified'} days
 ${passengerInfo}
-- Additional Preferences: ${requestData.additional_preferences || 'None provided'}
+${requestData.additional_preferences && requestData.additional_preferences.trim() ? `- **ADDITIONAL PREFERENCES (MANDATORY TO INCORPORATE): ${requestData.additional_preferences}**` : '- Additional Preferences: None provided'}
 ${photoMappingInfo}
 
 CRITICAL REQUIREMENTS - READ CAREFULLY:
 - Generate EXACTLY 3 distinct luxury itinerary options
 - Each option must be premium, bespoke, and professionally curated
+${requestData.additional_preferences && requestData.additional_preferences.trim() ? `- **MANDATORY: You MUST incorporate the client's additional preferences: "${requestData.additional_preferences}" in ALL 3 options. These preferences are important to the client and should be reflected throughout each itinerary in activities, locations, and experiences.**` : ''}
+- **CRITICAL: Each of the 3 options MUST be COMPLETELY DIFFERENT from each other:**
+  * Different themes (e.g., "Cultural Heritage", "Wildlife Safari", "Beach & Wellness", "Adventure & Nature", "Luxury Relaxation")
+  * Different location sequences and routes
+  * Different types of experiences and activities
+  * Different focus areas and highlights
+  * Unique titles that clearly distinguish each option
 - Each option MUST have EXACTLY ${actualDuration || 'the specified number of'} days - match the EXACT duration provided above (${actualDuration || requestData.duration || 'Not specified'} days)
 - The itinerary must span from ${startDateFormatted} to ${endDateFormatted} - use these EXACT dates
 - Use ALL the information provided: travel dates, duration, passenger info, and additional preferences
@@ -327,10 +334,22 @@ IMPORTANT RULES:
     const generateSingleOption = async (optionNumber: number, existingOptions: any[]): Promise<any> => {
       // Create a prompt for a single option, mentioning existing ones to ensure uniqueness
       const existingTitles = existingOptions.map((opt: any) => opt.title).join(', ')
+      const existingSummaries = existingOptions.map((opt: any) => opt.summary?.substring(0, 100)).filter(Boolean).join(' | ')
+      
       const singleOptionPrompt = `${prompt}
 
 IMPORTANT: Generate ONLY ONE itinerary option (option ${optionNumber} of 3). 
-${existingOptions.length > 0 ? `Already generated options: ${existingTitles}. Make this option completely different.` : ''}
+${existingOptions.length > 0 ? `**CRITICAL UNIQUENESS REQUIREMENT: The following options have already been generated:
+- Titles: ${existingTitles}
+${existingSummaries ? `- Themes: ${existingSummaries}` : ''}
+
+You MUST create a COMPLETELY DIFFERENT itinerary that:
+- Has a different theme and focus (e.g., if others are "Cultural Heritage" and "Wildlife Safari", create something like "Beach & Wellness" or "Adventure & Nature")
+- Visits different locations or in a different order
+- Offers different types of experiences and activities
+- Has a unique title that clearly distinguishes it from the existing options
+- Do NOT repeat similar activities, locations, or themes from the existing options**` : ''}
+${requestData.additional_preferences && requestData.additional_preferences.trim() ? `**MANDATORY: You MUST incorporate the client's additional preferences: "${requestData.additional_preferences}" in this itinerary. These preferences should be reflected in activities, locations, and experiences.**` : ''}
 Return JSON in this format: { "title": "...", "summary": "...", "days": [...] }`
 
       let completion

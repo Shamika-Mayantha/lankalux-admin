@@ -169,13 +169,21 @@ CLIENT INFORMATION:
 - Travel Start Date: ${startDateFormatted}
 - Travel End Date: ${endDateFormatted}
 ${passengerInfo}
-- Additional Preferences: ${requestData.additional_preferences || 'None provided'}
+${requestData.additional_preferences && requestData.additional_preferences.trim() ? `- **ADDITIONAL PREFERENCES (MANDATORY TO INCORPORATE): ${requestData.additional_preferences}**` : '- Additional Preferences: None provided'}
 ${photoMappingInfo}
 
-${existingTitles ? `IMPORTANT: Already generated options: ${existingTitles}. Make this option COMPLETELY DIFFERENT in theme, focus, and experiences.` : ''}
+${existingTitles ? `**CRITICAL UNIQUENESS REQUIREMENT: The following options have already been generated: ${existingTitles}. 
+
+You MUST create a COMPLETELY DIFFERENT itinerary that:
+- Has a different theme and focus (e.g., if others are "Cultural Heritage" and "Wildlife Safari", create something like "Beach & Wellness" or "Adventure & Nature")
+- Visits different locations or in a different order
+- Offers different types of experiences and activities
+- Has a unique title that clearly distinguishes it from: ${existingTitles}
+- Do NOT repeat similar activities, locations, or themes from the existing options**` : ''}
 
 CRITICAL REQUIREMENTS:
 - Generate ONE premium, bespoke, professionally curated itinerary option
+${requestData.additional_preferences && requestData.additional_preferences.trim() ? `- **MANDATORY: You MUST incorporate the client's additional preferences: "${requestData.additional_preferences}". These preferences are important to the client and should be reflected throughout the itinerary in activities, locations, and experiences.**` : ''}
 - **CALCULATE THE DURATION: Count the number of days from ${startDateFormatted} (Day 1 - START) to ${endDateFormatted} (LAST DAY - END), inclusive. The journey starts on ${startDateFormatted} and ends on ${endDateFormatted}. Calculate how many days this spans (including both start and end dates).**
 - **MANDATORY: The "days" array MUST contain exactly that many day objects - one day for each day from start date to end date, inclusive.**
 - Day 1 must correspond to ${startDateFormatted}

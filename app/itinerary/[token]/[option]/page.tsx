@@ -200,7 +200,7 @@ export default function PublicItineraryPage() {
     
     // WhatsApp number - update this with your business number (format: country code + number without +)
     // Example: 94771234567 for Sri Lanka
-    const whatsappNumber = '94761261788'
+    const whatsappNumber = '94763261788'
     window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank')
   }
 
@@ -225,7 +225,7 @@ export default function PublicItineraryPage() {
     
     // WhatsApp number - update this with your business number (format: country code + number without +)
     // Example: 94771234567 for Sri Lanka
-    const whatsappNumber = '94761261788'
+    const whatsappNumber = '94763261788'
     window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank')
     
     // Reset form and close modal
