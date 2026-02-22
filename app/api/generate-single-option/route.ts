@@ -141,19 +141,17 @@ export async function POST(request: Request) {
       } catch {}
     }
 
-    // Read photo mapping file
+    // Read photo mapping file (simplified for speed)
     let photoMappingInfo = ''
     try {
       const photoMappingPath = join(process.cwd(), 'public', 'images', 'photo-mapping.json')
       const photoMappingContent = readFileSync(photoMappingPath, 'utf-8')
       const photoMapping = JSON.parse(photoMappingContent)
       
-      photoMappingInfo = `\n\nAVAILABLE PHOTOS:\n`
+      // Simplified format to reduce prompt size
+      photoMappingInfo = `\nAVAILABLE PHOTOS (use most appropriate for each day):\n`
       Object.entries(photoMapping.locations).forEach(([location, data]: [string, any]) => {
-        photoMappingInfo += `- ${location}: Primary: ${data.primary_image}, Alternatives: ${data.alternative_images.join(', ')}\n`
-      })
-      Object.entries(photoMapping.activities).forEach(([activity, data]: [string, any]) => {
-        photoMappingInfo += `- ${activity}: ${data.images.join(', ')}\n`
+        photoMappingInfo += `${location}: ${data.primary_image}\n`
       })
     } catch (error) {
       console.warn('Could not read photo mapping file:', error)
@@ -208,53 +206,39 @@ Return ONLY valid JSON in this format:
   ]
 }`
 
-    // Generate single option
+    // Generate single option (optimized for speed - single attempt, lower tokens)
     let completion
     let generatedContent = ''
-    const maxRetries = 2
-    let currentMaxTokens = 6000
     
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        completion = await openai.chat.completions.create({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries. CRITICAL: Every day MUST include an "image" field. Always respond with valid JSON only. Never use markdown. Return only the JSON object.',
-            },
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          temperature: 0.9,
-          max_tokens: currentMaxTokens,
-          response_format: { type: 'json_object' },
-        })
+    try {
+      // Calculate max_tokens based on duration (roughly 800 tokens per day)
+      const estimatedDays = actualDuration || requestData.duration || 6
+      const calculatedMaxTokens = Math.min(Math.max(estimatedDays * 800, 3000), 5000)
+      
+      completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a luxury travel consultant. Create premium Sri Lanka itineraries. CRITICAL: Every day MUST include an "image" field. Always respond with valid JSON only. Never use markdown. Return only the JSON object.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.9,
+        max_tokens: calculatedMaxTokens,
+        response_format: { type: 'json_object' },
+      })
 
-        generatedContent = completion.choices[0]?.message?.content?.trim() || ''
-        
-        const finishReason = completion.choices[0]?.finish_reason
-        if (finishReason === 'length') {
-          if (attempt < maxRetries) {
-            currentMaxTokens = Math.min(Math.floor(currentMaxTokens * 1.5), 10000)
-            await new Promise(resolve => setTimeout(resolve, 500 * attempt))
-            continue
-          }
-        }
-        
-        if (generatedContent) break
-      } catch (apiError) {
-        console.error(`OpenAI API error on attempt ${attempt}:`, apiError)
-        if (attempt === maxRetries) {
-          return NextResponse.json(
-            { success: false, error: 'Failed to generate option after multiple attempts' },
-            { status: 500 }
-          )
-        }
-        await new Promise(resolve => setTimeout(resolve, 500 * attempt))
-      }
+      generatedContent = completion.choices[0]?.message?.content?.trim() || ''
+    } catch (apiError) {
+      console.error('OpenAI API error:', apiError)
+      return NextResponse.json(
+        { success: false, error: 'Failed to generate option' },
+        { status: 500 }
+      )
     }
 
     if (!generatedContent) {
@@ -264,20 +248,29 @@ Return ONLY valid JSON in this format:
       )
     }
 
-    // Parse and validate the option
+    // Parse and validate the option (simplified for speed)
     let cleanedContent = generatedContent.trim()
     cleanedContent = cleanedContent.replace(/^```(?:json|JSON)?\n?/gm, '').replace(/\n?```$/gm, '').trim()
     const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/)
     if (jsonMatch) cleanedContent = jsonMatch[0]
     
-    // Fix incomplete JSON
+    // Quick fix for incomplete JSON (only if needed)
     const openBraces = (cleanedContent.match(/\{/g) || []).length
     const closeBraces = (cleanedContent.match(/\}/g) || []).length
-    if (openBraces !== closeBraces) {
-      cleanedContent += '\n' + '}'.repeat(openBraces - closeBraces)
+    if (openBraces > closeBraces) {
+      cleanedContent += '}'.repeat(openBraces - closeBraces)
     }
     
-    const newOption = JSON.parse(cleanedContent)
+    let newOption
+    try {
+      newOption = JSON.parse(cleanedContent)
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError)
+      return NextResponse.json(
+        { success: false, error: 'Failed to parse generated option' },
+        { status: 500 }
+      )
+    }
     
     // Validate option structure
     if (!newOption.title || !newOption.summary || !Array.isArray(newOption.days)) {
