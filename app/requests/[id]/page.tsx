@@ -49,6 +49,7 @@ export default function RequestDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [generatingItinerary, setGeneratingItinerary] = useState(false)
+  const [generatingOption, setGeneratingOption] = useState<number | null>(null) // Track which option is being generated (0, 1, or 2)
   const [selectingOption, setSelectingOption] = useState<number | null>(null)
   const [editingStatus, setEditingStatus] = useState(false)
   const [editingNotes, setEditingNotes] = useState(false)
@@ -386,6 +387,63 @@ export default function RequestDetailsPage() {
     }
   }
 
+  const handleGenerateSingleOption = async (optionIndex: number) => {
+    if (!request) return
+
+    try {
+      setGeneratingOption(optionIndex)
+
+      const response = await fetch('/api/generate-single-option', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: request.id, optionIndex }),
+      })
+
+      // Check if response is ok before trying to parse JSON
+      let result
+      try {
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          result = await response.json()
+        } else {
+          const text = await response.text()
+          throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`)
+        }
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError)
+        if (!response.ok) {
+          const errorMessage = response.status === 504 
+            ? 'Request timed out. Please try again.'
+            : `Server error (${response.status}). Please try again.`
+          alert(`Failed to generate option ${optionIndex + 1}: ${errorMessage}`)
+          setGeneratingOption(null)
+          return
+        }
+        throw parseError
+      }
+
+      if (!response.ok || !result.success) {
+        const errorMessage = result.error || 'Failed to generate option'
+        alert(`Failed to generate option ${optionIndex + 1}: ${errorMessage}`)
+        setGeneratingOption(null)
+        return
+      }
+
+      // Refresh request data to show the new option
+      const updatedRequest = await fetchRequestData(request.id)
+      if (updatedRequest) {
+        setRequest(updatedRequest)
+      }
+      setGeneratingOption(null)
+    } catch (err) {
+      console.error('Unexpected error generating option:', err)
+      alert(`An unexpected error occurred while generating option ${optionIndex + 1}. Please try again.`)
+      setGeneratingOption(null)
+    }
+  }
+
   const handleGenerateItinerary = async () => {
     if (!request) return
 
@@ -400,12 +458,48 @@ export default function RequestDetailsPage() {
         body: JSON.stringify({ id: request.id }),
       })
 
-      const result = await response.json()
+      // Check if response is ok before trying to parse JSON
+      let result
+      try {
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          result = await response.json()
+        } else {
+          // If not JSON, it might be a timeout or other error
+          const text = await response.text()
+          throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`)
+        }
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError)
+        if (!response.ok) {
+          // If response is not ok and we can't parse JSON, it's likely a timeout
+          const errorMessage = response.status === 504 
+            ? 'Request timed out. The itinerary generation is taking longer than expected. Please try again or contact support if the issue persists.'
+            : `Server error (${response.status}). Please try again.`
+          alert(`Failed to generate itinerary: ${errorMessage}`)
+          setGeneratingItinerary(false)
+          return
+        }
+        throw parseError
+      }
 
       if (!response.ok || !result.success) {
         const errorMessage = result.error || 'Failed to generate itinerary'
         console.error('Error generating itinerary:', errorMessage)
         console.error('Error details:', result.details)
+        
+        // Check if we have partial results
+        if (result.partial && result.optionsGenerated > 0) {
+          const partialMessage = `Partially generated: ${result.optionsGenerated} of 3 options were created. ${errorMessage}\n\nYou can view the generated options below, or try regenerating to get all 3 options.`
+          alert(partialMessage)
+          // Still refresh to show partial results
+          const updatedRequest = await fetchRequestData(request.id)
+          if (updatedRequest) {
+            setRequest(updatedRequest)
+          }
+          setGeneratingItinerary(false)
+          return
+        }
         
         // Show detailed error in console and alert
         let alertMessage = `Failed to generate itinerary: ${errorMessage}`
@@ -877,7 +971,16 @@ LankaLux Team`
     )
   }
 
-  const itineraryOptions = request.itinerary_options?.options || []
+  // Ensure itineraryOptions array has 3 slots (may contain null for ungenerated options)
+  const itineraryOptions = (() => {
+    const options = request.itinerary_options?.options || []
+    // Ensure array has exactly 3 slots, filling with null if needed
+    const result = [...options]
+    while (result.length < 3) {
+      result.push(null)
+    }
+    return result.slice(0, 3) // Ensure exactly 3 slots
+  })()
   const isCancelled = request.status?.toLowerCase() === 'cancelled'
   
   // Helper function to parse itineraryoptions safely
@@ -1464,30 +1567,44 @@ LankaLux Team`
 
         {/* Itinerary Options Section */}
         <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 md:p-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
             <h2 className="text-2xl font-semibold text-[#d4af37]">Itinerary Options</h2>
-            {!generatingItinerary && !isCancelled && (
-              <button
-                onClick={handleGenerateItinerary}
-                disabled={generatingItinerary}
-                className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                {itineraryOptions.length > 0 ? 'Regenerate Itinerary Options' : 'Generate Itinerary Options'}
-              </button>
+            {!isCancelled && (
+              <div className="flex gap-2 flex-wrap">
+                {[0, 1, 2].map((optionIndex) => {
+                  const optionExists = itineraryOptions[optionIndex] !== null && itineraryOptions[optionIndex] !== undefined
+                  const isGenerating = generatingOption === optionIndex
+                  return (
+                    <button
+                      key={optionIndex}
+                      onClick={() => handleGenerateSingleOption(optionIndex)}
+                      disabled={isGenerating || generatingItinerary}
+                      className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
+                          Generating...
+                        </>
+                      ) : optionExists ? (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Regenerate Option {optionIndex + 1}
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          Generate Option {optionIndex + 1}
+                        </>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
             )}
             {isCancelled && (
               <p className="text-sm text-gray-500 italic">Itinerary generation disabled for cancelled trips</p>
@@ -1549,53 +1666,90 @@ LankaLux Team`
             })() : null}
           </div>
 
-          {generatingItinerary ? (
-            <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-8">
-              <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#d4af37] mb-4"></div>
-                <p className="text-gray-400">Generating itinerary options...</p>
-              </div>
-            </div>
-          ) : itineraryOptions.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {itineraryOptions.map((option, index) => {
-                const isSelected = request.selected_option === index
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {[0, 1, 2].map((index) => {
+              const option = itineraryOptions[index]
+              const optionExists = option !== null && option !== undefined
+              const isGenerating = generatingOption === index
+              const isSelected = request.selected_option === index
+              
+              if (!optionExists && !isGenerating) {
+                // Placeholder for option not yet generated
                 return (
                   <div
                     key={index}
-                    className={`bg-[#0a0a0a] border rounded-lg p-6 flex flex-col ${
-                      isSelected
-                        ? 'border-[#d4af37] ring-2 ring-[#d4af37]'
-                        : 'border-[#333]'
-                    }`}
+                    className="bg-[#0a0a0a] border border-[#333] rounded-lg p-6 flex flex-col items-center justify-center min-h-[300px]"
                   >
-                    <div className="flex items-start justify-between mb-4">
-                      <h3 className="text-xl font-semibold text-[#d4af37] flex-1">
-                        {option.title}
-                      </h3>
-                      {isSelected && (
-                        <span className="ml-2 px-2 py-1 bg-[#d4af37] text-black text-xs font-semibold rounded">
-                          SELECTED
-                        </span>
-                      )}
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-[#333] rounded-full flex items-center justify-center mb-4 mx-auto">
+                        <span className="text-2xl text-gray-500">{index + 1}</span>
                     </div>
-                    <div className="mb-4 flex-1">
-                      <p className="text-sm text-gray-400 mb-3">{option.summary}</p>
-                      <div className="bg-[#1a1a1a] border border-[#333] rounded-md p-4 max-h-64 overflow-y-auto">
-                        <p className="text-gray-300 text-sm whitespace-pre-wrap font-mono">
-                          {Array.isArray(option.days) 
-                            ? option.days.map((day: any) => 
-                                `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities?.map((act: string) => `  • ${act}`).join('\n') || ''}`
-                              ).join('\n\n')
-                            : (typeof option.days === 'string' ? option.days : '')
-                          }
-                        </p>
-                      </div>
+                    <p className="text-gray-500 mb-4">Option {index + 1} not generated yet</p>
+                    <button
+                      onClick={() => handleGenerateSingleOption(index)}
+                      disabled={generatingOption !== null || generatingItinerary || isCancelled}
+                      className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Generate Option {index + 1}
+                    </button>
+                  </div>
+                )
+              }
+              
+              if (isGenerating) {
+                // Loading state for option being generated
+                return (
+                  <div
+                    key={index}
+                    className="bg-[#0a0a0a] border border-[#333] rounded-lg p-6 flex flex-col items-center justify-center min-h-[300px]"
+                  >
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#d4af37] mb-4"></div>
+                    <p className="text-gray-400">Generating Option {index + 1}...</p>
+                  </div>
+                )
+              }
+              
+              // Display generated option
+              return (
+                <div
+                  key={index}
+                  className={`bg-[#0a0a0a] border rounded-lg p-6 flex flex-col ${
+                    isSelected
+                      ? 'border-[#d4af37] ring-2 ring-[#d4af37]'
+                      : 'border-[#333]'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <h3 className="text-xl font-semibold text-[#d4af37] flex-1">
+                      {option.title}
+                    </h3>
+                    {isSelected && (
+                      <span className="ml-2 px-2 py-1 bg-[#d4af37] text-black text-xs font-semibold rounded">
+                        SELECTED
+                      </span>
+                    )}
+                  </div>
+                  <div className="mb-4 flex-1">
+                    <p className="text-sm text-gray-400 mb-3">{option.summary}</p>
+                    <div className="bg-[#1a1a1a] border border-[#333] rounded-md p-4 max-h-64 overflow-y-auto">
+                      <p className="text-gray-300 text-sm whitespace-pre-wrap font-mono">
+                        {Array.isArray(option.days) 
+                          ? option.days.map((day: any) => 
+                              `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities?.map((act: string) => `  • ${act}`).join('\n') || ''}`
+                            ).join('\n\n')
+                          : (typeof option.days === 'string' ? option.days : '')
+                        }
+                      </p>
                     </div>
+                  </div>
+                  <div className="flex gap-2">
                     <button
                       onClick={() => handleSelectOption(index)}
                       disabled={selectingOption !== null}
-                      className={`w-full py-2 px-4 rounded-md font-semibold transition-colors duration-200 ${
+                      className={`flex-1 py-2 px-4 rounded-md font-semibold transition-colors duration-200 ${
                         isSelected
                           ? 'bg-[#666] hover:bg-[#777] text-white'
                           : 'bg-[#d4af37] hover:bg-[#b8941f] text-black'
@@ -1612,15 +1766,21 @@ LankaLux Team`
                         'Select This Option'
                       )}
                     </button>
+                    <button
+                      onClick={() => handleGenerateSingleOption(index)}
+                      disabled={generatingOption !== null || generatingItinerary || isCancelled}
+                      className="px-3 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Regenerate this option"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
                   </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-8">
-              <p className="text-gray-400 text-center">No itinerary options generated yet. Click "Generate Itinerary Options" to create them.</p>
-            </div>
-          )}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {/* Sent Itinerary Section - Show if any options have been sent */}

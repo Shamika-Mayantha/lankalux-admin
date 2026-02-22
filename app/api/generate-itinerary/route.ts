@@ -4,6 +4,9 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
+// Vercel Hobby plan has 10 second timeout - optimize for speed
+export const maxDuration = 10
+
 export async function POST(request: Request) {
   try {
     // Parse request body
@@ -315,266 +318,207 @@ IMPORTANT RULES:
 - No explanations
 - Only valid JSON`
 
-    // Generate itinerary using OpenAI with retry logic
-    // Use higher temperature for more variety and creativity
-    let completion
-    let generatedContent = ''
-    const maxRetries = 3
-    let currentMaxTokens = 8000 // Start with 8000 tokens
+    // Generate options one at a time and save incrementally to handle timeout gracefully
+    // This way if we timeout, at least some options are saved
+    const itineraryOptions: any = { options: [] }
+    const numOptions = 3
     
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        completion = await openai.chat.completions.create({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries with clear structure. Always generate FRESH, UNIQUE, and CREATIVE options that differ significantly from previous suggestions. CRITICAL: Every single day MUST include an "image" field that showcases the day\'s highlight - analyze each day\'s activities and theme to select the most appropriate photo. Always respond with valid JSON only. Never use markdown. Never add explanations. Return only the JSON object. Ensure the JSON is complete and valid. Every day must have an image - no exceptions.',
-            },
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          temperature: 0.9, // Increased from 0.7 to 0.9 for more variety and creativity
-          max_tokens: currentMaxTokens, // Dynamically increase if truncated
-          response_format: { type: 'json_object' },
-        })
+    // Helper function to generate a single option
+    const generateSingleOption = async (optionNumber: number, existingOptions: any[]): Promise<any> => {
+      // Create a prompt for a single option, mentioning existing ones to ensure uniqueness
+      const existingTitles = existingOptions.map((opt: any) => opt.title).join(', ')
+      const singleOptionPrompt = `${prompt}
 
-        generatedContent = completion.choices[0]?.message?.content?.trim() || ''
-        
-        // Check if response was truncated (indicated by finish_reason)
-        const finishReason = completion.choices[0]?.finish_reason
-        if (finishReason === 'length') {
-          console.warn(`Response was truncated on attempt ${attempt}. Current max_tokens: ${currentMaxTokens}`)
-          if (attempt < maxRetries) {
-            // Increase max_tokens for retry (double it, up to 16000)
-            currentMaxTokens = Math.min(currentMaxTokens * 2, 16000)
-            console.log(`Retrying with max_tokens: ${currentMaxTokens}`)
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
-            continue
-          } else {
-            console.error('Response still truncated after all retries')
+IMPORTANT: Generate ONLY ONE itinerary option (option ${optionNumber} of 3). 
+${existingOptions.length > 0 ? `Already generated options: ${existingTitles}. Make this option completely different.` : ''}
+Return JSON in this format: { "title": "...", "summary": "...", "days": [...] }`
+
+      let completion
+      let generatedContent = ''
+      const maxRetries = 2
+      let currentMaxTokens = 6000
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content:
+                  'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries with clear structure. Always generate FRESH, UNIQUE, and CREATIVE options. CRITICAL: Every single day MUST include an "image" field that showcases the day\'s highlight. Always respond with valid JSON only. Never use markdown. Never add explanations. Return only the JSON object.',
+              },
+              {
+                role: 'user',
+                content: singleOptionPrompt,
+              },
+            ],
+            temperature: 0.9,
+            max_tokens: currentMaxTokens,
+            response_format: { type: 'json_object' },
+          })
+
+          generatedContent = completion.choices[0]?.message?.content?.trim() || ''
+          
+          const finishReason = completion.choices[0]?.finish_reason
+          if (finishReason === 'length') {
+            if (attempt < maxRetries) {
+              currentMaxTokens = Math.min(Math.floor(currentMaxTokens * 1.5), 10000)
+              await new Promise(resolve => setTimeout(resolve, 500 * attempt))
+              continue
+            }
           }
+          
+          if (generatedContent) break
+        } catch (apiError) {
+          console.error(`OpenAI API error on attempt ${attempt}:`, apiError)
+          if (attempt === maxRetries) {
+            throw new Error('Failed to generate option after multiple attempts')
+          }
+          await new Promise(resolve => setTimeout(resolve, 500 * attempt))
         }
-        
-        if (generatedContent) {
-          break // Success, exit retry loop
-        }
-      } catch (apiError) {
-        console.error(`OpenAI API error on attempt ${attempt}:`, apiError)
-        if (attempt === maxRetries) {
-          return NextResponse.json(
-            { success: false, error: 'Failed to generate itinerary after multiple attempts' },
-            { status: 500 }
-          )
-        }
-        // Wait before retry (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
       }
-    }
 
-    if (!generatedContent) {
-      return NextResponse.json(
-        { success: false, error: 'Failed to generate itinerary' },
-        { status: 500 }
-      )
-    }
+      if (!generatedContent) {
+        throw new Error('Failed to generate option')
+      }
 
-    // Parse JSON response
-    let itineraryOptions
-    let cleanedContent = ''
-    let openBraces = 0
-    let closeBraces = 0
-    let openBrackets = 0
-    let closeBrackets = 0
-    
-    try {
-      // Remove any markdown code blocks if present
-      cleanedContent = generatedContent.trim()
-      
-      // Remove markdown code blocks (handle various formats)
-      cleanedContent = cleanedContent.replace(/^```(?:json|JSON)?\n?/gm, '').replace(/\n?```$/gm, '')
-      cleanedContent = cleanedContent.trim()
-      
-      // Try to extract JSON if there's extra text
+      // Parse and validate the single option
+      let cleanedContent = generatedContent.trim()
+      cleanedContent = cleanedContent.replace(/^```(?:json|JSON)?\n?/gm, '').replace(/\n?```$/gm, '').trim()
       const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        cleanedContent = jsonMatch[0]
-      }
+      if (jsonMatch) cleanedContent = jsonMatch[0]
       
-      // Remove any leading/trailing whitespace or newlines
-      cleanedContent = cleanedContent.trim()
-      
-      // Check if JSON might be incomplete (common if truncated)
-      openBraces = (cleanedContent.match(/\{/g) || []).length
-      closeBraces = (cleanedContent.match(/\}/g) || []).length
-      
+      // Fix incomplete JSON
+      const openBraces = (cleanedContent.match(/\{/g) || []).length
+      const closeBraces = (cleanedContent.match(/\}/g) || []).length
       if (openBraces !== closeBraces) {
-        console.warn('JSON appears incomplete - mismatched braces:', { openBraces, closeBraces })
-        // Try to fix incomplete JSON by closing braces
-        const missingBraces = openBraces - closeBraces
-        cleanedContent += '\n' + '}'.repeat(missingBraces)
+        cleanedContent += '\n' + '}'.repeat(openBraces - closeBraces)
       }
       
-      // Check for incomplete arrays
-      openBrackets = (cleanedContent.match(/\[/g) || []).length
-      closeBrackets = (cleanedContent.match(/\]/g) || []).length
-      if (openBrackets !== closeBrackets) {
-        console.warn('JSON appears incomplete - mismatched brackets:', { openBrackets, closeBrackets })
-        const missingBrackets = openBrackets - closeBrackets
-        cleanedContent += '\n' + ']'.repeat(missingBrackets)
+      const option = JSON.parse(cleanedContent)
+      
+      // Validate option structure
+      if (!option.title || !option.summary || !Array.isArray(option.days)) {
+        throw new Error('Invalid option format: missing required fields')
       }
       
-      console.log('Attempting to parse JSON. Content length:', cleanedContent.length)
-      console.log('First 200 chars:', cleanedContent.substring(0, 200))
-      console.log('Last 200 chars:', cleanedContent.substring(Math.max(0, cleanedContent.length - 200)))
+      const expectedDays = actualDuration || requestData.duration
+      if (expectedDays && option.days.length !== expectedDays) {
+        throw new Error(`Invalid option format: expected ${expectedDays} days but got ${option.days.length} days`)
+      }
       
-      itineraryOptions = JSON.parse(cleanedContent)
+      // Ensure every day has an image
+      const locationImageMap: Record<string, string> = {
+        "Colombo": "/images/colombo.jpg",
+        "Sigiriya": "/images/sigiriya.jpg",
+        "Ella": "/images/ella.jpg",
+        "Yala": "/images/yala.jpg",
+        "Galle": "/images/galle.jpg",
+        "Kandy": "/images/kandy.jpg",
+        "Nuwara Eliya": "/images/nuwara-eliya.jpg"
+      }
       
-      // Validate structure
-      if (!itineraryOptions.options || !Array.isArray(itineraryOptions.options) || itineraryOptions.options.length !== 3) {
+      for (const day of option.days) {
+        if (!day.image || typeof day.image !== 'string') {
+          day.image = locationImageMap[day.location] || "/images/placeholder.jpg"
+        }
+      }
+      
+      return option
+    }
+
+    // Generate and save options one at a time
+    try {
+      for (let i = 0; i < numOptions; i++) {
+        console.log(`Generating option ${i + 1} of ${numOptions}...`)
+        
+        const option = await generateSingleOption(i + 1, itineraryOptions.options)
+        itineraryOptions.options.push(option)
+        
+        // Save incrementally after each option is generated
+        const partialOptionsString = JSON.stringify(itineraryOptions)
+        const { error: partialUpdateError } = await supabase
+          .from('requests')
+          .update({ 
+            itineraryoptions: partialOptionsString,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', requestId)
+        
+        if (partialUpdateError) {
+          console.error(`Error saving partial options (${i + 1}/${numOptions}):`, partialUpdateError)
+        } else {
+          console.log(`Successfully saved option ${i + 1} of ${numOptions}`)
+        }
+      }
+      
+      // Final validation
+      if (itineraryOptions.options.length !== numOptions) {
         return NextResponse.json(
-          { success: false, error: 'Invalid itinerary format: expected 3 options' },
+          { 
+            success: false, 
+            error: `Only generated ${itineraryOptions.options.length} of ${numOptions} options`,
+            partial: true,
+            optionsGenerated: itineraryOptions.options.length
+          },
           { status: 500 }
         )
       }
+      
+      // Final save with selected_option cleared
+      const itineraryOptionsString = JSON.stringify(itineraryOptions)
+      const { error: finalUpdateError } = await supabase
+        .from('requests')
+        .update({ 
+          itineraryoptions: itineraryOptionsString,
+          selected_option: null, // Clear selection so user must select a new option
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId)
 
-      // Validate each option has the correct structure
-      for (const option of itineraryOptions.options) {
-        if (!option.title || !option.summary || !Array.isArray(option.days)) {
-          return NextResponse.json(
-            { success: false, error: 'Invalid itinerary format: missing required fields' },
-            { status: 500 }
-          )
-        }
-        // Validate that the number of days matches the requested duration
-        const expectedDays = actualDuration || requestData.duration
-        if (expectedDays && option.days.length !== expectedDays) {
-          return NextResponse.json(
-            { success: false, error: `Invalid itinerary format: expected ${expectedDays} days but got ${option.days.length} days` },
-            { status: 500 }
-          )
-        }
-        // Fallback: minimum 1 day if duration not specified
-        if (!expectedDays && option.days.length < 1) {
-          return NextResponse.json(
-            { success: false, error: 'Invalid itinerary format: itinerary must have at least 1 day' },
-            { status: 500 }
-          )
-        }
-        // Validate each day has required fields including image
-        for (const day of option.days) {
-          if (!day.day || !day.title || !day.location || !Array.isArray(day.activities)) {
-            return NextResponse.json(
-              { success: false, error: 'Invalid itinerary format: day structure invalid' },
-              { status: 500 }
-            )
-          }
-          // Ensure every day has an image - if missing, use location-based fallback
-          if (!day.image || typeof day.image !== 'string') {
-            console.warn(`Day ${day.day} (${day.title}) is missing image field. Adding fallback.`)
-            // Use location-based image as fallback
-            const locationImageMap: Record<string, string> = {
-              "Colombo": "/images/colombo.jpg",
-              "Sigiriya": "/images/sigiriya.jpg",
-              "Ella": "/images/ella.jpg",
-              "Yala": "/images/yala.jpg",
-              "Galle": "/images/galle.jpg",
-              "Kandy": "/images/kandy.jpg",
-              "Nuwara Eliya": "/images/nuwara-eliya.jpg"
-            }
-            day.image = locationImageMap[day.location] || "/images/placeholder.jpg"
-          }
-        }
+      if (finalUpdateError) {
+        console.error('Error in final update:', finalUpdateError)
+        // Options are already saved incrementally, so this is not critical
       }
-    } catch (parseError) {
-      console.error('Error parsing JSON:', parseError)
-      console.error('Parse error details:', {
-        message: parseError instanceof Error ? parseError.message : String(parseError),
-        name: parseError instanceof Error ? parseError.name : 'Unknown',
-        stack: parseError instanceof Error ? parseError.stack : undefined
+
+      // Return success response
+      return NextResponse.json({ 
+        success: true,
+        optionsGenerated: itineraryOptions.options.length
       })
-      console.error('Generated content length:', generatedContent.length)
-      console.error('Generated content (first 1000 chars):', generatedContent.substring(0, 1000))
-      console.error('Generated content (last 1000 chars):', generatedContent.substring(Math.max(0, generatedContent.length - 1000)))
+    } catch (generateError) {
+      console.error('Error generating options:', generateError)
       
-      // Check if content starts with JSON
-      const startsWithJson = cleanedContent.trim().startsWith('{')
-      const endsWithJson = cleanedContent.trim().endsWith('}')
+      // Check if we have any partial options saved
+      const { data: currentData } = await supabase
+        .from('requests')
+        .select('itineraryoptions')
+        .eq('id', requestId)
+        .single()
       
-      // Try to provide more helpful error message
-      let errorMessage = 'Failed to parse itinerary response'
-      let errorDetails: any = {
-        parseError: parseError instanceof Error ? parseError.message : String(parseError),
-        contentLength: generatedContent.length,
-        cleanedLength: cleanedContent.length,
-        startsWithJson,
-        endsWithJson,
-        openBraces,
-        closeBraces,
-        openBrackets,
-        closeBrackets
-      }
-      
-      if (parseError instanceof SyntaxError) {
-        // Extract position information from syntax error if available
-        const positionMatch = parseError.message.match(/position (\d+)/i)
-        if (positionMatch) {
-          const position = parseInt(positionMatch[1], 10)
-          errorDetails.syntaxErrorPosition = position
-          errorDetails.contextAroundError = cleanedContent.substring(
-            Math.max(0, position - 100),
-            Math.min(cleanedContent.length, position + 100)
-          )
-        }
-        errorMessage = `Invalid JSON format: ${parseError.message}`
-      }
-      
-      // Always include preview in error response for debugging
-      errorDetails.contentPreview = {
-        first500: generatedContent.substring(0, 500),
-        last500: generatedContent.substring(Math.max(0, generatedContent.length - 500)),
-        cleanedFirst500: cleanedContent.substring(0, 500),
-        cleanedLast500: cleanedContent.substring(Math.max(0, cleanedContent.length - 500))
+      let partialOptionsCount = 0
+      if (currentData?.itineraryoptions) {
+        try {
+          const parsed = typeof currentData.itineraryoptions === 'string' 
+            ? JSON.parse(currentData.itineraryoptions) 
+            : currentData.itineraryoptions
+          if (parsed?.options && Array.isArray(parsed.options)) {
+            partialOptionsCount = parsed.options.length
+          }
+        } catch {}
       }
       
       return NextResponse.json(
         { 
           success: false, 
-          error: errorMessage,
-          details: errorDetails
+          error: generateError instanceof Error ? generateError.message : 'Failed to generate itinerary',
+          partial: partialOptionsCount > 0,
+          optionsGenerated: partialOptionsCount
         },
         { status: 500 }
       )
     }
-
-    // Convert JSON object to string and save to itineraryoptions column
-    const itineraryOptionsString = JSON.stringify(itineraryOptions)
-    
-    // Clear selected_option when regenerating since new options will have different indices
-    // Keep public_token so old sent links remain active (they use snapshot data from sent_options)
-    const { error: updateError } = await supabase
-      .from('requests')
-      .update({ 
-        itineraryoptions: itineraryOptionsString,
-        selected_option: null, // Clear selection so user must select a new option
-        // Keep public_token - don't clear it so old links continue to work
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', requestId)
-
-    if (updateError) {
-      console.error('Error updating itineraryoptions:', updateError)
-      return NextResponse.json(
-        { success: false, error: 'Failed to save itinerary' },
-        { status: 500 }
-      )
-    }
-
-    // Return success response
-    return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Unexpected error generating itinerary:', error)
     return NextResponse.json(
