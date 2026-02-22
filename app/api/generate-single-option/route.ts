@@ -4,9 +4,6 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-// Vercel Hobby plan has 10 second timeout
-export const maxDuration = 10
-
 export async function POST(request: Request) {
   try {
     // Parse request body
