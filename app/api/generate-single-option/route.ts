@@ -193,18 +193,20 @@ You MUST create a COMPLETELY DIFFERENT itinerary that:
 
 CRITICAL REQUIREMENTS:
 - Generate ONE premium, bespoke, professionally curated itinerary option
-${requestData.additional_preferences && requestData.additional_preferences.trim() ? `- **MANDATORY: You MUST incorporate the client's additional preferences: "${requestData.additional_preferences}". These preferences are important to the client and should be reflected throughout the itinerary in activities, locations, and experiences.**` : ''}
+${requestData.additional_preferences && requestData.additional_preferences.trim() ? `- **INCORPORATING CLIENT PREFERENCES: The client has mentioned these highlights/preferences: "${requestData.additional_preferences}". These are important to the client, but they are highlights to incorporate into a well-rounded itinerary - NOT the entire focus. Create a comprehensive itinerary that includes these preferences along with other diverse experiences, activities, and locations. The itinerary should be balanced and showcase the best of Sri Lanka while incorporating the client's specific interests.**` : ''}
 - **CALCULATE THE DURATION: Count the number of days from ${startDateFormatted} (Day 1 - START) to ${endDateFormatted} (LAST DAY - END), inclusive. The journey starts on ${startDateFormatted} and ends on ${endDateFormatted}. Calculate how many days this spans (including both start and end dates).**
 - **MANDATORY: The "days" array MUST contain exactly that many day objects - one day for each day from start date to end date, inclusive.**
 - Day 1 must correspond to ${startDateFormatted}
 - The last day must correspond to ${endDateFormatted}
 - **ROUTE PLANNING - CRITICAL RULES:**
 
-1. **NO BACKTRACKING.**
-   - The travel route must flow geographically in one direction.
-   - Do not move north → south → north again.
-   - Each destination must follow a realistic driving path.
-   - Once you leave a region, do not return to it later in the itinerary.
+1. **NO BACKTRACKING - ABSOLUTELY CRITICAL:**
+   - **MANDATORY: The travel route MUST flow geographically in ONE direction only.**
+   - **STRICTLY FORBIDDEN: Do NOT move north → south → north again. Do NOT revisit locations or regions you've already left.**
+   - Each destination must follow a realistic driving path in a forward direction.
+   - Once you leave a region or location, you CANNOT return to it later in the itinerary.
+   - Plan your route carefully: Start → Location 1 → Location 2 → Location 3 → ... → End (all moving forward, never backward).
+   - If you find yourself planning to go back to a previous location, STOP and replan the route to flow in one direction only.
 
 2. **PROPER PACING.**
    - No rushing through destinations.

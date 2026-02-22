@@ -170,7 +170,7 @@ ${photoMappingInfo}
 CRITICAL REQUIREMENTS - READ CAREFULLY:
 - Generate EXACTLY 3 distinct luxury itinerary options
 - Each option must be premium, bespoke, and professionally curated
-${requestData.additional_preferences && requestData.additional_preferences.trim() ? `- **MANDATORY: You MUST incorporate the client's additional preferences: "${requestData.additional_preferences}" in ALL 3 options. These preferences are important to the client and should be reflected throughout each itinerary in activities, locations, and experiences.**` : ''}
+${requestData.additional_preferences && requestData.additional_preferences.trim() ? `- **INCORPORATING CLIENT PREFERENCES: The client has mentioned these highlights/preferences: "${requestData.additional_preferences}". These are important to the client, but they are highlights to incorporate into well-rounded itineraries - NOT the entire focus. Create comprehensive itineraries that include these preferences along with other diverse experiences, activities, and locations. Each itinerary should be balanced and showcase the best of Sri Lanka while incorporating the client's specific interests. The 3 options can emphasize different aspects, but all should be well-rounded.**` : ''}
 - **CRITICAL: Each of the 3 options MUST be COMPLETELY DIFFERENT from each other:**
   * Different themes (e.g., "Cultural Heritage", "Wildlife Safari", "Beach & Wellness", "Adventure & Nature", "Luxury Relaxation")
   * Different location sequences and routes
@@ -184,12 +184,14 @@ ${requestData.additional_preferences && requestData.additional_preferences.trim(
 - Plan activities and locations based on the actual number of days available
 - **ROUTE PLANNING - CRITICAL RULES (APPLY TO EACH OF THE 3 OPTIONS):**
 
-1. **NO BACKTRACKING.**
-   - The travel route must flow geographically in one direction.
-   - Do not move north → south → north again.
-   - Each destination must follow a realistic driving path.
-   - Once you leave a region, do not return to it later in the itinerary.
-   - Each of the 3 options can have different routes, but each individual option must flow logically without backtracking.
+1. **NO BACKTRACKING - ABSOLUTELY CRITICAL (APPLY TO EACH OF THE 3 OPTIONS):**
+   - **MANDATORY: Each travel route MUST flow geographically in ONE direction only.**
+   - **STRICTLY FORBIDDEN: Do NOT move north → south → north again. Do NOT revisit locations or regions you've already left.**
+   - Each destination must follow a realistic driving path in a forward direction.
+   - Once you leave a region or location, you CANNOT return to it later in that itinerary.
+   - Plan each route carefully: Start → Location 1 → Location 2 → Location 3 → ... → End (all moving forward, never backward).
+   - If you find yourself planning to go back to a previous location, STOP and replan the route to flow in one direction only.
+   - Each of the 3 options can have different routes, but each individual option must flow logically in one direction without ANY backtracking.
 
 2. **PROPER PACING.**
    - No rushing through destinations.
@@ -387,7 +389,7 @@ You MUST create a COMPLETELY DIFFERENT itinerary that:
 - Offers different types of experiences and activities
 - Has a unique title that clearly distinguishes it from the existing options
 - Do NOT repeat similar activities, locations, or themes from the existing options**` : ''}
-${requestData.additional_preferences && requestData.additional_preferences.trim() ? `**MANDATORY: You MUST incorporate the client's additional preferences: "${requestData.additional_preferences}" in this itinerary. These preferences should be reflected in activities, locations, and experiences.**` : ''}
+${requestData.additional_preferences && requestData.additional_preferences.trim() ? `**INCORPORATING CLIENT PREFERENCES: The client has mentioned these highlights/preferences: "${requestData.additional_preferences}". These are important to the client, but they are highlights to incorporate into a well-rounded itinerary - NOT the entire focus. Create a comprehensive itinerary that includes these preferences along with other diverse experiences, activities, and locations. The itinerary should be balanced and showcase the best of Sri Lanka while incorporating the client's specific interests.**` : ''}
 Return JSON in this format: { "title": "...", "summary": "...", "total_kilometers": <number>, "days": [...] }
 
 **IMPORTANT: Include "total_kilometers" field calculated as:**
