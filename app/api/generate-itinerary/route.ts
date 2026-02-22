@@ -143,23 +143,35 @@ export async function POST(request: Request) {
       // Continue without photo mapping - images will use default location-based mapping
     }
 
+    // Calculate actual duration from dates if duration is not provided
+    let actualDuration = requestData.duration
+    if (!actualDuration && requestData.start_date && requestData.end_date) {
+      const start = new Date(requestData.start_date)
+      const end = new Date(requestData.end_date)
+      const diffTime = Math.abs(end.getTime() - start.getTime())
+      actualDuration = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1 // +1 to include both start and end days
+    }
+
     const prompt = `You are an experienced and passionate luxury travel consultant who creates personalized, memorable journeys through Sri Lanka. Write naturally, as if you're personally crafting this itinerary for a dear friend. Generate exactly 3 distinct, premium itinerary options for the following client:
 
-Client Name: ${requestData.client_name || 'Not specified'}
-Origin Country: ${requestData.origin_country || 'Not specified'}
-Start Date: ${startDateFormatted}
-End Date: ${endDateFormatted}
-Duration: ${requestData.duration || 'Not specified'} days
+CLIENT INFORMATION:
+- Client Name: ${requestData.client_name || 'Not specified'}
+- Origin Country: ${requestData.origin_country || 'Not specified'}
+- Travel Start Date: ${startDateFormatted}
+- Travel End Date: ${endDateFormatted}
+- Total Duration: ${actualDuration || 'Not specified'} days
 ${passengerInfo}
-Additional Preferences: ${requestData.additional_preferences || 'None provided'}
+- Additional Preferences: ${requestData.additional_preferences || 'None provided'}
 ${photoMappingInfo}
 
-IMPORTANT: Generate FRESH, UNIQUE, and CREATIVE itinerary options. Do NOT repeat previous suggestions. Create completely new and different experiences each time. Vary the themes, locations, activities, and focus areas significantly.
-
-Requirements:
+CRITICAL REQUIREMENTS - READ CAREFULLY:
 - Generate EXACTLY 3 distinct luxury itinerary options
 - Each option must be premium, bespoke, and professionally curated
-- Each option must have MINIMUM 6 days
+- Each option MUST have EXACTLY ${actualDuration || 'the specified number of'} days - match the EXACT duration provided above (${actualDuration || requestData.duration || 'Not specified'} days)
+- The itinerary must span from ${startDateFormatted} to ${endDateFormatted} - use these EXACT dates
+- Use ALL the information provided: travel dates, duration, passenger info, and additional preferences
+- Do NOT default to 6 days - use the ACTUAL duration from the client's request
+- Plan activities and locations based on the actual number of days available
 - Use consistent location names: Colombo, Sigiriya, Ella, Yala, Galle, Kandy, Nuwara Eliya
 - Include clear location field for each day
 - Activities must be an array of strings (include 4-6 main activities per day)
@@ -292,7 +304,7 @@ Format your response as a valid JSON object with this exact structure:
 }
 
 IMPORTANT RULES:
-- Minimum 6 days per option
+- Each option MUST have EXACTLY ${actualDuration || 'the specified number of'} days - use the duration provided in the client information above (${actualDuration || requestData.duration || 'Not specified'} days from ${startDateFormatted} to ${endDateFormatted})
 - Location names must be one of: Colombo, Sigiriya, Ella, Yala, Galle, Kandy, Nuwara Eliya
 - Activities must be an array of strings
 - CRITICAL: EVERY day MUST have an "image" field - this is MANDATORY. No day should be without a photo.
@@ -437,9 +449,18 @@ IMPORTANT RULES:
             { status: 500 }
           )
         }
-        if (option.days.length < 6) {
+        // Validate that the number of days matches the requested duration
+        const expectedDays = actualDuration || requestData.duration
+        if (expectedDays && option.days.length !== expectedDays) {
           return NextResponse.json(
-            { success: false, error: 'Invalid itinerary format: minimum 6 days required' },
+            { success: false, error: `Invalid itinerary format: expected ${expectedDays} days but got ${option.days.length} days` },
+            { status: 500 }
+          )
+        }
+        // Fallback: minimum 1 day if duration not specified
+        if (!expectedDays && option.days.length < 1) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid itinerary format: itinerary must have at least 1 day' },
             { status: 500 }
           )
         }
