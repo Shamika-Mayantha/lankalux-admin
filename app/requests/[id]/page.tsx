@@ -11,7 +11,7 @@ interface ItineraryOption {
 }
 
 interface ItineraryOptions {
-  options: ItineraryOption[]
+  options: (ItineraryOption | null)[]
 }
 
 interface Request {
@@ -975,7 +975,7 @@ LankaLux Team`
   const itineraryOptions = (() => {
     const options = request.itinerary_options?.options || []
     // Ensure array has exactly 3 slots, filling with null if needed
-    const result = [...options]
+    const result: (ItineraryOption | null)[] = [...options]
     while (result.length < 3) {
       result.push(null)
     }
