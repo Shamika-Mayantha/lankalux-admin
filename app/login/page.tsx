@@ -95,7 +95,7 @@ export default function LoginPage() {
               <img 
                 src="/favicon.png" 
                 alt="LankaLux Logo" 
-                className="h-20 w-20 object-contain animate-fade-in"
+                className="h-20 w-20 object-cover animate-fade-in"
               />
             </div>
           </div>

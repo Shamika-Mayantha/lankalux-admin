@@ -47,13 +47,13 @@ const locationImages: Record<string, string> = {
 
 // Location descriptions for "About Your Destinations" section
 const locationDescriptions: Record<string, string> = {
-  "Colombo": "Sri Lanka's vibrant capital city, where colonial architecture meets modern luxury. Experience world-class dining, shopping, and cultural attractions in this cosmopolitan hub. Popular for its blend of historic charm and contemporary lifestyle, Colombo offers visitors a perfect introduction to Sri Lankan culture with its bustling markets, elegant colonial buildings, and thriving arts scene.",
-  "Sigiriya": "The ancient rock fortress, a UNESCO World Heritage site rising dramatically from the plains. Discover the legendary 'Lion Rock' with its stunning frescoes and breathtaking views. This iconic destination is popular for its remarkable engineering marvel - a 5th-century palace built atop a 200-meter rock, featuring ancient water gardens, mirror walls with graffiti, and the famous Sigiriya frescoes that showcase the artistic sophistication of ancient Sri Lanka.",
-  "Ella": "A charming hill country town surrounded by tea plantations and misty mountains. Perfect for hiking, train journeys, and experiencing authentic Sri Lankan tea culture. Popular for its stunning natural beauty, Ella attracts travelers seeking adventure and tranquility. The famous Nine Arch Bridge, scenic train rides through tea country, and hiking trails to viewpoints like Little Adam's Peak make it a favorite among nature lovers and photographers.",
-  "Yala": "Sri Lanka's premier wildlife sanctuary, home to leopards, elephants, and diverse birdlife. Experience thrilling safaris in one of the world's best national parks. Popular for having one of the highest leopard densities in the world, Yala offers incredible wildlife viewing opportunities. Visitors come here to spot the elusive Sri Lankan leopard, Asian elephants, sloth bears, and over 200 bird species in their natural habitat, making it a must-visit for wildlife enthusiasts.",
-  "Galle": "A historic fortified city with Dutch colonial architecture, cobblestone streets, and stunning ocean views. A perfect blend of history, culture, and coastal beauty. Popular for its well-preserved 17th-century Dutch fort, Galle Fort is a UNESCO World Heritage site that attracts history buffs and culture seekers. The charming streets are lined with boutique shops, art galleries, cafes, and colonial-era buildings, while nearby beaches offer relaxation and water sports.",
-  "Kandy": "The cultural heart of Sri Lanka, home to the sacred Temple of the Tooth Relic. Surrounded by hills and lakes, offering spiritual experiences and natural beauty. Popular as the last capital of the ancient Sinhalese kingdom, Kandy is a UNESCO World Heritage city. The Temple of the Tooth Relic houses Buddha's tooth relic and is one of Buddhism's most sacred sites, drawing pilgrims and visitors from around the world. The city's cultural shows, scenic lake, and botanical gardens add to its appeal.",
-  "Nuwara Eliya": "Known as 'Little England' for its cool climate and colonial charm. Surrounded by tea estates, waterfalls, and mountain peaks, offering a refreshing escape. Popular for its unique highland climate and British colonial architecture, Nuwara Eliya provides a cool retreat from Sri Lanka's tropical heat. Visitors love exploring tea plantations, visiting the famous Gregory Lake, enjoying golf at the 18-hole course, and experiencing the area's waterfalls and mountain scenery that create a distinctly different atmosphere from the rest of the island."
+  "Colombo": "Sri Lanka's vibrant capital city, where colonial architecture meets modern luxury. Experience world-class dining, shopping, and cultural attractions in this cosmopolitan hub.",
+  "Sigiriya": "The ancient rock fortress, a UNESCO World Heritage site rising dramatically from the plains. Discover the legendary 'Lion Rock' with its stunning frescoes and breathtaking views.",
+  "Ella": "A charming hill country town surrounded by tea plantations and misty mountains. Perfect for hiking, train journeys, and experiencing authentic Sri Lankan tea culture.",
+  "Yala": "Sri Lanka's premier wildlife sanctuary, home to leopards, elephants, and diverse birdlife. Experience thrilling safaris in one of the world's best national parks.",
+  "Galle": "A historic fortified city with Dutch colonial architecture, cobblestone streets, and stunning ocean views. A perfect blend of history, culture, and coastal beauty.",
+  "Kandy": "The cultural heart of Sri Lanka, home to the sacred Temple of the Tooth Relic. Surrounded by hills and lakes, offering spiritual experiences and natural beauty.",
+  "Nuwara Eliya": "Known as 'Little England' for its cool climate and colonial charm. Surrounded by tea estates, waterfalls, and mountain peaks, offering a refreshing escape."
 }
 
 export default function PublicItineraryPage() {
@@ -332,7 +332,7 @@ export default function PublicItineraryPage() {
                     type="text"
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#c8a45d]"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#c8a45d] text-[#8b6f2a] placeholder:text-gray-400"
                     placeholder="Enter your name"
                   />
                 </div>
@@ -345,7 +345,7 @@ export default function PublicItineraryPage() {
                     type="email"
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#c8a45d]"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#c8a45d] text-[#8b6f2a] placeholder:text-gray-400"
                     placeholder="Enter your email"
                   />
                 </div>
@@ -358,7 +358,7 @@ export default function PublicItineraryPage() {
                     value={contactMessage}
                     onChange={(e) => setContactMessage(e.target.value)}
                     rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#c8a45d]"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#c8a45d] text-[#8b6f2a] placeholder:text-gray-400"
                     placeholder="Any questions or special requests?"
                   />
                 </div>
@@ -393,7 +393,7 @@ export default function PublicItineraryPage() {
               <img 
                 src="/favicon.png" 
                 alt="LankaLux Logo" 
-                className="h-20 w-20 object-contain mx-auto mb-6"
+                className="h-20 w-20 object-cover mx-auto mb-6"
               />
             </div>
             <h1 className="text-5xl font-serif font-bold text-[#2c2c2c] mb-4">

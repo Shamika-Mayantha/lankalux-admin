@@ -187,7 +187,7 @@ export default function NewRequestPage() {
             <img 
               src="/favicon.png" 
               alt="LankaLux Logo" 
-              className="h-12 w-12 object-contain"
+              className="h-12 w-12 object-cover"
             />
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-[#d4af37] to-[#b8941f] bg-clip-text text-transparent">
