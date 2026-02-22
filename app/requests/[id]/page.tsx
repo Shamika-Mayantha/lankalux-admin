@@ -405,7 +405,27 @@ export default function RequestDetailsPage() {
       if (!response.ok || !result.success) {
         const errorMessage = result.error || 'Failed to generate itinerary'
         console.error('Error generating itinerary:', errorMessage)
-        alert(`Failed to generate itinerary: ${errorMessage}`)
+        console.error('Error details:', result.details)
+        
+        // Show detailed error in console and alert
+        let alertMessage = `Failed to generate itinerary: ${errorMessage}`
+        if (result.details) {
+          console.error('Full error details:', JSON.stringify(result.details, null, 2))
+          if (result.details.parseError) {
+            alertMessage += `\n\nParse Error: ${result.details.parseError}`
+          }
+          if (result.details.contentLength) {
+            alertMessage += `\nContent Length: ${result.details.contentLength} chars`
+          }
+          if (result.details.syntaxErrorPosition) {
+            alertMessage += `\nError at position: ${result.details.syntaxErrorPosition}`
+          }
+          if (result.details.openBraces !== result.details.closeBraces) {
+            alertMessage += `\nMismatched braces: ${result.details.openBraces} open, ${result.details.closeBraces} close`
+          }
+        }
+        
+        alert(alertMessage)
         setGeneratingItinerary(false)
         return
       }

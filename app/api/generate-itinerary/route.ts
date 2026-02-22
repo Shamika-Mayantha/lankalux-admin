@@ -327,9 +327,15 @@ IMPORTANT RULES:
 
     // Parse JSON response
     let itineraryOptions
+    let cleanedContent = ''
+    let openBraces = 0
+    let closeBraces = 0
+    let openBrackets = 0
+    let closeBrackets = 0
+    
     try {
       // Remove any markdown code blocks if present
-      let cleanedContent = generatedContent.trim()
+      cleanedContent = generatedContent.trim()
       
       // Remove markdown code blocks (handle various formats)
       cleanedContent = cleanedContent.replace(/^```(?:json|JSON)?\n?/gm, '').replace(/\n?```$/gm, '')
@@ -345,8 +351,8 @@ IMPORTANT RULES:
       cleanedContent = cleanedContent.trim()
       
       // Check if JSON might be incomplete (common if truncated)
-      const openBraces = (cleanedContent.match(/\{/g) || []).length
-      const closeBraces = (cleanedContent.match(/\}/g) || []).length
+      openBraces = (cleanedContent.match(/\{/g) || []).length
+      closeBraces = (cleanedContent.match(/\}/g) || []).length
       
       if (openBraces !== closeBraces) {
         console.warn('JSON appears incomplete - mismatched braces:', { openBraces, closeBraces })
@@ -356,8 +362,8 @@ IMPORTANT RULES:
       }
       
       // Check for incomplete arrays
-      const openBrackets = (cleanedContent.match(/\[/g) || []).length
-      const closeBrackets = (cleanedContent.match(/\]/g) || []).length
+      openBrackets = (cleanedContent.match(/\[/g) || []).length
+      closeBrackets = (cleanedContent.match(/\]/g) || []).length
       if (openBrackets !== closeBrackets) {
         console.warn('JSON appears incomplete - mismatched brackets:', { openBrackets, closeBrackets })
         const missingBrackets = openBrackets - closeBrackets
@@ -406,26 +412,58 @@ IMPORTANT RULES:
       console.error('Error parsing JSON:', parseError)
       console.error('Parse error details:', {
         message: parseError instanceof Error ? parseError.message : String(parseError),
-        name: parseError instanceof Error ? parseError.name : 'Unknown'
+        name: parseError instanceof Error ? parseError.name : 'Unknown',
+        stack: parseError instanceof Error ? parseError.stack : undefined
       })
       console.error('Generated content length:', generatedContent.length)
-      console.error('Generated content (first 500 chars):', generatedContent.substring(0, 500))
-      console.error('Generated content (last 500 chars):', generatedContent.substring(Math.max(0, generatedContent.length - 500)))
+      console.error('Generated content (first 1000 chars):', generatedContent.substring(0, 1000))
+      console.error('Generated content (last 1000 chars):', generatedContent.substring(Math.max(0, generatedContent.length - 1000)))
+      
+      // Check if content starts with JSON
+      const startsWithJson = cleanedContent.trim().startsWith('{')
+      const endsWithJson = cleanedContent.trim().endsWith('}')
       
       // Try to provide more helpful error message
       let errorMessage = 'Failed to parse itinerary response'
+      let errorDetails: any = {
+        parseError: parseError instanceof Error ? parseError.message : String(parseError),
+        contentLength: generatedContent.length,
+        cleanedLength: cleanedContent.length,
+        startsWithJson,
+        endsWithJson,
+        openBraces,
+        closeBraces,
+        openBrackets,
+        closeBrackets
+      }
+      
       if (parseError instanceof SyntaxError) {
-        errorMessage = `Invalid JSON format: ${parseError.message}. The AI response may not be in the correct format.`
+        // Extract position information from syntax error if available
+        const positionMatch = parseError.message.match(/position (\d+)/i)
+        if (positionMatch) {
+          const position = parseInt(positionMatch[1], 10)
+          errorDetails.syntaxErrorPosition = position
+          errorDetails.contextAroundError = cleanedContent.substring(
+            Math.max(0, position - 100),
+            Math.min(cleanedContent.length, position + 100)
+          )
+        }
+        errorMessage = `Invalid JSON format: ${parseError.message}`
+      }
+      
+      // Always include preview in error response for debugging
+      errorDetails.contentPreview = {
+        first500: generatedContent.substring(0, 500),
+        last500: generatedContent.substring(Math.max(0, generatedContent.length - 500)),
+        cleanedFirst500: cleanedContent.substring(0, 500),
+        cleanedLast500: cleanedContent.substring(Math.max(0, cleanedContent.length - 500))
       }
       
       return NextResponse.json(
         { 
           success: false, 
           error: errorMessage,
-          details: process.env.NODE_ENV === 'development' ? {
-            parseError: parseError instanceof Error ? parseError.message : String(parseError),
-            contentPreview: generatedContent.substring(0, 500)
-          } : undefined
+          details: errorDetails
         },
         { status: 500 }
       )
