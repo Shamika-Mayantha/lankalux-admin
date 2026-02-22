@@ -198,11 +198,12 @@ ${requestData.additional_preferences && requestData.additional_preferences.trim(
    - Avoid 1-night stays in far destinations unless it's an airport transit day.
    - Safari destinations should not exceed 1 night unless absolutely necessary for the itinerary.
 
-3. **REALISTIC ROUTING EXAMPLE FLOWS:**
-   - Colombo → Sigiriya → Kandy → Nuwara Eliya → Ella → Yala → Galle → Airport
-   - OR South Coast first → Hill Country → Cultural Triangle → Airport
-   - Plan routes that make the most geographic and logical sense for the duration available.
-   - The 3 options can explore different regions or follow different paths, but each must be a logical, one-direction flow.
+3. **REALISTIC ROUTING (These are EXAMPLES only - plan the best routes for each option):**
+   - Example flows: Colombo → Sigiriya → Kandy → Nuwara Eliya → Ella → Yala → Galle → Airport
+   - OR: South Coast first → Hill Country → Cultural Triangle → Airport
+   - These are just examples - you should plan routes that make the most geographic and logical sense for the specific duration and preferences provided.
+   - The 3 options can explore different regions or follow different paths, but each must be a logical, one-direction flow without backtracking.
+   - Be creative with route planning while respecting the no-backtracking and proper pacing rules.
 
 - Use ALL the information provided: travel dates, duration, passenger info, and additional preferences
 - Plan locations naturally based on the route - use appropriate location names that fit the geographic flow
