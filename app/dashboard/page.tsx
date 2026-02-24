@@ -196,6 +196,16 @@ export default function DashboardPage() {
           </div>
           <div className="flex gap-2">
             <button
+              onClick={() => window.open('/dashboard/vehicle-reservations', '_blank')}
+              className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-all duration-200 hover:shadow-lg transform hover:scale-105 active:scale-95 text-sm flex items-center gap-2"
+              title="View and manage reserved vehicles"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Reserved vehicles
+            </button>
+            <button
               onClick={fetchRequests}
               disabled={requestsLoading}
               className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-all duration-200 hover:shadow-lg transform hover:scale-105 active:scale-95 text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
