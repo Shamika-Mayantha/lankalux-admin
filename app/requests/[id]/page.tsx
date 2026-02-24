@@ -240,6 +240,7 @@ export default function RequestDetailsPage() {
     const statusLower = status.toLowerCase()
     if (statusLower === 'new') return 'text-blue-400'
     if (statusLower === 'follow_up') return 'text-orange-400'
+    if (statusLower === 'deposit') return 'text-cyan-400'
     if (statusLower === 'sold') return 'text-green-400'
     if (statusLower === 'after_sales') return 'text-purple-400'
     if (statusLower === 'cancelled') return 'text-red-400'
@@ -251,6 +252,7 @@ export default function RequestDetailsPage() {
     const statusLower = status.toLowerCase()
     if (statusLower === 'new') return 'bg-blue-900/30'
     if (statusLower === 'follow_up') return 'bg-orange-900/30'
+    if (statusLower === 'deposit') return 'bg-cyan-900/30'
     if (statusLower === 'sold') return 'bg-green-900/30'
     if (statusLower === 'after_sales') return 'bg-purple-900/30'
     if (statusLower === 'cancelled') return 'bg-red-900/30'
@@ -1103,6 +1105,7 @@ LankaLux Team`
                     >
                       <option value="new">NEW</option>
                       <option value="follow_up">FOLLOW_UP</option>
+                      <option value="deposit">DEPOSIT</option>
                       <option value="sold">SOLD</option>
                       <option value="after_sales">AFTER_SALES</option>
                       <option value="cancelled">CANCELLED</option>

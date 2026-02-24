@@ -143,6 +143,7 @@ export default function DashboardPage() {
     const statusLower = status.toLowerCase()
     if (statusLower === 'new') return 'text-blue-400'
     if (statusLower === 'follow_up') return 'text-orange-400'
+    if (statusLower === 'deposit') return 'text-cyan-400'
     if (statusLower === 'sold') return 'text-green-400'
     if (statusLower === 'after_sales') return 'text-purple-400'
     if (statusLower === 'cancelled') return 'text-red-400'
@@ -154,13 +155,21 @@ export default function DashboardPage() {
     const statusLower = status.toLowerCase()
     if (statusLower === 'new') return 'bg-blue-900/30'
     if (statusLower === 'follow_up') return 'bg-orange-900/30'
+    if (statusLower === 'deposit') return 'bg-cyan-900/30'
     if (statusLower === 'sold') return 'bg-green-900/30'
     if (statusLower === 'after_sales') return 'bg-purple-900/30'
     if (statusLower === 'cancelled') return 'bg-red-900/30'
     return 'bg-gray-800'
   }
 
-  const activeRequests = requests.filter((r) => r.status?.toLowerCase() !== 'cancelled')
+  const activeRequests = requests.filter(
+    (r) =>
+      r.status?.toLowerCase() !== 'cancelled' &&
+      r.status?.toLowerCase() !== 'deposit' &&
+      r.status?.toLowerCase() !== 'sold'
+  )
+  const depositRequests = requests.filter((r) => r.status?.toLowerCase() === 'deposit')
+  const soldRequests = requests.filter((r) => r.status?.toLowerCase() === 'sold')
   const cancelledRequests = requests.filter((r) => r.status?.toLowerCase() === 'cancelled')
 
   return (
@@ -288,6 +297,126 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+
+        {/* Deposit Collected Section */}
+        {depositRequests.length > 0 && (
+          <div className="mb-6 animate-slide-in">
+            <h2 className="text-xl font-semibold text-white mb-3 flex items-center gap-2">
+              <span className="w-1 h-6 bg-cyan-500 rounded-full"></span>
+              Deposit Collected
+              <span className="text-sm text-gray-500 font-normal">({depositRequests.length})</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {depositRequests.map((request, index) => (
+                <div
+                  key={request.id}
+                  onClick={() => router.push(`/requests/${request.id}`)}
+                  className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-cyan-500/30 rounded-xl p-4 hover:border-cyan-400 hover:shadow-lg hover:shadow-cyan-500/20 transition-all duration-200 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98] animate-fade-in"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <div className="mb-3">
+                    <h3 className="text-lg font-semibold text-white mb-1 truncate">
+                      {request.client_name || 'Unnamed Client'}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {formatDate(request.created_at)}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {(request.start_date || request.end_date) && (
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          Travel Dates
+                        </p>
+                        <p className="text-gray-300">
+                          {request.start_date && request.end_date
+                            ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
+                            : request.start_date
+                            ? `From ${formatDate(request.start_date)}`
+                            : request.end_date
+                            ? `Until ${formatDate(request.end_date)}`
+                            : 'Not specified'}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                        Status
+                      </p>
+                      <span
+                        className={`inline-block px-2 py-1 rounded-md text-xs font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current/20`}
+                      >
+                        {(request.status || 'deposit').toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sold Section */}
+        {soldRequests.length > 0 && (
+          <div className="mb-6 animate-slide-in">
+            <h2 className="text-xl font-semibold text-white mb-3 flex items-center gap-2">
+              <span className="w-1 h-6 bg-green-500 rounded-full"></span>
+              Sold
+              <span className="text-sm text-gray-500 font-normal">({soldRequests.length})</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {soldRequests.map((request, index) => (
+                <div
+                  key={request.id}
+                  onClick={() => router.push(`/requests/${request.id}`)}
+                  className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-green-500/30 rounded-xl p-4 hover:border-green-400 hover:shadow-lg hover:shadow-green-500/20 transition-all duration-200 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98] animate-fade-in"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <div className="mb-3">
+                    <h3 className="text-lg font-semibold text-white mb-1 truncate">
+                      {request.client_name || 'Unnamed Client'}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {formatDate(request.created_at)}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {(request.start_date || request.end_date) && (
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          Travel Dates
+                        </p>
+                        <p className="text-gray-300">
+                          {request.start_date && request.end_date
+                            ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
+                            : request.start_date
+                            ? `From ${formatDate(request.start_date)}`
+                            : request.end_date
+                            ? `Until ${formatDate(request.end_date)}`
+                            : 'Not specified'}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                        Status
+                      </p>
+                      <span
+                        className={`inline-block px-2 py-1 rounded-md text-xs font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current/20`}
+                      >
+                        {(request.status || 'sold').toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Cancelled Trips Section */}
         {cancelledRequests.length > 0 && (
