@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
     // Fetch request details from database
     const { data, error: fetchError } = await supabase
-      .from('requests')
+      .from('Client Requests')
       .select('*')
       .eq('id', requestId)
       .single()
@@ -506,7 +506,7 @@ Return JSON in this format: { "title": "...", "summary": "...", "total_kilometer
         // Save incrementally after each option is generated
         const partialOptionsString = JSON.stringify(itineraryOptions)
         const { error: partialUpdateError } = await supabase
-          .from('requests')
+          .from('Client Requests')
           .update({ 
             itineraryoptions: partialOptionsString,
             updated_at: new Date().toISOString()
@@ -536,7 +536,7 @@ Return JSON in this format: { "title": "...", "summary": "...", "total_kilometer
       // Final save with selected_option cleared
       const itineraryOptionsString = JSON.stringify(itineraryOptions)
       const { error: finalUpdateError } = await supabase
-        .from('requests')
+        .from('Client Requests')
         .update({ 
           itineraryoptions: itineraryOptionsString,
           selected_option: null, // Clear selection so user must select a new option
@@ -559,7 +559,7 @@ Return JSON in this format: { "title": "...", "summary": "...", "total_kilometer
       
       // Check if we have any partial options saved
       const { data: currentData } = await supabase
-        .from('requests')
+        .from('Client Requests')
         .select('itineraryoptions')
         .eq('id', requestId)
         .single()

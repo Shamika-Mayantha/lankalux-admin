@@ -54,7 +54,7 @@ export default function DashboardPage() {
     try {
       setRequestsLoading(true)
       const { data, error } = await supabase
-        .from('requests')
+        .from('Client Requests')
         .select('*')
         .order('created_at', { ascending: false })
 

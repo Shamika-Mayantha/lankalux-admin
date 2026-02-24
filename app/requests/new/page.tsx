@@ -42,7 +42,7 @@ export default function NewRequestPage() {
     try {
       // Fetch all existing request IDs
       const { data, error } = await supabase
-        .from('requests')
+        .from('Client Requests')
         .select('id')
 
       if (error) {
@@ -108,7 +108,7 @@ export default function NewRequestPage() {
       const requestId = await generateNextRequestId()
 
       const { data, error: insertError } = await supabase
-        .from('requests')
+        .from('Client Requests')
         .insert([
           {
             id: requestId,

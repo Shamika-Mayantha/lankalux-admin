@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 
     // Fetch request details from database
     const { data, error: fetchError } = await supabase
-      .from('requests')
+      .from('Client Requests')
       .select('*')
       .eq('id', requestId)
       .single()
@@ -498,7 +498,7 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
     const itineraryOptionsString = JSON.stringify(itineraryOptions)
     
     const { error: updateError } = await supabase
-      .from('requests')
+      .from('Client Requests')
       .update({ 
         itineraryoptions: itineraryOptionsString,
         selected_option: null, // Clear selection when regenerating

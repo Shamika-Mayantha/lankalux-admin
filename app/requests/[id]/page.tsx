@@ -90,7 +90,7 @@ export default function RequestDetailsPage() {
         }
 
         const { data, error } = await supabase
-          .from('requests')
+          .from('Client Requests')
           .select('*')
           .eq('id', id)
           .single()
@@ -261,7 +261,7 @@ export default function RequestDetailsPage() {
 
   const fetchRequestData = async (id: string) => {
     const { data, error } = await supabase
-      .from('requests')
+      .from('Client Requests')
       .select('*')
       .eq('id', id)
       .single()
@@ -300,7 +300,7 @@ export default function RequestDetailsPage() {
     // Auto-update status to follow_up if email_sent_count > 0
     if (requestData.email_sent_count && requestData.email_sent_count > 0 && requestData.status !== 'follow_up') {
       // Update status in database
-      await (supabase.from('requests') as any)
+      await (supabase.from('Client Requests') as any)
         .update({ status: 'follow_up', updated_at: new Date().toISOString() })
         .eq('id', id)
       
@@ -354,7 +354,7 @@ export default function RequestDetailsPage() {
         }
       }
 
-      const { error } = await (supabase.from('requests') as any)
+      const { error } = await (supabase.from('Client Requests') as any)
         .update({
           client_name: clientNameValue.trim() || null,
           email: emailValue.trim() || null,
@@ -552,7 +552,7 @@ export default function RequestDetailsPage() {
 
       // If clicking the same option that's already selected, deselect it
       if (request.selected_option === optionIndex) {
-        const { error } = await (supabase.from('requests') as any)
+        const { error } = await (supabase.from('Client Requests') as any)
           .update({
             selected_option: null,
             updated_at: new Date().toISOString(),
@@ -580,7 +580,7 @@ export default function RequestDetailsPage() {
         publicToken = crypto.randomUUID()
       }
 
-      const { error } = await (supabase.from('requests') as any)
+      const { error } = await (supabase.from('Client Requests') as any)
         .update({
           selected_option: optionIndex,
           public_token: publicToken,
@@ -612,7 +612,7 @@ export default function RequestDetailsPage() {
 
     try {
       setSaving(true)
-      const { error } = await (supabase.from('requests') as any)
+      const { error } = await (supabase.from('Client Requests') as any)
         .update({
           status: statusValue || null,
           updated_at: new Date().toISOString(),
@@ -644,7 +644,7 @@ export default function RequestDetailsPage() {
 
     try {
       setSaving(true)
-      const { error } = await (supabase.from('requests') as any)
+      const { error } = await (supabase.from('Client Requests') as any)
         .update({
           notes: notesValue || null,
           updated_at: new Date().toISOString(),
@@ -729,7 +729,7 @@ LankaLux Team`
 
     try {
       setCancelling(true)
-      const { error } = await (supabase.from('requests') as any)
+      const { error } = await (supabase.from('Client Requests') as any)
         .update({
           status: 'cancelled',
           updated_at: new Date().toISOString(),
@@ -761,7 +761,7 @@ LankaLux Team`
 
     try {
       setReopening(true)
-      const { error } = await (supabase.from('requests') as any)
+      const { error } = await (supabase.from('Client Requests') as any)
         .update({
           status: 'follow_up',
           updated_at: new Date().toISOString(),
@@ -913,7 +913,7 @@ LankaLux Team`
       }
       const itineraryOptionsString = JSON.stringify(updatedItineraryOptions)
 
-      const { error } = await (supabase.from('requests') as any)
+      const { error } = await (supabase.from('Client Requests') as any)
         .update({
           itineraryoptions: itineraryOptionsString,
           updated_at: new Date().toISOString(),

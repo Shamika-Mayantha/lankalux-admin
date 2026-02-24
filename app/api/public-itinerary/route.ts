@@ -37,7 +37,7 @@ export async function GET(request: Request) {
 
     // Fetch the request by public_token (include sent_options and status)
     const { data, error } = await supabase
-      .from('requests')
+      .from('Client Requests')
       .select('id, client_name, start_date, end_date, duration, itineraryoptions, selected_option, sent_options, status')
       .eq('public_token', token)
       .single()

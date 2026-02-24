@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
     // Fetch request details from database
     const { data, error: fetchError } = await supabase
-      .from('requests')
+      .from('Client Requests')
       .select('*')
       .eq('id', requestId)
       .single()
@@ -684,7 +684,7 @@ Your journey to Sri Lanka begins here.
     }
 
     const { error: updateError } = await supabase
-      .from('requests')
+      .from('Client Requests')
       .update(updateData)
       .eq('id', requestId)
 
