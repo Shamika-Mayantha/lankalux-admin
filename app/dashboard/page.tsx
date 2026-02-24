@@ -173,31 +173,31 @@ export default function DashboardPage() {
   const cancelledRequests = requests.filter((r) => r.status?.toLowerCase() === 'cancelled')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-[#0c0c0c] to-gray-950">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-[#0d0d0d] to-gray-950">
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10 py-10">
         {/* Header */}
-        <div className="flex flex-wrap justify-between items-center gap-4 mb-8 bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl p-5 shadow-xl">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-wrap justify-between items-center gap-6 mb-12 bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-2xl px-8 py-6 shadow-xl">
+          <div className="flex items-center gap-5">
             <img 
               src="/favicon.png" 
               alt="LankaLux Logo" 
-              className="h-12 w-12 object-cover rounded-xl"
+              className="h-14 w-14 object-cover rounded-xl"
             />
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-amber-200/95">
+              <h1 className="text-2xl sm:text-3xl font-bold text-amber-100/90 tracking-tight">
                 LankaLux Admin
               </h1>
               {user?.email && (
-                <p className="text-gray-500 text-sm">
+                <p className="text-gray-500 text-sm mt-0.5">
                   <span className="text-gray-400">{user.email}</span>
                 </p>
               )}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={() => window.open('/dashboard/vehicle-reservations', '_blank')}
-              className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-gray-200 font-medium rounded-xl transition-all text-sm flex items-center gap-2"
+              className="px-5 py-2.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-gray-300 font-medium rounded-xl transition-all text-sm flex items-center gap-2"
               title="View and manage vehicle availability"
             >
               <svg className="w-4 h-4 text-amber-400/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,7 +208,7 @@ export default function DashboardPage() {
             <button
               onClick={fetchRequests}
               disabled={requestsLoading}
-              className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-gray-200 font-medium rounded-xl transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-5 py-2.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-gray-300 font-medium rounded-xl transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               title="Refresh requests"
             >
               <svg 
@@ -223,13 +223,13 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => router.push('/requests/new')}
-              className="px-4 py-2 bg-amber-500/25 hover:bg-amber-500/35 border border-amber-500/40 text-amber-100 font-semibold rounded-xl transition-all text-sm"
+              className="px-5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-100 font-semibold rounded-xl transition-all text-sm"
             >
               New Request
             </button>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-gray-200 font-medium rounded-xl transition-all text-sm"
+              className="px-5 py-2.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-gray-300 font-medium rounded-xl transition-all text-sm"
             >
               Logout
             </button>
@@ -237,49 +237,49 @@ export default function DashboardPage() {
         </div>
 
         {/* Active Requests Section */}
-        <section className="mb-8 animate-slide-in">
-          <h2 className="text-lg font-semibold text-gray-200 mb-4 flex items-center gap-2">
-            <span className="w-1 h-5 bg-amber-500/80 rounded-full" />
+        <section className="mb-12 animate-slide-in">
+          <h2 className="text-xl font-semibold text-gray-300 mb-6 flex items-center gap-3">
+            <span className="w-1 h-6 bg-amber-500/60 rounded-full" />
             Active Requests
             <span className="text-sm text-gray-500 font-normal">({activeRequests.length})</span>
           </h2>
           
           {requestsLoading ? (
-            <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-10">
+            <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl py-16 px-8">
               <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-amber-500/30 border-t-amber-400/80 mb-4" />
+                <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-amber-500/20 border-t-amber-400/60 mb-5" />
                 <p className="text-gray-500">Loading requests...</p>
               </div>
             </div>
           ) : activeRequests.length === 0 ? (
-            <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-10">
+            <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl py-16 px-8">
               <p className="text-gray-500 text-center">No active requests</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {activeRequests.map((request, index) => (
                 <div
                   key={request.id}
                   onClick={() => router.push(`/requests/${request.id}`)}
-                  className="bg-white/[0.04] border border-white/10 rounded-2xl p-5 hover:border-amber-500/40 hover:bg-white/[0.06] transition-all cursor-pointer animate-fade-in"
+                  className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 hover:border-amber-500/30 hover:bg-white/[0.05] transition-all cursor-pointer animate-fade-in"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
-                  <div className="mb-3">
-                    <h3 className="text-lg font-semibold text-white mb-1 truncate">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-gray-100 mb-1.5 truncate">
                       {request.client_name || 'Unnamed Client'}
                     </h3>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm text-gray-500">
                       {formatDate(request.created_at)}
                     </p>
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {(request.start_date || request.end_date) && (
                       <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">
                           Travel Dates
                         </p>
-                        <p className="text-gray-300">
+                        <p className="text-gray-400">
                           {request.start_date && request.end_date
                             ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
                             : request.start_date
@@ -292,11 +292,11 @@ export default function DashboardPage() {
                     )}
                     
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">
                         Status
                       </p>
                       <span
-                        className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
+                        className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
                       >
                         {(request.status || 'new').toUpperCase()}
                       </span>
@@ -310,36 +310,36 @@ export default function DashboardPage() {
 
         {/* Deposit Collected Section */}
         {depositRequests.length > 0 && (
-          <section className="mb-8 animate-slide-in">
-            <h2 className="text-lg font-semibold text-gray-200 mb-4 flex items-center gap-2">
-              <span className="w-1 h-5 bg-cyan-500/80 rounded-full" />
+          <section className="mb-12 animate-slide-in">
+            <h2 className="text-xl font-semibold text-gray-300 mb-6 flex items-center gap-3">
+              <span className="w-1 h-6 bg-cyan-500/60 rounded-full" />
               Deposit Collected
               <span className="text-sm text-gray-500 font-normal">({depositRequests.length})</span>
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {depositRequests.map((request, index) => (
                 <div
                   key={request.id}
                   onClick={() => router.push(`/requests/${request.id}`)}
-                  className="bg-white/[0.04] border border-cyan-500/20 rounded-2xl p-5 hover:border-cyan-500/40 hover:bg-white/[0.06] transition-all cursor-pointer animate-fade-in"
+                  className="bg-white/[0.03] border border-cyan-500/15 rounded-2xl p-6 hover:border-cyan-500/30 hover:bg-white/[0.05] transition-all cursor-pointer animate-fade-in"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
-                  <div className="mb-3">
-                    <h3 className="text-lg font-semibold text-white mb-1 truncate">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-gray-100 mb-1.5 truncate">
                       {request.client_name || 'Unnamed Client'}
                     </h3>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm text-gray-500">
                       {formatDate(request.created_at)}
                     </p>
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {(request.start_date || request.end_date) && (
                       <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">
                           Travel Dates
                         </p>
-                        <p className="text-gray-300">
+                        <p className="text-gray-400">
                           {request.start_date && request.end_date
                             ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
                             : request.start_date
@@ -352,11 +352,11 @@ export default function DashboardPage() {
                     )}
                     
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">
                         Status
                       </p>
                       <span
-                        className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
+                        className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
                       >
                         {(request.status || 'deposit').toUpperCase()}
                       </span>
@@ -370,36 +370,36 @@ export default function DashboardPage() {
 
         {/* Sold Section */}
         {soldRequests.length > 0 && (
-          <section className="mb-8 animate-slide-in">
-            <h2 className="text-lg font-semibold text-gray-200 mb-4 flex items-center gap-2">
-              <span className="w-1 h-5 bg-emerald-500/80 rounded-full" />
+          <section className="mb-12 animate-slide-in">
+            <h2 className="text-xl font-semibold text-gray-300 mb-6 flex items-center gap-3">
+              <span className="w-1 h-6 bg-emerald-500/60 rounded-full" />
               Sold
               <span className="text-sm text-gray-500 font-normal">({soldRequests.length})</span>
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {soldRequests.map((request, index) => (
                 <div
                   key={request.id}
                   onClick={() => router.push(`/requests/${request.id}`)}
-                  className="bg-white/[0.04] border border-emerald-500/20 rounded-2xl p-5 hover:border-emerald-500/40 hover:bg-white/[0.06] transition-all cursor-pointer animate-fade-in"
+                  className="bg-white/[0.03] border border-emerald-500/15 rounded-2xl p-6 hover:border-emerald-500/30 hover:bg-white/[0.05] transition-all cursor-pointer animate-fade-in"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
-                  <div className="mb-3">
-                    <h3 className="text-lg font-semibold text-white mb-1 truncate">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-gray-100 mb-1.5 truncate">
                       {request.client_name || 'Unnamed Client'}
                     </h3>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm text-gray-500">
                       {formatDate(request.created_at)}
                     </p>
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {(request.start_date || request.end_date) && (
                       <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">
                           Travel Dates
                         </p>
-                        <p className="text-gray-300">
+                        <p className="text-gray-400">
                           {request.start_date && request.end_date
                             ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
                             : request.start_date
@@ -412,11 +412,11 @@ export default function DashboardPage() {
                     )}
                     
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">
                         Status
                       </p>
                       <span
-                        className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
+                        className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
                       >
                         {(request.status || 'sold').toUpperCase()}
                       </span>
@@ -430,13 +430,13 @@ export default function DashboardPage() {
 
         {/* Cancelled Trips Section */}
         {cancelledRequests.length > 0 && (
-          <section className="mb-8 animate-slide-in">
+          <section className="mb-12 animate-slide-in">
             <button
               onClick={() => setCancelledExpanded(!cancelledExpanded)}
-              className="flex items-center justify-between w-full mb-4 px-5 py-3 bg-white/[0.04] border border-white/10 rounded-2xl hover:border-rose-500/30 transition-all"
+              className="flex items-center justify-between w-full mb-6 px-6 py-4 bg-white/[0.03] border border-white/[0.08] rounded-2xl hover:border-rose-500/25 transition-all"
             >
-              <h2 className="text-lg font-semibold text-gray-200 flex items-center gap-2">
-                <span className="w-1 h-5 bg-rose-500/80 rounded-full" />
+              <h2 className="text-xl font-semibold text-gray-300 flex items-center gap-3">
+                <span className="w-1 h-6 bg-rose-500/60 rounded-full" />
                 Cancelled Trips ({cancelledRequests.length})
               </h2>
               <svg
@@ -455,30 +455,30 @@ export default function DashboardPage() {
             </button>
 
             {cancelledExpanded && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {cancelledRequests.map((request, index) => (
                   <div
                     key={request.id}
                     onClick={() => router.push(`/requests/${request.id}`)}
-                    className="bg-white/[0.04] border border-rose-500/20 rounded-2xl p-5 hover:border-rose-500/40 hover:bg-white/[0.06] transition-all cursor-pointer opacity-90 animate-fade-in"
+                    className="bg-white/[0.03] border border-rose-500/15 rounded-2xl p-6 hover:border-rose-500/30 hover:bg-white/[0.05] transition-all cursor-pointer opacity-90 animate-fade-in"
                     style={{ animationDelay: `${index * 0.05}s` }}
                   >
-                    <div className="mb-3">
-                      <h3 className="text-lg font-semibold text-white mb-1 truncate">
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-gray-100 mb-1.5 truncate">
                         {request.client_name || 'Unnamed Client'}
                       </h3>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm text-gray-500">
                         {formatDate(request.created_at)}
                       </p>
                     </div>
                     
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {(request.start_date || request.end_date) && (
                         <div>
-                          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">
                             Travel Dates
                           </p>
-                          <p className="text-gray-300">
+                          <p className="text-gray-400">
                             {request.start_date && request.end_date
                               ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
                               : request.start_date
@@ -491,11 +491,11 @@ export default function DashboardPage() {
                       )}
                       
                       <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">
                           Status
                         </p>
                         <span
-                          className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
+                          className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
                         >
                           {(request.status || 'cancelled').toUpperCase()}
                         </span>
