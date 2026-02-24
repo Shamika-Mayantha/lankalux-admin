@@ -39,8 +39,7 @@ export default function VehicleReservationsPage() {
 
   const loadReservations = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from(TABLE_NAME)
+      const { data, error } = await (supabase.from(TABLE_NAME) as any)
         .select('reserved_date')
         .eq('vehicle_name', vehicle)
 
@@ -89,8 +88,7 @@ export default function VehicleReservationsPage() {
 
     try {
       if (reservedDates.has(key)) {
-        const { error } = await supabase
-          .from(TABLE_NAME)
+        const { error } = await (supabase.from(TABLE_NAME) as any)
           .delete()
           .eq('vehicle_name', vehicle)
           .eq('reserved_date', key)
@@ -105,7 +103,7 @@ export default function VehicleReservationsPage() {
           return next
         })
       } else {
-        const { error } = await supabase.from(TABLE_NAME).insert({
+        const { error } = await (supabase.from(TABLE_NAME) as any).insert({
           vehicle_name: vehicle,
           reserved_date: key,
         })
