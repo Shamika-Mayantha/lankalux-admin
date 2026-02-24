@@ -174,7 +174,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-[#0d0d0d] to-gray-950">
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-10 py-10">
+      <div className="w-full mx-auto px-6 sm:px-10 lg:px-14 xl:px-20 py-10">
         {/* Header */}
         <div className="flex flex-wrap justify-between items-center gap-6 mb-12 bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-2xl px-8 py-6 shadow-xl">
           <div className="flex items-center gap-5">
