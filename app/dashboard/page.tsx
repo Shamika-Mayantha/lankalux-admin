@@ -116,10 +116,10 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#d4af37] mb-4"></div>
-          <p className="text-gray-400">Loading...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-amber-500/20 border-t-amber-400/70 mb-4" />
+          <p className="text-gray-500">Loading...</p>
         </div>
       </div>
     )
@@ -141,25 +141,25 @@ export default function DashboardPage() {
   const getStatusColor = (status: string | null) => {
     if (!status) return 'text-gray-400'
     const statusLower = status.toLowerCase()
-    if (statusLower === 'new') return 'text-blue-400'
-    if (statusLower === 'follow_up') return 'text-orange-400'
-    if (statusLower === 'deposit') return 'text-cyan-400'
-    if (statusLower === 'sold') return 'text-green-400'
-    if (statusLower === 'after_sales') return 'text-purple-400'
-    if (statusLower === 'cancelled') return 'text-red-400'
+    if (statusLower === 'new') return 'text-blue-300'
+    if (statusLower === 'follow_up') return 'text-amber-300'
+    if (statusLower === 'deposit') return 'text-cyan-300'
+    if (statusLower === 'sold') return 'text-emerald-300'
+    if (statusLower === 'after_sales') return 'text-violet-300'
+    if (statusLower === 'cancelled') return 'text-rose-400'
     return 'text-gray-400'
   }
 
   const getStatusBgColor = (status: string | null) => {
-    if (!status) return 'bg-gray-800'
+    if (!status) return 'bg-gray-700/20'
     const statusLower = status.toLowerCase()
-    if (statusLower === 'new') return 'bg-blue-900/30'
-    if (statusLower === 'follow_up') return 'bg-orange-900/30'
-    if (statusLower === 'deposit') return 'bg-cyan-900/30'
-    if (statusLower === 'sold') return 'bg-green-900/30'
-    if (statusLower === 'after_sales') return 'bg-purple-900/30'
-    if (statusLower === 'cancelled') return 'bg-red-900/30'
-    return 'bg-gray-800'
+    if (statusLower === 'new') return 'bg-blue-500/15'
+    if (statusLower === 'follow_up') return 'bg-amber-500/15'
+    if (statusLower === 'deposit') return 'bg-cyan-500/15'
+    if (statusLower === 'sold') return 'bg-emerald-500/15'
+    if (statusLower === 'after_sales') return 'bg-violet-500/15'
+    if (statusLower === 'cancelled') return 'bg-rose-500/15'
+    return 'bg-gray-700/20'
   }
 
   const activeRequests = requests.filter(
@@ -173,46 +173,46 @@ export default function DashboardPage() {
   const cancelledRequests = requests.filter((r) => r.status?.toLowerCase() === 'cancelled')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-[#0a0a0a] to-black">
-      <div className="max-w-[95%] mx-auto px-3 sm:px-4 lg:px-6 py-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-[#0c0c0c] to-gray-950">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6 bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 shadow-lg animate-fade-in">
+        <div className="flex flex-wrap justify-between items-center gap-4 mb-8 bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl p-5 shadow-xl">
           <div className="flex items-center gap-4">
             <img 
               src="/favicon.png" 
               alt="LankaLux Logo" 
-              className="h-12 w-12 object-cover"
+              className="h-12 w-12 object-cover rounded-xl"
             />
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-[#d4af37] to-[#b8941f] bg-clip-text text-transparent">
-                LankaLux Admin Dashboard
+              <h1 className="text-xl sm:text-2xl font-bold text-amber-200/95">
+                LankaLux Admin
               </h1>
               {user?.email && (
-                <p className="text-gray-400 text-sm">
-                  Logged in as: <span className="text-gray-300 font-medium">{user.email}</span>
+                <p className="text-gray-500 text-sm">
+                  <span className="text-gray-400">{user.email}</span>
                 </p>
               )}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => window.open('/dashboard/vehicle-reservations', '_blank')}
-              className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-all duration-200 hover:shadow-lg transform hover:scale-105 active:scale-95 text-sm flex items-center gap-2"
-              title="View and manage reserved vehicles"
+              className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-gray-200 font-medium rounded-xl transition-all text-sm flex items-center gap-2"
+              title="View and manage vehicle availability"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-amber-400/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              Reserved vehicles
+              Vehicle Availability
             </button>
             <button
               onClick={fetchRequests}
               disabled={requestsLoading}
-              className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-all duration-200 hover:shadow-lg transform hover:scale-105 active:scale-95 text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-gray-200 font-medium rounded-xl transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               title="Refresh requests"
             >
               <svg 
-                className={`w-4 h-4 ${requestsLoading ? 'animate-spin' : ''}`}
+                className={`w-4 h-4 ${requestsLoading ? 'animate-spin' : ''} text-amber-400/80`}
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
@@ -223,13 +223,13 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => router.push('/requests/new')}
-              className="px-4 py-2 bg-gradient-to-r from-[#d4af37] to-[#b8941f] hover:from-[#b8941f] hover:to-[#d4af37] text-black font-semibold rounded-md transition-all duration-200 shadow-lg hover:shadow-[#d4af37]/50 transform hover:scale-105 active:scale-95 text-sm"
+              className="px-4 py-2 bg-amber-500/25 hover:bg-amber-500/35 border border-amber-500/40 text-amber-100 font-semibold rounded-xl transition-all text-sm"
             >
               New Request
             </button>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-all duration-200 hover:shadow-lg transform hover:scale-105 active:scale-95 text-sm"
+              className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-gray-200 font-medium rounded-xl transition-all text-sm"
             >
               Logout
             </button>
@@ -237,31 +237,31 @@ export default function DashboardPage() {
         </div>
 
         {/* Active Requests Section */}
-        <div className="mb-6 animate-slide-in">
-          <h2 className="text-xl font-semibold text-white mb-3 flex items-center gap-2">
-            <span className="w-1 h-6 bg-gradient-to-b from-[#d4af37] to-[#b8941f] rounded-full"></span>
+        <section className="mb-8 animate-slide-in">
+          <h2 className="text-lg font-semibold text-gray-200 mb-4 flex items-center gap-2">
+            <span className="w-1 h-5 bg-amber-500/80 rounded-full" />
             Active Requests
             <span className="text-sm text-gray-500 font-normal">({activeRequests.length})</span>
           </h2>
           
           {requestsLoading ? (
-            <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-8">
+            <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-10">
               <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#d4af37] mb-4"></div>
-                <p className="text-gray-400">Loading requests...</p>
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-amber-500/30 border-t-amber-400/80 mb-4" />
+                <p className="text-gray-500">Loading requests...</p>
               </div>
             </div>
           ) : activeRequests.length === 0 ? (
-            <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-8">
-              <p className="text-gray-400 text-center">No active requests</p>
+            <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-10">
+              <p className="text-gray-500 text-center">No active requests</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {activeRequests.map((request, index) => (
                 <div
                   key={request.id}
                   onClick={() => router.push(`/requests/${request.id}`)}
-                  className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 hover:border-[#d4af37] hover:shadow-lg hover:shadow-[#d4af37]/20 transition-all duration-200 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98] animate-fade-in"
+                  className="bg-white/[0.04] border border-white/10 rounded-2xl p-5 hover:border-amber-500/40 hover:bg-white/[0.06] transition-all cursor-pointer animate-fade-in"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className="mb-3">
@@ -296,7 +296,7 @@ export default function DashboardPage() {
                         Status
                       </p>
                       <span
-                        className={`inline-block px-2 py-1 rounded-md text-xs font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current/20`}
+                        className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
                       >
                         {(request.status || 'new').toUpperCase()}
                       </span>
@@ -306,22 +306,22 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
-        </div>
+        </section>
 
         {/* Deposit Collected Section */}
         {depositRequests.length > 0 && (
-          <div className="mb-6 animate-slide-in">
-            <h2 className="text-xl font-semibold text-white mb-3 flex items-center gap-2">
-              <span className="w-1 h-6 bg-cyan-500 rounded-full"></span>
+          <section className="mb-8 animate-slide-in">
+            <h2 className="text-lg font-semibold text-gray-200 mb-4 flex items-center gap-2">
+              <span className="w-1 h-5 bg-cyan-500/80 rounded-full" />
               Deposit Collected
               <span className="text-sm text-gray-500 font-normal">({depositRequests.length})</span>
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {depositRequests.map((request, index) => (
                 <div
                   key={request.id}
                   onClick={() => router.push(`/requests/${request.id}`)}
-                  className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-cyan-500/30 rounded-xl p-4 hover:border-cyan-400 hover:shadow-lg hover:shadow-cyan-500/20 transition-all duration-200 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98] animate-fade-in"
+                  className="bg-white/[0.04] border border-cyan-500/20 rounded-2xl p-5 hover:border-cyan-500/40 hover:bg-white/[0.06] transition-all cursor-pointer animate-fade-in"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className="mb-3">
@@ -356,7 +356,7 @@ export default function DashboardPage() {
                         Status
                       </p>
                       <span
-                        className={`inline-block px-2 py-1 rounded-md text-xs font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current/20`}
+                        className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
                       >
                         {(request.status || 'deposit').toUpperCase()}
                       </span>
@@ -365,23 +365,23 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Sold Section */}
         {soldRequests.length > 0 && (
-          <div className="mb-6 animate-slide-in">
-            <h2 className="text-xl font-semibold text-white mb-3 flex items-center gap-2">
-              <span className="w-1 h-6 bg-green-500 rounded-full"></span>
+          <section className="mb-8 animate-slide-in">
+            <h2 className="text-lg font-semibold text-gray-200 mb-4 flex items-center gap-2">
+              <span className="w-1 h-5 bg-emerald-500/80 rounded-full" />
               Sold
               <span className="text-sm text-gray-500 font-normal">({soldRequests.length})</span>
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {soldRequests.map((request, index) => (
                 <div
                   key={request.id}
                   onClick={() => router.push(`/requests/${request.id}`)}
-                  className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-green-500/30 rounded-xl p-4 hover:border-green-400 hover:shadow-lg hover:shadow-green-500/20 transition-all duration-200 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98] animate-fade-in"
+                  className="bg-white/[0.04] border border-emerald-500/20 rounded-2xl p-5 hover:border-emerald-500/40 hover:bg-white/[0.06] transition-all cursor-pointer animate-fade-in"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className="mb-3">
@@ -416,7 +416,7 @@ export default function DashboardPage() {
                         Status
                       </p>
                       <span
-                        className={`inline-block px-2 py-1 rounded-md text-xs font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current/20`}
+                        className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
                       >
                         {(request.status || 'sold').toUpperCase()}
                       </span>
@@ -425,18 +425,18 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Cancelled Trips Section */}
         {cancelledRequests.length > 0 && (
-          <div className="mb-6 animate-slide-in">
+          <section className="mb-8 animate-slide-in">
             <button
               onClick={() => setCancelledExpanded(!cancelledExpanded)}
-              className="flex items-center justify-between w-full mb-3 px-4 py-2 bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl hover:border-red-500/50 transition-all duration-200 hover:shadow-lg"
+              className="flex items-center justify-between w-full mb-4 px-5 py-3 bg-white/[0.04] border border-white/10 rounded-2xl hover:border-rose-500/30 transition-all"
             >
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                <span className="w-1 h-6 bg-red-500 rounded-full"></span>
+              <h2 className="text-lg font-semibold text-gray-200 flex items-center gap-2">
+                <span className="w-1 h-5 bg-rose-500/80 rounded-full" />
                 Cancelled Trips ({cancelledRequests.length})
               </h2>
               <svg
@@ -455,12 +455,12 @@ export default function DashboardPage() {
             </button>
 
             {cancelledExpanded && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {cancelledRequests.map((request, index) => (
                   <div
                     key={request.id}
                     onClick={() => router.push(`/requests/${request.id}`)}
-                    className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-red-500/30 rounded-xl p-4 hover:border-red-500 hover:shadow-lg hover:shadow-red-500/20 transition-all duration-200 cursor-pointer opacity-75 transform hover:scale-[1.02] active:scale-[0.98] animate-fade-in"
+                    className="bg-white/[0.04] border border-rose-500/20 rounded-2xl p-5 hover:border-rose-500/40 hover:bg-white/[0.06] transition-all cursor-pointer opacity-90 animate-fade-in"
                     style={{ animationDelay: `${index * 0.05}s` }}
                   >
                     <div className="mb-3">
@@ -495,7 +495,7 @@ export default function DashboardPage() {
                           Status
                         </p>
                         <span
-                          className={`inline-block px-2 py-1 rounded-md text-xs font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current/20`}
+                          className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
                         >
                           {(request.status || 'cancelled').toUpperCase()}
                         </span>
@@ -505,7 +505,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             )}
-          </div>
+          </section>
         )}
       </div>
     </div>

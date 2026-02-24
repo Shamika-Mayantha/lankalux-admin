@@ -151,38 +151,38 @@ export default function VehicleReservationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#d4af37] mb-4" />
-          <p className="text-gray-400">Loading...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-amber-500/20 border-t-amber-400/70 mb-4" />
+          <p className="text-gray-500">Loading...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-[#0a0a0a] to-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-[#0c0c0c] to-gray-950 text-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 shadow-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl p-5 shadow-xl">
           <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-2 text-gray-400 hover:text-[#d4af37] transition-colors shrink-0"
+              className="flex items-center gap-2 text-gray-400 hover:text-amber-300 transition-colors shrink-0"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              <span className="hidden sm:inline">Back to dashboard</span>
+              <span className="hidden sm:inline">Back to Dashboard</span>
             </button>
-            <div className="h-6 w-px bg-[#333] hidden sm:block" />
+            <div className="h-6 w-px bg-white/10 hidden sm:block" />
             <img src="/favicon.png" alt="LankaLux" className="h-10 w-10 object-cover rounded-lg" />
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-[#d4af37] to-[#b8941f] bg-clip-text text-transparent">
-                Vehicle availability
+              <h1 className="text-xl font-bold text-amber-200/95">
+                Vehicle Availability
               </h1>
-              <p className="text-gray-500 text-sm">Track reserved dates by vehicle</p>
+              <p className="text-gray-500 text-sm">Track when each vehicle is reserved</p>
             </div>
           </div>
           <button
@@ -192,7 +192,7 @@ export default function VehicleReservationsPage() {
               setSavedFeedback(true)
               setTimeout(() => setSavedFeedback(false), 2000)
             }}
-            className="px-4 py-2 bg-gradient-to-r from-[#d4af37] to-[#b8941f] hover:from-[#b8941f] hover:to-[#d4af37] text-black font-semibold rounded-lg transition-all shadow-md hover:shadow-[#d4af37]/30 shrink-0"
+            className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-medium rounded-xl border border-amber-500/30 transition-all shrink-0"
           >
             {savedFeedback ? 'Saved' : 'Refresh'}
           </button>
@@ -201,15 +201,15 @@ export default function VehicleReservationsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Vehicle + Calendar */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-[#1a1a1a]/50 border border-[#333] rounded-xl p-4 sm:p-5">
+            <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-5">
               <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span className="w-1 h-4 bg-[#d4af37] rounded-full" />
-                Select vehicle
+                <span className="w-1 h-4 bg-amber-500/80 rounded-full" />
+                Select Vehicle
               </h2>
               <select
                 value={vehicle}
                 onChange={(e) => setVehicle(e.target.value as VehicleName)}
-                className="w-full sm:max-w-xs px-4 py-2.5 bg-[#0a0a0a] border border-[#333] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
+                className="w-full sm:max-w-xs px-4 py-2.5 bg-white/[0.06] border border-white/10 rounded-xl text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40"
               >
                 {VEHICLES.map((v) => (
                   <option key={v} value={v}>
@@ -222,17 +222,17 @@ export default function VehicleReservationsPage() {
               </p>
             </div>
 
-            <div className="bg-[#1a1a1a]/50 border border-[#333] rounded-xl p-4 sm:p-6">
+            <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-5 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-1 h-4 bg-[#d4af37] rounded-full" />
+                  <span className="w-1 h-4 bg-amber-500/80 rounded-full" />
                   Calendar
                 </h2>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={prevMonth}
-                    className="p-2 rounded-lg hover:bg-[#333] text-gray-400 hover:text-white transition-colors"
+                    className="p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-gray-200 transition-colors"
                     aria-label="Previous month"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -243,7 +243,7 @@ export default function VehicleReservationsPage() {
                   <button
                     type="button"
                     onClick={nextMonth}
-                    className="p-2 rounded-lg hover:bg-[#333] text-gray-400 hover:text-white transition-colors"
+                    className="p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-gray-200 transition-colors"
                     aria-label="Next month"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -276,8 +276,8 @@ export default function VehicleReservationsPage() {
                       className={`
                         aspect-square rounded-lg text-sm font-medium transition-all disabled:opacity-50
                         flex items-center justify-center
-                        ${isReserved ? 'bg-[#d4af37] text-black shadow-md' : 'bg-[#252525] text-gray-300 hover:bg-[#333] hover:text-white'}
-                        ${isToday && !isReserved ? 'ring-2 ring-[#d4af37] ring-offset-2 ring-offset-[#1a1a1a]' : ''}
+                        ${isReserved ? 'bg-amber-500/25 text-amber-200 border border-amber-500/40 hover:bg-amber-500/35' : 'bg-white/[0.06] text-gray-400 hover:bg-white/[0.1] hover:text-gray-300 border border-transparent'}
+                        ${isToday && !isReserved ? 'ring-2 ring-amber-400/50 ring-offset-2 ring-offset-[#1a1a1a]' : ''}
                       `}
                     >
                       {isToggling ? (
@@ -289,27 +289,27 @@ export default function VehicleReservationsPage() {
                   )
                 })}
               </div>
-              <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-[#333]">
-                <span className="flex items-center gap-2 text-xs text-gray-500">
-                  <span className="w-3 h-3 rounded bg-[#d4af37]" /> Reserved
+              <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/10">
+                <span className="flex items-center gap-2 text-xs text-gray-400">
+                  <span className="w-3 h-3 rounded bg-amber-500/30 border border-amber-500/40" /> Reserved
                 </span>
-                <span className="flex items-center gap-2 text-xs text-gray-500">
-                  <span className="w-3 h-3 rounded bg-[#252525] border border-[#444]" /> Available
+                <span className="flex items-center gap-2 text-xs text-gray-400">
+                  <span className="w-3 h-3 rounded bg-white/[0.06]" /> Available
                 </span>
-                <span className="flex items-center gap-2 text-xs text-gray-500">
-                  <span className="w-3 h-3 rounded border-2 border-[#d4af37]" /> Today
+                <span className="flex items-center gap-2 text-xs text-gray-400">
+                  <span className="w-3 h-3 rounded border-2 border-amber-400/50" /> Today
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-2">Click a date to mark as reserved or available.</p>
+              <p className="text-xs text-gray-500 mt-2">Click a date to mark as Reserved or Available.</p>
             </div>
           </div>
 
           {/* Right: Reserved dates list */}
           <div className="lg:col-span-1">
-            <div className="bg-[#1a1a1a]/50 border border-[#333] rounded-xl p-4 sm:p-5 sticky top-4">
+            <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-5 sticky top-4">
               <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span className="w-1 h-4 bg-[#d4af37] rounded-full" />
-                Reserved dates — {vehicle}
+                <span className="w-1 h-4 bg-amber-500/80 rounded-full" />
+                Reserved Dates — {vehicle}
               </h2>
               {sortedReservedDates.length === 0 ? (
                 <p className="text-gray-500 text-sm">No dates reserved yet. Use the calendar to mark dates.</p>
@@ -318,12 +318,12 @@ export default function VehicleReservationsPage() {
                   {sortedReservedDates.map((dateStr) => (
                     <li
                       key={dateStr}
-                      className="flex items-center justify-between gap-2 py-2 px-3 rounded-lg bg-[#252525] border border-[#333]"
+                      className="flex items-center justify-between gap-2 py-2.5 px-3 rounded-xl bg-white/[0.06] border border-white/10"
                     >
-                      <span className="text-gray-200 text-sm font-medium">
+                      <span className="text-gray-300 text-sm font-medium">
                         {formatReservedDate(dateStr)}
                       </span>
-                      <span className="shrink-0 w-2 h-2 rounded-full bg-[#d4af37]" />
+                      <span className="shrink-0 w-2 h-2 rounded-full bg-amber-400/80" />
                     </li>
                   ))}
                 </ul>
