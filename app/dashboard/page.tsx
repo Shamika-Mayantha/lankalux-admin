@@ -194,42 +194,43 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => window.open('/dashboard/vehicle-reservations', '_blank')}
-              className="px-5 py-2.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-gray-300 font-medium rounded-xl transition-all text-sm flex items-center gap-2"
-              title="View and manage vehicle availability"
-            >
-              <svg className="w-4 h-4 text-amber-400/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Vehicle Availability
-            </button>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
               onClick={fetchRequests}
               disabled={requestsLoading}
-              className="px-5 py-2.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-gray-300 font-medium rounded-xl transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2.5 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-gray-300 font-medium rounded-xl transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               title="Refresh requests"
             >
-              <svg 
-                className={`w-4 h-4 ${requestsLoading ? 'animate-spin' : ''} text-amber-400/80`}
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className={`w-4 h-4 shrink-0 ${requestsLoading ? 'animate-spin' : ''} text-amber-400/70`}
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+            <button
+              onClick={() => window.open('/dashboard/vehicle-reservations', '_blank')}
+              className="px-4 py-2.5 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-gray-300 font-medium rounded-xl transition-all text-sm flex items-center gap-2"
+              title="View and manage vehicle availability"
+            >
+              <svg className="w-4 h-4 shrink-0 text-amber-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span className="hidden sm:inline">Vehicle Availability</span>
             </button>
             <button
               onClick={() => router.push('/requests/new')}
-              className="px-5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-100 font-semibold rounded-xl transition-all text-sm"
+              className="px-5 py-2.5 bg-amber-500/25 hover:bg-amber-500/35 border border-amber-500/40 text-amber-50 font-semibold rounded-xl transition-all text-sm shadow-sm"
             >
               New Request
             </button>
+            <span className="hidden sm:block w-px h-8 bg-white/[0.1] mx-1" aria-hidden />
             <button
               onClick={handleLogout}
-              className="px-5 py-2.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-gray-300 font-medium rounded-xl transition-all text-sm"
+              className="px-4 py-2.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-gray-400 hover:text-gray-300 font-medium rounded-xl transition-all text-sm"
             >
               Logout
             </button>
