@@ -86,6 +86,8 @@ export default function RequestDetailsPage() {
   const [previewBody, setPreviewBody] = useState('')
   const [sentItineraryExpanded, setSentItineraryExpanded] = useState(true)
   const [followUpEmailsSentExpanded, setFollowUpEmailsSentExpanded] = useState(false)
+  const [savingManualOption, setSavingManualOption] = useState<number | null>(null)
+  const [manualDrafts, setManualDrafts] = useState<Record<number, { title: string; summary: string; days: string }>>({})
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -636,6 +638,97 @@ export default function RequestDetailsPage() {
       console.error('Unexpected error selecting option:', err)
       alert('An unexpected error occurred. Please try again.')
       setSelectingOption(null)
+    }
+  }
+
+  const ensurePublicToken = async (): Promise<string> => {
+    if (!request) throw new Error('No request')
+    if (request.public_token) return request.public_token
+    const token = crypto.randomUUID()
+    await (supabase.from('Client Requests') as any)
+      .update({ public_token: token, updated_at: new Date().toISOString() })
+      .eq('id', request.id)
+    setRequest((r) => (r ? { ...r, public_token: token } : r))
+    return token
+  }
+
+  const getOptionsArray = (): (ItineraryOption | null)[] => {
+    const opts = request?.itinerary_options?.options ?? []
+    const arr: (ItineraryOption | null)[] = [...opts]
+    while (arr.length < 3) arr.push(null)
+    return arr
+  }
+
+  const handleAddManualItinerary = async () => {
+    if (!request) return
+    try {
+      await ensurePublicToken()
+      const options = getOptionsArray()
+      options.push({ title: 'Manual Itinerary', summary: '', days: '' })
+      const { error } = await (supabase.from('Client Requests') as any)
+        .update({
+          itineraryoptions: JSON.stringify({ options }),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+      if (error) throw error
+      const updated = await fetchRequestData(request.id)
+      if (updated) setRequest(updated)
+    } catch (err) {
+      console.error(err)
+      alert('Failed to add manual itinerary. Please try again.')
+    }
+  }
+
+  const handleSaveManualItinerary = async (index: number, draft: { title: string; summary: string; days: string }) => {
+    if (!request) return
+    setSavingManualOption(index)
+    try {
+      const options = getOptionsArray()
+      if (options[index] === null) options[index] = { title: '', summary: '', days: '' }
+      const opt = options[index] as ItineraryOption
+      options[index] = { ...opt, title: draft.title.trim() || opt.title, summary: draft.summary.trim() || opt.summary, days: draft.days.trim() || (typeof opt.days === 'string' ? opt.days : '') }
+      const { error } = await (supabase.from('Client Requests') as any)
+        .update({
+          itineraryoptions: JSON.stringify({ options }),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+      if (error) throw error
+      const updated = await fetchRequestData(request.id)
+      if (updated) setRequest(updated)
+      setManualDrafts((d) => ({ ...d, [index]: undefined }))
+    } catch (err) {
+      console.error(err)
+      alert('Failed to save. Please try again.')
+    } finally {
+      setSavingManualOption(null)
+    }
+  }
+
+  const handleRemoveManualItinerary = async (index: number) => {
+    if (!request || index < 3) return
+    if (!confirm('Remove this manual itinerary? This cannot be undone.')) return
+    try {
+      const options = getOptionsArray().filter((_, i) => i !== index)
+      while (options.length < 3) options.push(null)
+      let newSelected = request.selected_option
+      if (request.selected_option === index) newSelected = null
+      else if (request.selected_option !== null && request.selected_option > index) newSelected = request.selected_option - 1
+      const { error } = await (supabase.from('Client Requests') as any)
+        .update({
+          itineraryoptions: JSON.stringify({ options }),
+          selected_option: newSelected,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+      if (error) throw error
+      const updated = await fetchRequestData(request.id)
+      if (updated) setRequest(updated)
+      setManualDrafts((d) => ({ ...d, [index]: undefined }))
+    } catch (err) {
+      console.error(err)
+      alert('Failed to remove. Please try again.')
     }
   }
 
@@ -1705,26 +1798,30 @@ LankaLux Team`
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                {followUpEmailsSentExpanded && (
-                  <ul className="space-y-3 mt-4">
-                    {[...request.follow_up_emails_sent]
-                      .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
-                      .map((entry, index) => (
-                        <li
-                          key={`${entry.sent_at}-${index}`}
-                          className="flex flex-wrap items-baseline gap-3 py-2 text-gray-300"
-                        >
-                          <time className="text-sm text-gray-500 shrink-0" dateTime={entry.sent_at}>
-                            {formatDateTime(entry.sent_at)}
-                          </time>
-                          <span className="text-gray-600">·</span>
-                          <span className="text-gray-300" title={entry.subject}>
-                            {entry.template_name}: {entry.subject}
-                          </span>
-                        </li>
-                      ))}
-                  </ul>
-                )}
+                <div
+                  className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${followUpEmailsSentExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    <ul className="space-y-3 mt-4">
+                      {[...request.follow_up_emails_sent]
+                        .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
+                        .map((entry, index) => (
+                          <li
+                            key={`${entry.sent_at}-${index}`}
+                            className="flex flex-wrap items-baseline gap-3 py-2 text-gray-300"
+                          >
+                            <time className="text-sm text-gray-500 shrink-0" dateTime={entry.sent_at}>
+                              {formatDateTime(entry.sent_at)}
+                            </time>
+                            <span className="text-gray-600">·</span>
+                            <span className="text-gray-300" title={entry.subject}>
+                              {entry.template_name}: {entry.subject}
+                            </span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1962,6 +2059,120 @@ LankaLux Team`
               )
             })}
           </div>
+
+          {/* Manual itineraries: same card format, editable, with public link */}
+          {(() => {
+            const allOpts = getOptionsArray()
+            const manualIndices = allOpts.length > 3 ? Array.from({ length: allOpts.length - 3 }, (_, i) => 3 + i) : []
+            return (
+              <div className="mt-8 pt-8 border-t border-[#333]">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-[#d4af37]">Manual itineraries</h3>
+                  {!isCancelled && (
+                    <button
+                      type="button"
+                      onClick={handleAddManualItinerary}
+                      className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add manual itinerary
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {manualIndices.map((index) => {
+                    const option = allOpts[index] as ItineraryOption | null
+                    if (!option) return null
+                    const isSelected = request.selected_option === index
+                    const draft = manualDrafts[index] ?? {
+                      title: option.title || '',
+                      summary: option.summary || '',
+                      days: typeof option.days === 'string' ? option.days : (Array.isArray(option.days) ? option.days.map((d: any) => `Day ${d.day}: ${d.title} - ${d.location}\n${(d.activities || []).join('\n')}`).join('\n\n') : ''),
+                    }
+                    const baseUrl = 'https://admin.lankalux.com'
+                    const publicLink = request.public_token != null ? `${baseUrl}/itinerary/${request.public_token}/${index}` : null
+                    return (
+                      <div
+                        key={index}
+                        className={`bg-[#0a0a0a] border rounded-lg p-6 flex flex-col ${isSelected ? 'border-[#d4af37] ring-2 ring-[#d4af37]' : 'border-[#333]'}`}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs text-gray-500 uppercase">Manual {index - 2}</span>
+                          {isSelected && (
+                            <span className="px-2 py-1 bg-[#d4af37] text-black text-xs font-semibold rounded">SELECTED</span>
+                          )}
+                        </div>
+                        <div className="space-y-3 mb-4">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Title</label>
+                            <input
+                              type="text"
+                              value={draft.title}
+                              onChange={(e) => setManualDrafts((d) => ({ ...d, [index]: { ...draft, title: e.target.value } }))}
+                              className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#333] rounded-md text-white text-sm"
+                              placeholder="Itinerary title"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Summary</label>
+                            <textarea
+                              value={draft.summary}
+                              onChange={(e) => setManualDrafts((d) => ({ ...d, [index]: { ...draft, summary: e.target.value } }))}
+                              rows={2}
+                              className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#333] rounded-md text-white text-sm resize-y"
+                              placeholder="Short summary"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Days / itinerary (one line or day per line)</label>
+                            <textarea
+                              value={draft.days}
+                              onChange={(e) => setManualDrafts((d) => ({ ...d, [index]: { ...draft, days: e.target.value } }))}
+                              rows={6}
+                              className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#333] rounded-md text-white text-sm font-mono resize-y"
+                              placeholder="Day 1: ...&#10;Day 2: ..."
+                            />
+                          </div>
+                        </div>
+                        {publicLink && isSelected && (
+                          <div className="mb-3 p-2 bg-[#1a1a1a] rounded text-xs text-gray-400 break-all">
+                            Public link: <a href={publicLink} target="_blank" rel="noopener noreferrer" className="text-[#d4af37] hover:underline">{publicLink}</a>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2 mt-auto">
+                          <button
+                            type="button"
+                            onClick={() => handleSaveManualItinerary(index, draft)}
+                            disabled={savingManualOption === index}
+                            className="px-3 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md text-sm disabled:opacity-50"
+                          >
+                            {savingManualOption === index ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectOption(index)}
+                            disabled={selectingOption !== null}
+                            className={`px-3 py-2 rounded-md text-sm font-semibold ${isSelected ? 'bg-[#666] hover:bg-[#777] text-white' : 'bg-[#333] hover:bg-[#444] text-white'} disabled:opacity-50`}
+                          >
+                            {selectingOption === index ? '...' : isSelected ? 'Deselect' : 'Select'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveManualItinerary(index)}
+                            className="px-3 py-2 bg-red-900/50 hover:bg-red-900/70 text-red-300 rounded-md text-sm font-semibold"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Sent Itinerary Section - Show if any options have been sent */}
@@ -2004,8 +2215,10 @@ LankaLux Team`
                 </svg>
               </button>
 
-              {sentItineraryExpanded && (
-              <>
+              <div
+                className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${sentItineraryExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+              >
+                <div className="min-h-0 overflow-hidden">
               {/* List of All Sent Options - Show full details for each */}
               {(() => {
                 // Get sent options from sent_options array, or fallback to last_sent_option if array is empty
@@ -2183,8 +2396,8 @@ LankaLux Team`
                 </div>
                 )
               })()}
-              </>
-              )}
+                </div>
+              </div>
 
             </div>
           )

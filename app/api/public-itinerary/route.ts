@@ -111,6 +111,20 @@ export async function GET(request: Request) {
         }
 
         if (itineraryOptions?.options?.[optionIndex]) {
+          let option = itineraryOptions.options[optionIndex]
+          // Normalize manual options: days may be string; convert to Day[] for public page
+          if (option && typeof (option as any).days === 'string') {
+            const daysStr = (option as any).days as string
+            option = {
+              ...option,
+              days: [{
+                day: 1,
+                title: 'Itinerary',
+                location: '',
+                activities: daysStr.trim().split(/\n+/).filter(Boolean)
+              }]
+            }
+          }
           return NextResponse.json({
             request: {
               id: data.id,
@@ -120,7 +134,7 @@ export async function GET(request: Request) {
               duration: data.duration,
               selected_option: data.selected_option
             },
-            itinerary: itineraryOptions.options[optionIndex]
+            itinerary: option
           })
         }
       }
