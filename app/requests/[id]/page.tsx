@@ -697,7 +697,7 @@ export default function RequestDetailsPage() {
       if (error) throw error
       const updated = await fetchRequestData(request.id)
       if (updated) setRequest(updated)
-      setManualDrafts((d) => ({ ...d, [index]: undefined }))
+      setManualDrafts((d) => { const next = { ...d }; delete next[index]; return next; })
     } catch (err) {
       console.error(err)
       alert('Failed to save. Please try again.')
@@ -725,7 +725,7 @@ export default function RequestDetailsPage() {
       if (error) throw error
       const updated = await fetchRequestData(request.id)
       if (updated) setRequest(updated)
-      setManualDrafts((d) => ({ ...d, [index]: undefined }))
+      setManualDrafts((d) => { const next = { ...d }; delete next[index]; return next; })
     } catch (err) {
       console.error(err)
       alert('Failed to remove. Please try again.')
