@@ -1748,40 +1748,6 @@ LankaLux Team`
             })() : null}
           </div>
 
-          {/* Follow-up email templates - send humanized follow-up to client */}
-          {request.email && (
-            <div className="mt-6 pt-6 border-t border-[#333]">
-              <h3 className="text-lg font-semibold text-[#d4af37] mb-3">Follow-up email</h3>
-              <p className="text-sm text-gray-400 mb-3">Send a friendly, humanized follow-up with a button. The client will see their itinerary link in the button when available.</p>
-              <div className="flex flex-wrap items-center gap-3">
-                <select
-                  value={selectedTemplateId}
-                  onChange={(e) => setSelectedTemplateId(e.target.value as TemplateId)}
-                  className="px-4 py-2 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent min-w-[220px]"
-                >
-                  {FOLLOW_UP_TEMPLATES.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={openTemplateEmailModal}
-                  className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Send follow-up
-                </button>
-                {templateEmailSuccess && (
-                  <span className="text-green-400 text-sm font-medium flex items-center gap-1">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    Sent!
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {[0, 1, 2].map((index) => {
               const option = itineraryOptions[index]
@@ -2125,28 +2091,66 @@ LankaLux Team`
           )
         })()}
 
-      {/* Follow-up emails sent: compact log with timestamps (Gmail-style), below Sent Itinerary */}
-      {request.follow_up_emails_sent && request.follow_up_emails_sent.length > 0 && (
-        <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 md:p-6 mt-8">
-          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Follow-up emails sent</h3>
-          <ul className="space-y-1.5">
-            {[...request.follow_up_emails_sent]
-              .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
-              .map((entry, index) => (
-                <li
-                  key={`${entry.sent_at}-${index}`}
-                  className="flex flex-wrap items-baseline gap-2 text-sm text-gray-400"
-                >
-                  <time className="text-xs text-gray-500 shrink-0" dateTime={entry.sent_at}>
-                    {formatDateTime(entry.sent_at)}
-                  </time>
-                  <span className="text-gray-500">·</span>
-                  <span className="text-gray-300 truncate" title={entry.subject}>
-                    {entry.template_name}: {entry.subject}
-                  </span>
-                </li>
-              ))}
-          </ul>
+      {/* Follow-up email: dedicated section, separate from itinerary, expanded */}
+      {request.email && (
+        <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-6 md:p-8 mt-10">
+          <h2 className="text-2xl font-semibold text-[#d4af37] mb-2">Follow-up email</h2>
+          <p className="text-gray-400 mb-6 max-w-xl">
+            Send a friendly, humanized email to the client. Choose a template, preview and edit in the popup, then send. The client will see a button linking to their itinerary when available.
+          </p>
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="min-w-[260px]">
+              <label className="block text-sm font-medium text-gray-400 mb-2">Template</label>
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => setSelectedTemplateId(e.target.value as TemplateId)}
+                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
+              >
+                {FOLLOW_UP_TEMPLATES.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={openTemplateEmailModal}
+              className="px-5 py-3 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-lg transition-colors duration-200 flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Preview & send follow-up
+            </button>
+            {templateEmailSuccess && (
+              <span className="text-green-400 font-medium flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                Sent!
+              </span>
+            )}
+          </div>
+
+          {request.follow_up_emails_sent && request.follow_up_emails_sent.length > 0 && (
+            <div className="mt-10 pt-8 border-t border-[#333]">
+              <h3 className="text-lg font-semibold text-gray-300 mb-4">Follow-up emails sent</h3>
+              <ul className="space-y-3">
+                {[...request.follow_up_emails_sent]
+                  .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
+                  .map((entry, index) => (
+                    <li
+                      key={`${entry.sent_at}-${index}`}
+                      className="flex flex-wrap items-baseline gap-3 py-2 text-gray-300"
+                    >
+                      <time className="text-sm text-gray-500 shrink-0" dateTime={entry.sent_at}>
+                        {formatDateTime(entry.sent_at)}
+                      </time>
+                      <span className="text-gray-600">·</span>
+                      <span className="text-gray-300" title={entry.subject}>
+                        {entry.template_name}: {entry.subject}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 
