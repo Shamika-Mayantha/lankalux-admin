@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 const nodemailer = require('nodemailer')
-import { getTemplate, type TemplateId } from '@/lib/email-templates'
+import { getTemplate, bodyTextToHtml, buildHtmlFromBody, type TemplateId } from '@/lib/email-templates'
 
 const BASE_URL = 'https://admin.lankalux.com'
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { requestId, templateId } = body as { requestId?: string; templateId?: TemplateId }
+    const { requestId, templateId, subject: customSubject, body: customBody } = body as {
+      requestId?: string
+      templateId?: TemplateId
+      subject?: string
+      body?: string
+    }
 
     if (!requestId || !templateId) {
       return NextResponse.json(
@@ -86,9 +91,17 @@ export async function POST(request: Request) {
       itineraryUrl = `${BASE_URL}/itinerary/${requestData.public_token}/${requestData.selected_option}`
     }
 
-    const emailHtml = template.getHtml({ clientName, itineraryUrl })
-    const emailText = template.getText({ clientName, itineraryUrl })
-    const subject = template.subject
+    const subject = (customSubject && customSubject.trim()) ? customSubject.trim() : template.subject
+    let emailHtml: string
+    let emailText: string
+    if (customBody != null && String(customBody).trim() !== '') {
+      const bodyHtml = bodyTextToHtml(String(customBody).trim())
+      emailHtml = buildHtmlFromBody({ clientName, bodyHtml, itineraryUrl })
+      emailText = String(customBody).trim() + (itineraryUrl ? `\n\nView your itinerary: ${itineraryUrl}\n\n` : '\n\n') + 'Warm regards,\nThe LankaLux Team'
+    } else {
+      emailHtml = template.getHtml({ clientName, itineraryUrl })
+      emailText = template.getText({ clientName, itineraryUrl })
+    }
 
     const transporter = nodemailer.createTransport({
       host: emailHost,

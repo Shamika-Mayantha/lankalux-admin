@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { FOLLOW_UP_TEMPLATES, type TemplateId } from '@/lib/email-templates'
+import { FOLLOW_UP_TEMPLATES, getTemplate, type TemplateId } from '@/lib/email-templates'
 
 interface ItineraryOption {
   title: string
@@ -80,6 +80,9 @@ export default function RequestDetailsPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<TemplateId>('friendly_checkin')
   const [sendingTemplateEmail, setSendingTemplateEmail] = useState(false)
   const [templateEmailSuccess, setTemplateEmailSuccess] = useState(false)
+  const [templateEmailModalOpen, setTemplateEmailModalOpen] = useState(false)
+  const [previewSubject, setPreviewSubject] = useState('')
+  const [previewBody, setPreviewBody] = useState('')
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -863,6 +866,20 @@ LankaLux Team`
     }
   }
 
+  const openTemplateEmailModal = () => {
+    if (!request?.email) return
+    const template = getTemplate(selectedTemplateId)
+    if (!template) return
+    const clientName = request.client_name || 'Valued Client'
+    const itineraryUrl =
+      request.public_token != null && request.selected_option != null
+        ? `https://admin.lankalux.com/itinerary/${request.public_token}/${request.selected_option}`
+        : null
+    setPreviewSubject(template.subject)
+    setPreviewBody(template.getText({ clientName, itineraryUrl }))
+    setTemplateEmailModalOpen(true)
+  }
+
   const handleSendTemplateEmail = async () => {
     if (!request?.email) return
     try {
@@ -871,7 +888,12 @@ LankaLux Team`
       const res = await fetch('/api/send-template-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId: request.id, templateId: selectedTemplateId }),
+        body: JSON.stringify({
+          requestId: request.id,
+          templateId: selectedTemplateId,
+          subject: previewSubject.trim() || undefined,
+          body: previewBody.trim() || undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -880,6 +902,7 @@ LankaLux Team`
         return
       }
       setTemplateEmailSuccess(true)
+      setTemplateEmailModalOpen(false)
       setTimeout(() => setTemplateEmailSuccess(false), 3000)
     } catch (err) {
       console.error(err)
@@ -1716,23 +1739,13 @@ LankaLux Team`
                   ))}
                 </select>
                 <button
-                  onClick={handleSendTemplateEmail}
-                  disabled={sendingTemplateEmail}
-                  className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  onClick={openTemplateEmailModal}
+                  className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
                 >
-                  {sendingTemplateEmail ? (
-                    <>
-                      <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                      Send follow-up
-                    </>
-                  )}
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Send follow-up
                 </button>
                 {templateEmailSuccess && (
                   <span className="text-green-400 text-sm font-medium flex items-center gap-1">
@@ -2087,6 +2100,81 @@ LankaLux Team`
           )
         })()}
       </div>
+
+      {/* Follow-up email preview modal: edit subject/body then send */}
+      {templateEmailModalOpen && request?.email && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70"
+          onClick={() => !sendingTemplateEmail && setTemplateEmailModalOpen(false)}
+        >
+          <div
+            className="bg-[#1a1a1a] border border-[#333] rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-[#333]">
+              <h2 className="text-xl font-semibold text-[#d4af37]">Preview email</h2>
+              <p className="text-sm text-gray-400 mt-1">Edit the subject and message below, then send.</p>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              <div>
+                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">To</label>
+                <p className="text-white font-medium">{request.email}</p>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Subject</label>
+                <input
+                  type="text"
+                  value={previewSubject}
+                  onChange={(e) => setPreviewSubject(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
+                  placeholder="Email subject"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Message</label>
+                <p className="text-xs text-gray-500 mb-1">A “View your itinerary” button and our signature will be added automatically.</p>
+                <textarea
+                  value={previewBody}
+                  onChange={(e) => setPreviewBody(e.target.value)}
+                  rows={12}
+                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent resize-y font-mono text-sm"
+                  placeholder="Email body (plain text)"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-[#333] flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => !sendingTemplateEmail && setTemplateEmailModalOpen(false)}
+                disabled={sendingTemplateEmail}
+                className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendTemplateEmail}
+                disabled={sendingTemplateEmail}
+                className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {sendingTemplateEmail ? (
+                  <>
+                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    Send email
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
