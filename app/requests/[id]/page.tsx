@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { FOLLOW_UP_TEMPLATES, type TemplateId } from '@/lib/email-templates'
 
 interface ItineraryOption {
   title: string
@@ -76,6 +77,9 @@ export default function RequestDetailsPage() {
   const [sentItinerarySummary, setSentItinerarySummary] = useState('')
   const [sentItineraryDays, setSentItineraryDays] = useState('')
   const [savingSentItinerary, setSavingSentItinerary] = useState(false)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<TemplateId>('friendly_checkin')
+  const [sendingTemplateEmail, setSendingTemplateEmail] = useState(false)
+  const [templateEmailSuccess, setTemplateEmailSuccess] = useState(false)
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -856,6 +860,32 @@ LankaLux Team`
       console.error('Unexpected error sending itinerary:', err)
       alert('An unexpected error occurred. Please try again.')
       setSendingItinerary(false)
+    }
+  }
+
+  const handleSendTemplateEmail = async () => {
+    if (!request?.email) return
+    try {
+      setSendingTemplateEmail(true)
+      setTemplateEmailSuccess(false)
+      const res = await fetch('/api/send-template-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: request.id, templateId: selectedTemplateId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || 'Failed to send email')
+        setSendingTemplateEmail(false)
+        return
+      }
+      setTemplateEmailSuccess(true)
+      setTimeout(() => setTemplateEmailSuccess(false), 3000)
+    } catch (err) {
+      console.error(err)
+      alert('An unexpected error occurred. Please try again.')
+    } finally {
+      setSendingTemplateEmail(false)
     }
   }
 
@@ -1669,6 +1699,50 @@ LankaLux Team`
               )
             })() : null}
           </div>
+
+          {/* Follow-up email templates - send humanized follow-up to client */}
+          {request.email && (
+            <div className="mt-6 pt-6 border-t border-[#333]">
+              <h3 className="text-lg font-semibold text-[#d4af37] mb-3">Follow-up email</h3>
+              <p className="text-sm text-gray-400 mb-3">Send a friendly, humanized follow-up with a button. The client will see their itinerary link in the button when available.</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <select
+                  value={selectedTemplateId}
+                  onChange={(e) => setSelectedTemplateId(e.target.value as TemplateId)}
+                  className="px-4 py-2 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent min-w-[220px]"
+                >
+                  {FOLLOW_UP_TEMPLATES.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleSendTemplateEmail}
+                  disabled={sendingTemplateEmail}
+                  className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {sendingTemplateEmail ? (
+                    <>
+                      <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Send follow-up
+                    </>
+                  )}
+                </button>
+                {templateEmailSuccess && (
+                  <span className="text-green-400 text-sm font-medium flex items-center gap-1">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    Sent!
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {[0, 1, 2].map((index) => {

@@ -1,0 +1,136 @@
+import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+const nodemailer = require('nodemailer')
+import { getTemplate, type TemplateId } from '@/lib/email-templates'
+
+const BASE_URL = 'https://admin.lankalux.com'
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const { requestId, templateId } = body as { requestId?: string; templateId?: TemplateId }
+
+    if (!requestId || !templateId) {
+      return NextResponse.json(
+        { success: false, error: 'Request ID and template ID are required' },
+        { status: 400 }
+      )
+    }
+
+    const template = getTemplate(templateId)
+    if (!template) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid template ID' },
+        { status: 400 }
+      )
+    }
+
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
+
+    const emailHost = process.env.SMTP_HOST
+    const emailPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587
+    const emailUser = process.env.SMTP_USER
+    const emailPass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD
+    const emailFrom = process.env.SMTP_FROM || emailUser
+
+    if (!emailHost || !emailUser || !emailPass) {
+      return NextResponse.json(
+        { success: false, error: 'Email service not configured. Please check SMTP environment variables.' },
+        { status: 500 }
+      )
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+
+    const { data, error: fetchError } = await supabase
+      .from('Client Requests')
+      .select('id, email, client_name, public_token, selected_option')
+      .eq('id', requestId)
+      .single()
+
+    if (fetchError || !data) {
+      return NextResponse.json(
+        { success: false, error: 'Request not found' },
+        { status: 404 }
+      )
+    }
+
+    const requestData = data as {
+      email: string | null
+      client_name: string | null
+      public_token: string | null
+      selected_option: number | null
+    }
+
+    if (!requestData.email) {
+      return NextResponse.json(
+        { success: false, error: 'Client email not found' },
+        { status: 400 }
+      )
+    }
+
+    const clientName = requestData.client_name || 'Valued Client'
+    let itineraryUrl: string | null = null
+    if (
+      requestData.public_token != null &&
+      requestData.selected_option != null
+    ) {
+      itineraryUrl = `${BASE_URL}/itinerary/${requestData.public_token}/${requestData.selected_option}`
+    }
+
+    const emailHtml = template.getHtml({ clientName, itineraryUrl })
+    const emailText = template.getText({ clientName, itineraryUrl })
+    const subject = template.subject
+
+    const transporter = nodemailer.createTransport({
+      host: emailHost,
+      port: emailPort,
+      secure: emailPort === 465,
+      auth: { user: emailUser, pass: emailPass },
+      tls: { rejectUnauthorized: false },
+    })
+
+    try {
+      await transporter.verify()
+    } catch (verifyError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'SMTP verification failed. Please check your credentials.',
+          details: verifyError instanceof Error ? verifyError.message : String(verifyError),
+        },
+        { status: 500 }
+      )
+    }
+
+    await transporter.sendMail({
+      from: `"LankaLux" <${emailUser}>`,
+      to: requestData.email,
+      subject,
+      text: emailText,
+      html: emailHtml,
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Follow-up email sent successfully',
+    })
+  } catch (error) {
+    console.error('Error sending template email:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to send email',
+      },
+      { status: 500 }
+    )
+  }
+}
