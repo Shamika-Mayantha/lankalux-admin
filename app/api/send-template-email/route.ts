@@ -100,7 +100,8 @@ export async function POST(request: Request) {
       emailText = String(customBody).trim() + (itineraryUrl ? `\n\nView your itinerary: ${itineraryUrl}\n\n` : '\n\n') + 'Warm regards,\nThe LankaLux Team'
     } else {
       emailHtml = template.getHtml({ clientName, itineraryUrl })
-      emailText = template.getText({ clientName, itineraryUrl })
+      const bodyOnly = template.getText({ clientName, itineraryUrl })
+      emailText = bodyOnly + (itineraryUrl ? `\n\nView your itinerary: ${itineraryUrl}\n\n` : '\n\n') + 'Warm regards,\nThe LankaLux Team'
     }
 
     const transporter = nodemailer.createTransport({

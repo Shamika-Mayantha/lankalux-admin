@@ -37,6 +37,15 @@ export interface TemplateConfig {
 
 const logoUrl = `${BASE_URL}/favicon.png`
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 /** Turn plain text body into HTML paragraphs for the email content area */
 export function bodyTextToHtml(bodyText: string): string {
   const paragraphs = bodyText
@@ -45,7 +54,7 @@ export function bodyTextToHtml(bodyText: string): string {
     .filter((p) => p.trim().length > 0)
   if (paragraphs.length === 0) return '<p class="body-text">&nbsp;</p>'
   return paragraphs
-    .map((p) => `<p class="body-text">${p.trim().replace(/\n/g, '<br />')}</p>`)
+    .map((p) => `<p class="body-text">${escapeHtml(p.trim()).replace(/\n/g, '<br />')}</p>`)
     .join('\n      ')
 }
 
