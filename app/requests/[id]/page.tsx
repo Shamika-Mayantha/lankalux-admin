@@ -40,6 +40,7 @@ interface Request {
   last_sent_option: number | null
   email_sent_count: number | null
   sent_options: any[] | null
+  follow_up_emails_sent?: { sent_at: string; template_id: string; template_name: string; subject: string }[] | null
   created_at: string
   updated_at: string | null
 }
@@ -139,6 +140,17 @@ export default function RequestDetailsPage() {
           }
         } else if (!requestData.sent_options) {
           requestData.sent_options = []
+        }
+
+        if (requestData.follow_up_emails_sent != null && typeof requestData.follow_up_emails_sent === 'string') {
+          try {
+            const parsed = JSON.parse(requestData.follow_up_emails_sent)
+            requestData.follow_up_emails_sent = Array.isArray(parsed) ? parsed : []
+          } catch {
+            requestData.follow_up_emails_sent = []
+          }
+        } else if (!Array.isArray(requestData.follow_up_emails_sent)) {
+          requestData.follow_up_emails_sent = []
         }
         
         setRequest(requestData)
@@ -302,6 +314,17 @@ export default function RequestDetailsPage() {
       }
     } else if (!requestData?.sent_options) {
       requestData.sent_options = []
+    }
+
+    if (requestData?.follow_up_emails_sent != null && typeof requestData.follow_up_emails_sent === 'string') {
+      try {
+        const parsed = JSON.parse(requestData.follow_up_emails_sent)
+        requestData.follow_up_emails_sent = Array.isArray(parsed) ? parsed : []
+      } catch {
+        requestData.follow_up_emails_sent = []
+      }
+    } else if (!Array.isArray(requestData?.follow_up_emails_sent)) {
+      requestData.follow_up_emails_sent = []
     }
 
     // Auto-update status to follow_up if email_sent_count > 0
@@ -903,6 +926,8 @@ LankaLux Team`
       }
       setTemplateEmailSuccess(true)
       setTemplateEmailModalOpen(false)
+      const updated = await fetchRequestData(request.id)
+      if (updated) setRequest(updated)
       setTimeout(() => setTemplateEmailSuccess(false), 3000)
     } catch (err) {
       console.error(err)
@@ -2099,7 +2124,31 @@ LankaLux Team`
             </div>
           )
         })()}
-      </div>
+
+      {/* Follow-up emails sent: compact log with timestamps (Gmail-style), below Sent Itinerary */}
+      {request.follow_up_emails_sent && request.follow_up_emails_sent.length > 0 && (
+        <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 md:p-6 mt-8">
+          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Follow-up emails sent</h3>
+          <ul className="space-y-1.5">
+            {[...request.follow_up_emails_sent]
+              .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
+              .map((entry, index) => (
+                <li
+                  key={`${entry.sent_at}-${index}`}
+                  className="flex flex-wrap items-baseline gap-2 text-sm text-gray-400"
+                >
+                  <time className="text-xs text-gray-500 shrink-0" dateTime={entry.sent_at}>
+                    {formatDateTime(entry.sent_at)}
+                  </time>
+                  <span className="text-gray-500">·</span>
+                  <span className="text-gray-300 truncate" title={entry.subject}>
+                    {entry.template_name}: {entry.subject}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
 
       {/* Follow-up email preview modal: edit subject/body then send */}
       {templateEmailModalOpen && request?.email && (

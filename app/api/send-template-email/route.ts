@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
     const { data, error: fetchError } = await supabase
       .from('Client Requests')
-      .select('id, email, client_name, public_token, selected_option')
+      .select('id, email, client_name, public_token, selected_option, follow_up_emails_sent')
       .eq('id', requestId)
       .single()
 
@@ -73,6 +73,7 @@ export async function POST(request: Request) {
       client_name: string | null
       public_token: string | null
       selected_option: number | null
+      follow_up_emails_sent?: string | null
     }
 
     if (!requestData.email) {
@@ -132,6 +133,32 @@ export async function POST(request: Request) {
       text: emailText,
       html: emailHtml,
     })
+
+    const now = new Date().toISOString()
+    let followUpLog: { sent_at: string; template_id: string; template_name: string; subject: string }[] = []
+    if (requestData.follow_up_emails_sent) {
+      try {
+        const parsed = JSON.parse(requestData.follow_up_emails_sent)
+        followUpLog = Array.isArray(parsed) ? parsed : []
+      } catch {
+        followUpLog = []
+      }
+    }
+    followUpLog.push({
+      sent_at: now,
+      template_id: templateId,
+      template_name: template.name,
+      subject,
+    })
+    if (followUpLog.length > 50) followUpLog = followUpLog.slice(-50)
+
+    await supabase
+      .from('Client Requests')
+      .update({
+        follow_up_emails_sent: JSON.stringify(followUpLog),
+        updated_at: now,
+      })
+      .eq('id', requestId)
 
     return NextResponse.json({
       success: true,

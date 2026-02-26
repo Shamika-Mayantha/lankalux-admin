@@ -25,7 +25,14 @@ const sharedStyles = `
   .footer p { margin: 5px 0; }
 `
 
-export type TemplateId = 'friendly_checkin' | 'gentle_reminder' | 'here_when_ready'
+export type TemplateId =
+  | 'friendly_checkin'
+  | 'gentle_reminder'
+  | 'here_when_ready'
+  | 'why_sri_lanka'
+  | 'your_trip_your_way'
+  | 'spots_youll_love'
+  | 'one_step_closer'
 
 export interface TemplateConfig {
   id: TemplateId
@@ -257,6 +264,214 @@ export const FOLLOW_UP_TEMPLATES: TemplateConfig[] = [
     getText: ({ clientName }) => {
       const firstName = clientName?.split(' ')[0] || 'there'
       return `Hello ${firstName},\n\nA short note to say we are here whenever you would like to chat, adjust your plans, or simply look through your itinerary again. There is no deadline.\n\nIf something catches your eye or you have questions, just reply. We would love to hear from you.`
+    },
+  },
+  {
+    id: 'why_sri_lanka',
+    name: 'Why Sri Lanka',
+    subject: 'Why travellers fall in love with Sri Lanka',
+    getHtml: ({ clientName, itineraryUrl }) => {
+      const firstName = clientName?.split(' ')[0] || 'there'
+      const buttonUrl = itineraryUrl || BASE_URL
+      const buttonText = itineraryUrl ? 'View your itinerary' : 'Discover LankaLux'
+      return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${sharedStyles}</style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <a href="https://lankalux.com" style="text-decoration: none; display: block;">
+        <img src="${logoUrl}" alt="LankaLux" class="logo" />
+      </a>
+      <h1>LankaLux</h1>
+      <div class="subtitle">Journey</div>
+    </div>
+    <div class="content">
+      <div class="greeting">Hello ${firstName},</div>
+      <p class="body-text">
+        Sri Lanka is one of those places that stays with you. Tea country, wildlife, ancient temples, and coastlines that go on for miles. We have shaped your itinerary so you can experience the best of it at your own pace.
+      </p>
+      <p class="body-text">
+        Your journey is waiting. Take a look when you have a moment, and if you would like to add a stop or change the rhythm of the trip, we are happy to adjust. Just reply and we will take it from there.
+      </p>
+      <div class="cta-section">
+        <a href="${buttonUrl}" class="cta-button">${buttonText}</a>
+      </div>
+      <div class="signature">
+        <p>Warm regards,</p>
+        <p class="signature-name">The LankaLux Team</p>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} LankaLux. Your journey to Sri Lanka begins here.</p>
+    </div>
+  </div>
+</body>
+</html>`
+    },
+    getText: ({ clientName }) => {
+      const firstName = clientName?.split(' ')[0] || 'there'
+      return `Hello ${firstName},\n\nSri Lanka is one of those places that stays with you. Tea country, wildlife, ancient temples, and coastlines that go on for miles. We have shaped your itinerary so you can experience the best of it at your own pace.\n\nYour journey is waiting. Take a look when you have a moment, and if you would like to add a stop or change the rhythm of the trip, we are happy to adjust. Just reply and we will take it from there.`
+    },
+  },
+  {
+    id: 'your_trip_your_way',
+    name: 'Your trip, your way',
+    subject: 'Your trip, your way: we are here to get it right',
+    getHtml: ({ clientName, itineraryUrl }) => {
+      const firstName = clientName?.split(' ')[0] || 'there'
+      const buttonUrl = itineraryUrl || BASE_URL
+      const buttonText = itineraryUrl ? 'View your itinerary' : 'Get in touch'
+      return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${sharedStyles}</style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <a href="https://lankalux.com" style="text-decoration: none; display: block;">
+        <img src="${logoUrl}" alt="LankaLux" class="logo" />
+      </a>
+      <h1>LankaLux</h1>
+      <div class="subtitle">Journey</div>
+    </div>
+    <div class="content">
+      <div class="greeting">Hello ${firstName},</div>
+      <p class="body-text">
+        We want your trip to feel exactly right. Whether that means shifting a few dates, adding a special experience, or keeping things simple, we are here to make it happen. Nothing is set in stone until you are happy.
+      </p>
+      <p class="body-text">
+        Have another look at your itinerary below. If anything nags at you or you think of something you would love to include, tell us. We will work with you until it feels like the journey you have in mind.
+      </p>
+      <div class="cta-section">
+        <a href="${buttonUrl}" class="cta-button">${buttonText}</a>
+      </div>
+      <div class="signature">
+        <p>Warm regards,</p>
+        <p class="signature-name">The LankaLux Team</p>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} LankaLux. Your journey to Sri Lanka begins here.</p>
+    </div>
+  </div>
+</body>
+</html>`
+    },
+    getText: ({ clientName }) => {
+      const firstName = clientName?.split(' ')[0] || 'there'
+      return `Hello ${firstName},\n\nWe want your trip to feel exactly right. Whether that means shifting a few dates, adding a special experience, or keeping things simple, we are here to make it happen. Nothing is set in stone until you are happy.\n\nHave another look at your itinerary below. If anything nags at you or you think of something you would love to include, tell us. We will work with you until it feels like the journey you have in mind.`
+    },
+  },
+  {
+    id: 'spots_youll_love',
+    name: 'Spots we think you will love',
+    subject: 'A few spots we think you will love',
+    getHtml: ({ clientName, itineraryUrl }) => {
+      const firstName = clientName?.split(' ')[0] || 'there'
+      const buttonUrl = itineraryUrl || BASE_URL
+      const buttonText = itineraryUrl ? 'See your full itinerary' : 'Explore your options'
+      return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${sharedStyles}</style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <a href="https://lankalux.com" style="text-decoration: none; display: block;">
+        <img src="${logoUrl}" alt="LankaLux" class="logo" />
+      </a>
+      <h1>LankaLux</h1>
+      <div class="subtitle">Journey</div>
+    </div>
+    <div class="content">
+      <div class="greeting">Hello ${firstName},</div>
+      <p class="body-text">
+        We have put together a route that we think fits what you are looking for. Think of it as a starting point: the kind of places and moments that make Sri Lanka unforgettable, chosen with you in mind.
+      </p>
+      <p class="body-text">
+        Your full itinerary is one click away. When you are ready, take a look and imagine yourself there. If you want to swap a day, add a detour, or slow the pace down, we are here to refine it with you.
+      </p>
+      <div class="cta-section">
+        <a href="${buttonUrl}" class="cta-button">${buttonText}</a>
+      </div>
+      <div class="signature">
+        <p>Warm regards,</p>
+        <p class="signature-name">The LankaLux Team</p>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} LankaLux. Your journey to Sri Lanka begins here.</p>
+    </div>
+  </div>
+</body>
+</html>`
+    },
+    getText: ({ clientName }) => {
+      const firstName = clientName?.split(' ')[0] || 'there'
+      return `Hello ${firstName},\n\nWe have put together a route that we think fits what you are looking for. Think of it as a starting point: the kind of places and moments that make Sri Lanka unforgettable, chosen with you in mind.\n\nYour full itinerary is one click away. When you are ready, take a look and imagine yourself there. If you want to swap a day, add a detour, or slow the pace down, we are here to refine it with you.`
+    },
+  },
+  {
+    id: 'one_step_closer',
+    name: 'One step closer',
+    subject: 'You are one step away from your Sri Lanka journey',
+    getHtml: ({ clientName, itineraryUrl }) => {
+      const firstName = clientName?.split(' ')[0] || 'there'
+      const buttonUrl = itineraryUrl || BASE_URL
+      const buttonText = itineraryUrl ? 'View your itinerary' : 'Start your journey'
+      return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${sharedStyles}</style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <a href="https://lankalux.com" style="text-decoration: none; display: block;">
+        <img src="${logoUrl}" alt="LankaLux" class="logo" />
+      </a>
+      <h1>LankaLux</h1>
+      <div class="subtitle">Journey</div>
+    </div>
+    <div class="content">
+      <div class="greeting">Hello ${firstName},</div>
+      <p class="body-text">
+        Your personalised itinerary is ready. All that is left is for you to take a look and tell us what you think. A quick reply to confirm your dates, ask a question, or request a small change is all we need to keep things moving.
+      </p>
+      <p class="body-text">
+        We know how much thought goes into planning a trip. We have done our best to make this part easy. Click below to see your journey, and whenever you are ready, we are here to help you take the next step.
+      </p>
+      <div class="cta-section">
+        <a href="${buttonUrl}" class="cta-button">${buttonText}</a>
+      </div>
+      <div class="signature">
+        <p>Warm regards,</p>
+        <p class="signature-name">The LankaLux Team</p>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} LankaLux. Your journey to Sri Lanka begins here.</p>
+    </div>
+  </div>
+</body>
+</html>`
+    },
+    getText: ({ clientName }) => {
+      const firstName = clientName?.split(' ')[0] || 'there'
+      return `Hello ${firstName},\n\nYour personalised itinerary is ready. All that is left is for you to take a look and tell us what you think. A quick reply to confirm your dates, ask a question, or request a small change is all we need to keep things moving.\n\nWe know how much thought goes into planning a trip. We have done our best to make this part easy. Click below to see your journey, and whenever you are ready, we are here to help you take the next step.`
     },
   },
 ]
