@@ -84,7 +84,7 @@ export default function RequestDetailsPage() {
   const [templateEmailModalOpen, setTemplateEmailModalOpen] = useState(false)
   const [previewSubject, setPreviewSubject] = useState('')
   const [previewBody, setPreviewBody] = useState('')
-  const [sentItineraryExpanded, setSentItineraryExpanded] = useState(true)
+  const [sentItineraryExpanded, setSentItineraryExpanded] = useState(false)
   const [followUpEmailsSentExpanded, setFollowUpEmailsSentExpanded] = useState(false)
   const [savingManualOption, setSavingManualOption] = useState<number | null>(null)
   const [manualDrafts, setManualDrafts] = useState<Record<number, { title: string; summary: string; days: string }>>({})
@@ -1790,7 +1790,7 @@ LankaLux Team`
                     Follow-up emails sent ({request.follow_up_emails_sent.length})
                   </h3>
                   <svg
-                    className={`w-5 h-5 text-gray-400 transition-transform ${followUpEmailsSentExpanded ? 'rotate-180' : ''}`}
+                    className={`w-5 h-5 text-gray-400 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${followUpEmailsSentExpanded ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -1799,7 +1799,8 @@ LankaLux Team`
                   </svg>
                 </button>
                 <div
-                  className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${followUpEmailsSentExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                  className={`grid ${followUpEmailsSentExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                  style={{ transition: 'grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}
                 >
                   <div className="min-h-0 overflow-hidden">
                     <ul className="space-y-3 mt-4">
@@ -2207,7 +2208,7 @@ LankaLux Team`
                   )}
                 </div>
                 <svg
-                  className={`w-6 h-6 text-gray-400 shrink-0 transition-transform ${sentItineraryExpanded ? 'rotate-180' : ''}`}
+                  className={`w-6 h-6 text-gray-400 shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${sentItineraryExpanded ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2217,7 +2218,8 @@ LankaLux Team`
               </button>
 
               <div
-                className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${sentItineraryExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                className={`grid ${sentItineraryExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                style={{ transition: 'grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}
               >
                 <div className="min-h-0 overflow-hidden">
               {/* List of All Sent Options - Show full details for each */}
