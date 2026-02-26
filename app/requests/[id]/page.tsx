@@ -2086,10 +2086,11 @@ LankaLux Team`
                     const option = allOpts[index] as ItineraryOption | null
                     if (!option) return null
                     const isSelected = request.selected_option === index
+                    const daysRaw = (option as { days?: string | { day: number; title: string; location: string; activities?: string[] }[] }).days
                     const draft = manualDrafts[index] ?? {
                       title: option.title || '',
                       summary: option.summary || '',
-                      days: typeof option.days === 'string' ? option.days : (Array.isArray(option.days) ? option.days.map((d: any) => `Day ${d.day}: ${d.title} - ${d.location}\n${(d.activities || []).join('\n')}`).join('\n\n') : ''),
+                      days: typeof daysRaw === 'string' ? daysRaw : (Array.isArray(daysRaw) ? daysRaw.map((d: any) => `Day ${d.day}: ${d.title} - ${d.location}\n${(d.activities || []).join('\n')}`).join('\n\n') : ''),
                     }
                     const baseUrl = 'https://admin.lankalux.com'
                     const publicLink = request.public_token != null ? `${baseUrl}/itinerary/${request.public_token}/${index}` : null
