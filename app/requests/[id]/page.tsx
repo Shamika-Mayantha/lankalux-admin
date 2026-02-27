@@ -89,6 +89,9 @@ export default function RequestDetailsPage() {
   const [followUpEmailsSentExpanded, setFollowUpEmailsSentExpanded] = useState(false)
   const [savingManualOption, setSavingManualOption] = useState<number | null>(null)
   const [manualDrafts, setManualDrafts] = useState<Record<number, { title: string; summary: string; days: string }>>({})
+  const [cancellationReasonModalOpen, setCancellationReasonModalOpen] = useState(false)
+  const [cancellationReasonInput, setCancellationReasonInput] = useState('')
+  const [cancellationReasonPending, setCancellationReasonPending] = useState<'status' | 'trip' | null>(null)
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -738,11 +741,11 @@ export default function RequestDetailsPage() {
     if (!request) return
 
     const isCancelled = statusValue?.toLowerCase() === 'cancelled'
-    let cancellationReason: string | null = null
     if (isCancelled) {
-      const reason = window.prompt('Reason for cancellation (optional):')
-      if (reason === null) return // User clicked Cancel on prompt - don't save
-      cancellationReason = (reason || '').trim() || null
+      setCancellationReasonInput('')
+      setCancellationReasonPending('status')
+      setCancellationReasonModalOpen(true)
+      return
     }
 
     try {
@@ -750,7 +753,7 @@ export default function RequestDetailsPage() {
       const { error } = await (supabase.from('Client Requests') as any)
         .update({
           status: statusValue || null,
-          cancellation_reason: isCancelled ? cancellationReason : null,
+          cancellation_reason: null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', request.id)
@@ -763,15 +766,60 @@ export default function RequestDetailsPage() {
       }
 
       const updatedRequest = await fetchRequestData(request.id)
-      if (updatedRequest) {
-        setRequest(updatedRequest)
-      }
+      if (updatedRequest) setRequest(updatedRequest)
       setEditingStatus(false)
       setSaving(false)
     } catch (err) {
       console.error('Unexpected error saving status:', err)
       alert('An unexpected error occurred. Please try again.')
       setSaving(false)
+    }
+  }
+
+  const handleSubmitCancellationReason = async () => {
+    if (!request || !cancellationReasonPending) return
+    const reason = cancellationReasonInput.trim() || null
+
+    try {
+      if (cancellationReasonPending === 'status') {
+        setSaving(true)
+        const { error } = await (supabase.from('Client Requests') as any)
+          .update({
+            status: 'cancelled',
+            cancellation_reason: reason,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', request.id)
+        if (error) throw error
+        const updated = await fetchRequestData(request.id)
+        if (updated) setRequest(updated)
+        setEditingStatus(false)
+        setSaving(false)
+      } else {
+        setCancelling(true)
+        const { error } = await (supabase.from('Client Requests') as any)
+          .update({
+            status: 'cancelled',
+            cancellation_reason: reason,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', request.id)
+        if (error) throw error
+        const updated = await fetchRequestData(request.id)
+        if (updated) {
+          setRequest(updated)
+          setStatusValue('cancelled')
+        }
+        setCancelling(false)
+      }
+      setCancellationReasonModalOpen(false)
+      setCancellationReasonInput('')
+      setCancellationReasonPending(null)
+    } catch (err) {
+      console.error(err)
+      alert('Failed to save. Please try again.')
+      setSaving(false)
+      setCancelling(false)
     }
   }
 
@@ -863,38 +911,9 @@ LankaLux Team`
       return
     }
 
-    const reason = window.prompt('Reason for cancellation (optional):')
-    if (reason === null) return // User clicked Cancel - abort
-    const cancellationReason = (reason || '').trim() || null
-
-    try {
-      setCancelling(true)
-      const { error } = await (supabase.from('Client Requests') as any)
-        .update({
-          status: 'cancelled',
-          cancellation_reason: cancellationReason,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', request.id)
-
-      if (error) {
-        console.error('Error cancelling trip:', error)
-        alert('Failed to cancel trip. Please try again.')
-        setCancelling(false)
-        return
-      }
-
-      const updatedRequest = await fetchRequestData(request.id)
-      if (updatedRequest) {
-        setRequest(updatedRequest)
-        setStatusValue('cancelled')
-      }
-      setCancelling(false)
-    } catch (err) {
-      console.error('Unexpected error cancelling trip:', err)
-      alert('An unexpected error occurred. Please try again.')
-      setCancelling(false)
-    }
+    setCancellationReasonInput('')
+    setCancellationReasonPending('trip')
+    setCancellationReasonModalOpen(true)
   }
 
   const handleReopenTrip = async () => {
@@ -2493,6 +2512,60 @@ LankaLux Team`
                     Send email
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancellation reason modal - in-app styled, no browser prompt */}
+      {cancellationReasonModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70"
+          onClick={() => {
+            setCancellationReasonModalOpen(false)
+            setCancellationReasonInput('')
+            setCancellationReasonPending(null)
+          }}
+        >
+          <div
+            className="bg-[#1a1a1a] border border-[#333] rounded-xl shadow-xl max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-[#333]">
+              <h2 className="text-xl font-semibold text-[#d4af37]">Reason for cancellation</h2>
+              <p className="text-sm text-gray-400 mt-1">Optional. This will be shown on the request and dashboard.</p>
+            </div>
+            <div className="p-6">
+              <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1.5">Reason (optional)</label>
+              <textarea
+                value={cancellationReasonInput}
+                onChange={(e) => setCancellationReasonInput(e.target.value)}
+                rows={3}
+                placeholder="e.g. Client postponed trip / Budget change"
+                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent resize-y"
+                autoFocus
+              />
+            </div>
+            <div className="p-6 border-t border-[#333] flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setCancellationReasonModalOpen(false)
+                  setCancellationReasonInput('')
+                  setCancellationReasonPending(null)
+                }}
+                className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitCancellationReason}
+                disabled={saving || cancelling}
+                className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving || cancelling ? 'Saving...' : 'Confirm'}
               </button>
             </div>
           </div>

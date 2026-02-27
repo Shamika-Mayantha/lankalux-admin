@@ -498,10 +498,15 @@ export default function DashboardPage() {
                         </p>
                         <span
                           className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
-                          title={request.status?.toLowerCase() === 'cancelled' && request.cancellation_reason ? request.cancellation_reason : undefined}
                         >
                           {(request.status || 'cancelled').toUpperCase()}
                         </span>
+                        {request.cancellation_reason && (
+                          <p className="text-sm text-gray-400 mt-2 line-clamp-2" title={request.cancellation_reason}>
+                            <span className="text-gray-500">Reason: </span>
+                            {request.cancellation_reason}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
