@@ -10,6 +10,7 @@ interface Request {
   start_date: string | null
   end_date: string | null
   status: string | null
+  cancellation_reason?: string | null
   created_at: string
 }
 
@@ -497,6 +498,7 @@ export default function DashboardPage() {
                         </p>
                         <span
                           className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
+                          title={request.status?.toLowerCase() === 'cancelled' && request.cancellation_reason ? request.cancellation_reason : undefined}
                         >
                           {(request.status || 'cancelled').toUpperCase()}
                         </span>

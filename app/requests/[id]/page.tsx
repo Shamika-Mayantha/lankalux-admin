@@ -34,6 +34,7 @@ interface Request {
   selected_option: number | null
   public_token: string | null
   status: string | null
+  cancellation_reason?: string | null
   notes: string | null
   sent_at: string | null
   last_sent_at: string | null
@@ -331,8 +332,9 @@ export default function RequestDetailsPage() {
       requestData.follow_up_emails_sent = []
     }
 
-    // Auto-update status to follow_up if email_sent_count > 0
-    if (requestData.email_sent_count && requestData.email_sent_count > 0 && requestData.status !== 'follow_up') {
+    // Auto-update status to follow_up if email_sent_count > 0 (do not overwrite explicit 'cancelled')
+    const statusLower = (requestData.status || '').toLowerCase()
+    if (requestData.email_sent_count && requestData.email_sent_count > 0 && requestData.status !== 'follow_up' && statusLower !== 'cancelled') {
       // Update status in database
       await (supabase.from('Client Requests') as any)
         .update({ status: 'follow_up', updated_at: new Date().toISOString() })
@@ -735,11 +737,20 @@ export default function RequestDetailsPage() {
   const handleSaveStatus = async () => {
     if (!request) return
 
+    const isCancelled = statusValue?.toLowerCase() === 'cancelled'
+    let cancellationReason: string | null = null
+    if (isCancelled) {
+      const reason = window.prompt('Reason for cancellation (optional):')
+      if (reason === null) return // User clicked Cancel on prompt - don't save
+      cancellationReason = (reason || '').trim() || null
+    }
+
     try {
       setSaving(true)
       const { error } = await (supabase.from('Client Requests') as any)
         .update({
           status: statusValue || null,
+          cancellation_reason: isCancelled ? cancellationReason : null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', request.id)
@@ -852,11 +863,16 @@ LankaLux Team`
       return
     }
 
+    const reason = window.prompt('Reason for cancellation (optional):')
+    if (reason === null) return // User clicked Cancel - abort
+    const cancellationReason = (reason || '').trim() || null
+
     try {
       setCancelling(true)
       const { error } = await (supabase.from('Client Requests') as any)
         .update({
           status: 'cancelled',
+          cancellation_reason: cancellationReason,
           updated_at: new Date().toISOString(),
         })
         .eq('id', request.id)
@@ -889,6 +905,7 @@ LankaLux Team`
       const { error } = await (supabase.from('Client Requests') as any)
         .update({
           status: 'follow_up',
+          cancellation_reason: null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', request.id)
@@ -1304,6 +1321,7 @@ LankaLux Team`
                   <div className="flex items-center gap-2">
                     <span
                       className={`inline-block px-4 py-2 rounded-md font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current/20`}
+                      title={request.status?.toLowerCase() === 'cancelled' && request.cancellation_reason ? request.cancellation_reason : undefined}
                     >
                       {(request.status || 'new').toUpperCase()}
                     </span>
