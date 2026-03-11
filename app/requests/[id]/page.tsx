@@ -47,6 +47,11 @@ interface Request {
   updated_at: string | null
 }
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24
+function inclusiveDaysFromMs(ms: number) {
+  return Math.floor(ms / MS_PER_DAY) + 1
+}
+
 export default function RequestDetailsPage() {
   const params = useParams()
   const router = useRouter()
@@ -409,9 +414,7 @@ export default function RequestDetailsPage() {
         const end = new Date(endDateValue)
         if (end >= start) {
           const diffTime = Math.abs(end.getTime() - start.getTime())
-          // Add 1 to make duration inclusive of both start and end dates
-          // e.g., June 2-4 = 3 days (June 2, 3, 4)
-          duration = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
+          duration = inclusiveDaysFromMs(diffTime)
         }
       }
 
@@ -457,7 +460,7 @@ export default function RequestDetailsPage() {
     try {
       setGeneratingOption(optionIndex)
 
-      const response = await fetch('/api/generate-single-option', {
+      const response = await fetch("/api/generate-single-option", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -514,7 +517,7 @@ export default function RequestDetailsPage() {
     try {
       setGeneratingItinerary(true)
 
-      const response = await fetch('/api/generate-itinerary', {
+      const response = await fetch("/api/generate-itinerary", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -884,7 +887,7 @@ export default function RequestDetailsPage() {
     }
 
     const baseUrl = "https://admin.lankalux.com"
-    const itineraryUrl = `${baseUrl}/itinerary/${request.public_token}/${request.selected_option}`
+    const itineraryUrl = baseUrl + '/itinerary/' + request.public_token + '/' + request.selected_option
 
     const subject = encodeURIComponent('Your LankaLux Sri Lanka Itinerary')
     const body = encodeURIComponent(
@@ -912,13 +915,13 @@ LankaLux Team`
     }
 
     const baseUrl = "https://admin.lankalux.com"
-    const itineraryUrl = `${baseUrl}/itinerary/${request.public_token}/${request.selected_option}`
+    const itineraryUrl = baseUrl + '/itinerary/' + request.public_token + '/' + request.selected_option
 
     const message = encodeURIComponent(
       `Your personalized LankaLux Sri Lanka itinerary is ready! View it here: ${itineraryUrl}`
     )
 
-    const whatsappNumber = request.whatsapp?.replace(/[^0-9]/g, '') || ''
+    const whatsappNumber = request.whatsapp?.replace(new RegExp('[^0-9]', 'g'), '') || ''
     if (whatsappNumber) {
       window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank')
     } else {
@@ -983,7 +986,7 @@ LankaLux Team`
       setSendingItinerary(true)
       setSendSuccess(false)
 
-      const response = await fetch('/api/send-itinerary', {
+      const response = await fetch("/api/send-itinerary", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1049,7 +1052,7 @@ LankaLux Team`
     const clientName = request.client_name || 'Valued Client'
     const itineraryUrl =
       request.public_token != null && request.selected_option != null
-        ? `https://admin.lankalux.com/itinerary/${request.public_token}/${request.selected_option}`
+        ? 'https://admin.lankalux.com/itinerary/' + request.public_token + '/' + request.selected_option
         : null
     setPreviewSubject(template.subject)
     setPreviewBody(template.getText({ clientName, itineraryUrl }))
@@ -1061,7 +1064,7 @@ LankaLux Team`
     try {
       setSendingTemplateEmail(true)
       setTemplateEmailSuccess(false)
-      const res = await fetch('/api/send-template-email', {
+      const res = await fetch("/api/send-template-email", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1195,7 +1198,7 @@ LankaLux Team`
           <h1 className="text-3xl font-bold text-[#d4af37] mb-4">Request not found</h1>
           <p className="text-gray-400 mb-6">The request you're looking for doesn't exist or has been removed.</p>
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push("/dashboard")}
             className="px-6 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200"
           >
             Back to Dashboard
@@ -1230,6 +1233,10 @@ LankaLux Team`
     }
   }
 
+  const waHref = request?.whatsapp
+    ? 'https://wa.me/' + request.whatsapp.replace(new RegExp('[^0-9]', 'g'), '')
+    : ''
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -1237,7 +1244,7 @@ LankaLux Team`
         <div className="mb-10 bg-white border border-gray-200 rounded-xl p-6 md:p-8 shadow-sm animate-fade-in">
           <div className="flex items-center justify-between mb-6">
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push("/dashboard")}
               className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-all duration-200 flex items-center gap-2 hover:scale-105 active:scale-95"
             >
               <svg
@@ -1359,7 +1366,7 @@ LankaLux Team`
                 ) : (
                   <div className="flex items-center gap-2">
                     <span
-                      className={`inline-block px-4 py-2 rounded-md font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current/20`}
+                      className={`inline-block px-4 py-2 rounded-md font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current border-opacity-20`}
                       title={request.status?.toLowerCase() === 'cancelled' && request.cancellation_reason ? request.cancellation_reason : undefined}
                     >
                       {(request.status || 'new').toUpperCase()}
@@ -1448,7 +1455,7 @@ LankaLux Team`
                       <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
                         Origin Country
                       </label>
-                      <p className="text-gray-800 py-3">{request.origin_country || 'N/A'}</p>
+                      <p className="text-gray-800 py-3">{request.origin_country ?? "N/A"}</p>
                     </div>
                   </div>
                   <div className="flex gap-3">
@@ -1493,7 +1500,7 @@ LankaLux Team`
                   <div>
                     <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Client Name</p>
                     <p className="text-gray-900 text-lg font-medium">
-                      {request.client_name || 'N/A'}
+                      {request.client_name ?? "N/A"}
                     </p>
                   </div>
                   <div>
@@ -1507,7 +1514,7 @@ LankaLux Team`
                           {request.email}
                         </a>
                       ) : (
-                        'N/A'
+                        "N/A"
                       )}
                     </p>
                   </div>
@@ -1516,7 +1523,7 @@ LankaLux Team`
                     <p className="text-gray-800">
                       {request.whatsapp ? (
                         <a
-                          href={`https://wa.me/${request.whatsapp.replace(new RegExp('[^0-9]', 'g'), '')}`}
+                          href={waHref}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-[#d4af37] hover:text-[#b8941f] transition-colors duration-200"
@@ -1524,13 +1531,13 @@ LankaLux Team`
                           {request.whatsapp}
                         </a>
                       ) : (
-                        'N/A'
+                        "N/A"
                       )}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Origin Country</p>
-                    <p className="text-gray-900">{request.origin_country || 'N/A'}</p>
+                    <p className="text-gray-900">{request.origin_country ?? "N/A"}</p>
                   </div>
                 </div>
               )}
@@ -1576,16 +1583,14 @@ LankaLux Team`
                               const end = new Date(endDateValue)
                               if (end >= start) {
                                 const diffTime = Math.abs(end.getTime() - start.getTime())
-                                // Add 1 to make duration inclusive of both start and end dates
-                                // e.g., June 2-4 = 3 days (June 2, 3, 4)
-                                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
+                                const diffDays = inclusiveDaysFromMs(diffTime)
                                 return `${diffDays} days`
                               }
                               return 'Invalid'
                             })()
                           : request.duration
                           ? `${request.duration} days`
-                          : 'N/A'}
+                          : "N/A"}
                       </p>
                     </div>
                   </div>
@@ -1672,17 +1677,17 @@ LankaLux Team`
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Duration</p>
-                      <p className="text-gray-800">{request.duration ? `${request.duration} days` : 'N/A'}</p>
+                      <p className="text-gray-800">{request.duration ? `${request.duration} days` : "N/A"}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Number of Adults</p>
-                      <p className="text-gray-800">{request.number_of_adults || 'N/A'}</p>
+                      <p className="text-gray-800">{request.number_of_adults ?? "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Number of Children</p>
-                      <p className="text-gray-800">{request.number_of_children || 'N/A'}</p>
+                      <p className="text-gray-800">{request.number_of_children ?? "N/A"}</p>
                     </div>
                     {request.children_ages && (() => {
                       try {
@@ -2202,7 +2207,7 @@ LankaLux Team`
                       days: typeof daysRaw === 'string' ? daysRaw : (Array.isArray(daysRaw) ? daysRaw.map((d: any) => `Day ${d.day}: ${d.title} - ${d.location}\n${(d.activities || []).join('\n')}`).join('\n\n') : ''),
                     }
                     const baseUrl = 'https://admin.lankalux.com'
-                    const publicLink = request.public_token != null ? `${baseUrl}/itinerary/${request.public_token}/${index}` : null
+                    const publicLink = request.public_token != null ? baseUrl + '/itinerary/' + request.public_token + '/' + index : null
                     return (
                       <div
                         key={index}
@@ -2236,7 +2241,7 @@ LankaLux Team`
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-500 mb-1">Days / itinerary (one line or day per line)</label>
+                            <label className="block text-xs text-gray-500 mb-1">Days and itinerary (one line or day per line)</label>
                             <textarea
                               value={draft.days}
                               onChange={(e) => setManualDrafts((d) => ({ ...d, [index]: { ...draft, days: e.target.value } }))}
@@ -2271,7 +2276,7 @@ LankaLux Team`
                           <button
                             type="button"
                             onClick={() => handleRemoveManualItinerary(index)}
-                            className="px-3 py-2 bg-red-900/50 hover:bg-red-900/70 text-red-300 rounded-md text-sm font-semibold"
+                            className="px-3 py-2 text-red-300 rounded-md text-sm font-semibold bg-red-900 bg-opacity-50 hover:bg-red-900 hover:bg-opacity-70"
                           >
                             Remove
                           </button>
@@ -2406,13 +2411,13 @@ LankaLux Team`
                       } else if (request.public_token && typeof request.public_token === 'string') {
                         // Fallback: generate URL if not stored
                         const baseUrl = "https://admin.lankalux.com"
-                        itineraryUrl = `${baseUrl}/itinerary/${request.public_token}/${optionIndex}`
+                        itineraryUrl = baseUrl + "/itinerary/" + request.public_token + "/" + optionIndex
                       }
 
                       return (
                         <div 
                           key={`sent-option-${index}-${optionIndex}`} 
-                          className="bg-gray-50 border border-gray-200 rounded-lg p-6 hover:border-[#d4af37]/50 transition-colors"
+                          className="bg-gray-50 border border-gray-200 rounded-lg p-6 transition-colors hover:border-[#d4af37] hover:border-opacity-50"
                         >
                           <div className="space-y-4">
                             {/* Header with title and sent date */}
@@ -2432,7 +2437,7 @@ LankaLux Team`
                               </div>
                             </div>
 
-                            {/* Days/Details */}
+                            {/* Days and details */}
                             {optionDays && (
                               <div>
                                 <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
@@ -2514,10 +2519,10 @@ LankaLux Team`
           )
         })()}
 
-      {/* Follow-up email preview modal: edit subject/body then send */}
+      {/* Follow-up email preview modal: edit subject and body then send */}
       {templateEmailModalOpen && request?.email && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-40"
           onClick={() => !sendingTemplateEmail && setTemplateEmailModalOpen(false)}
         >
           <div
@@ -2592,7 +2597,7 @@ LankaLux Team`
       {/* Cancellation reason modal - in-app styled, no browser prompt */}
       {cancellationReasonModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-40"
           onClick={() => {
             setCancellationReasonModalOpen(false)
             setCancellationReasonInput('')
@@ -2613,7 +2618,7 @@ LankaLux Team`
                 value={cancellationReasonInput}
                 onChange={(e) => setCancellationReasonInput(e.target.value)}
                 rows={3}
-                placeholder="e.g. Client postponed trip / Budget change"
+                placeholder="e.g. Client postponed trip or Budget change"
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent resize-y"
                 autoFocus
               />
@@ -2636,7 +2641,7 @@ LankaLux Team`
                 disabled={saving || cancelling}
                 className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saving || cancelling ? 'Saving...' : 'Confirm'}
+                {saving || cancelling ? "Saving..." : "Confirm"}
               </button>
             </div>
           </div>
