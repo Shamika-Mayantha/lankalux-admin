@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 
 interface Day {
@@ -75,6 +75,7 @@ export default function PublicItineraryPage() {
   const [contactName, setContactName] = useState('')
   const [contactEmail, setContactEmail] = useState('')
   const [contactMessage, setContactMessage] = useState('')
+  const recordedOpenRef = useRef(false)
 
   useEffect(() => {
     const fetchItinerary = async () => {
@@ -154,6 +155,15 @@ export default function PublicItineraryPage() {
         setRequest(requestData)
         setSelectedItinerary(selectedItineraryOption)
         setLoading(false)
+
+        if (!recordedOpenRef.current) {
+          recordedOpenRef.current = true
+          fetch('/api/record-itinerary-open', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, option: optionIndex }),
+          }).catch(() => {})
+        }
       } catch (err) {
         console.error('Unexpected error fetching itinerary:', err)
         setNotFound(true)

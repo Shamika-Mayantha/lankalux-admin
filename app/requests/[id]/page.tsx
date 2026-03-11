@@ -42,6 +42,7 @@ interface Request {
   email_sent_count: number | null
   sent_options: any[] | null
   follow_up_emails_sent?: { sent_at: string; template_id: string; template_name: string; subject: string }[] | null
+  link_opens?: { opened_at: string; option_index?: number | null }[] | null
   created_at: string
   updated_at: string | null
 }
@@ -87,6 +88,7 @@ export default function RequestDetailsPage() {
   const [previewBody, setPreviewBody] = useState('')
   const [sentItineraryExpanded, setSentItineraryExpanded] = useState(false)
   const [followUpEmailsSentExpanded, setFollowUpEmailsSentExpanded] = useState(false)
+  const [linkOpensExpanded, setLinkOpensExpanded] = useState(false)
   const [savingManualOption, setSavingManualOption] = useState<number | null>(null)
   const [manualDrafts, setManualDrafts] = useState<Record<number, { title: string; summary: string; days: string }>>({})
   const [cancellationReasonModalOpen, setCancellationReasonModalOpen] = useState(false)
@@ -159,6 +161,16 @@ export default function RequestDetailsPage() {
           }
         } else if (!Array.isArray(requestData.follow_up_emails_sent)) {
           requestData.follow_up_emails_sent = []
+        }
+        if (requestData.link_opens != null && typeof requestData.link_opens === 'string') {
+          try {
+            const parsed = JSON.parse(requestData.link_opens)
+            requestData.link_opens = Array.isArray(parsed) ? parsed : []
+          } catch {
+            requestData.link_opens = []
+          }
+        } else if (!Array.isArray(requestData.link_opens)) {
+          requestData.link_opens = []
         }
         
         setRequest(requestData)
@@ -333,6 +345,16 @@ export default function RequestDetailsPage() {
       }
     } else if (!Array.isArray(requestData?.follow_up_emails_sent)) {
       requestData.follow_up_emails_sent = []
+    }
+    if (requestData?.link_opens != null && typeof requestData.link_opens === 'string') {
+      try {
+        const parsed = JSON.parse(requestData.link_opens)
+        requestData.link_opens = Array.isArray(parsed) ? parsed : []
+      } catch {
+        requestData.link_opens = []
+      }
+    } else if (!Array.isArray(requestData?.link_opens)) {
+      requestData.link_opens = []
     }
 
     // Auto-update status to follow_up if email_sent_count > 0 (do not overwrite explicit 'cancelled')
@@ -1855,6 +1877,56 @@ LankaLux Team`
                             <span className="text-gray-300" title={entry.subject}>
                               {entry.template_name}: {entry.subject}
                             </span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {request.link_opens && request.link_opens.length > 0 && (
+              <div className="mt-10 pt-8 border-t border-[#333]">
+                <button
+                  type="button"
+                  onClick={() => setLinkOpensExpanded((v) => !v)}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <h3 className="text-lg font-semibold text-gray-300">
+                    Link opens ({request.link_opens.length})
+                  </h3>
+                  <svg
+                    className={`w-5 h-5 text-gray-400 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${linkOpensExpanded ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div
+                  className={`grid ${linkOpensExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                  style={{ transition: 'grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    <p className="text-sm text-gray-500 mt-2 mb-3">When the client opened the itinerary link (most recent first).</p>
+                    <ul className="space-y-3">
+                      {[...request.link_opens]
+                        .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
+                        .map((entry, index) => (
+                          <li
+                            key={`${entry.opened_at}-${index}`}
+                            className="flex flex-wrap items-baseline gap-3 py-2 text-gray-300"
+                          >
+                            <time className="text-sm text-gray-500 shrink-0" dateTime={entry.opened_at}>
+                              {formatDateTime(entry.opened_at)}
+                            </time>
+                            {entry.option_index !== undefined && entry.option_index !== null && (
+                              <>
+                                <span className="text-gray-600">·</span>
+                                <span className="text-gray-400">Option {entry.option_index + 1}</span>
+                              </>
+                            )}
                           </li>
                         ))}
                     </ul>
