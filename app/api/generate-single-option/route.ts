@@ -90,6 +90,27 @@ export async function POST(request: Request) {
       ? new Date(requestData.end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
       : 'Not specified'
 
+    // When dates exist, build per-day date labels so the AI can use them in titles (e.g. "Day 1 – Saturday, March 15")
+    let dayDateLabels: string[] = []
+    if (requestData.start_date && requestData.end_date) {
+      const start = new Date(requestData.start_date)
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(requestData.end_date)
+      end.setHours(0, 0, 0, 0)
+      const daysDiff = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      for (let i = 0; i < daysDiff; i++) {
+        const d = new Date(start)
+        d.setDate(d.getDate() + i)
+        const weekday = d.toLocaleDateString('en-US', { weekday: 'long' })
+        const full = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        dayDateLabels.push(`Day ${i + 1} – ${weekday}, ${full}`)
+      }
+    }
+    const hasDayDates = dayDateLabels.length > 0
+    const dayDatesBlock = hasDayDates
+      ? `\n**DATES FOR EACH DAY (use these in the day titles):**\n${dayDateLabels.map((l, i) => `${i + 1}. ${l}`).join('\n')}\n\nFor each day object, set "title" to start with the exact label above (e.g. "${dayDateLabels[0]}: Arrival in Colombo") then add a colon and your day description. So the title combines the date label and the activity theme.`
+      : ''
+
     let passengerInfo = 'Not specified'
     if (requestData.number_of_adults || requestData.number_of_children) {
       const adults = requestData.number_of_adults || 0
@@ -198,6 +219,8 @@ ${requestData.additional_preferences && requestData.additional_preferences.trim(
 - **MANDATORY: The "days" array MUST contain exactly that many day objects - one day for each day from start date to end date, inclusive.**
 - Day 1 must correspond to ${startDateFormatted}
 - The last day must correspond to ${endDateFormatted}
+${hasDayDates ? `- **DATE IN TITLES: Travel dates are set. Each day's "title" MUST start with the date label for that day (e.g. "Day 1 – Saturday, March 15, 2025: Your theme here"). Use the exact date labels provided below so the itinerary shows the real date for each day.**` : ''}
+${dayDatesBlock}
 - **ROUTE PLANNING - CRITICAL RULES:**
 
 1. **NO BACKTRACKING - ABSOLUTELY CRITICAL:**
@@ -233,7 +256,7 @@ ${requestData.additional_preferences && requestData.additional_preferences.trim(
 - Make activities detailed, specific, and realistic
 ${requestData.number_of_children && requestData.number_of_children > 0 ? `- IMPORTANT: Consider child-friendly activities for ${requestData.number_of_children} child${requestData.number_of_children > 1 ? 'ren' : ''}` : ''}
 
-Return ONLY valid JSON in this format. Calculate the number of days from ${startDateFormatted} to ${endDateFormatted} (inclusive) and create that many day objects:
+Return ONLY valid JSON in this format. Calculate the number of days from ${startDateFormatted} to ${endDateFormatted} (inclusive) and create that many day objects.${hasDayDates ? ` For each day, use the exact date label in the "title" (e.g. "${dayDateLabels[0]}: Your theme").` : ''}
 {
   "title": "Option title",
   "summary": "Short elegant overview paragraph (3-4 lines)",
@@ -241,7 +264,7 @@ Return ONLY valid JSON in this format. Calculate the number of days from ${start
   "days": [
     {
       "day": 1,
-      "title": "Day title for ${startDateFormatted}",
+      "title": "${hasDayDates ? dayDateLabels[0] + ': Arrival in Colombo' : 'Day title for ' + startDateFormatted}",
       "location": "Location name",
       "image": "/images/location.jpg",
       "activities": ["09:00 - Activity with timestamp"],
@@ -250,14 +273,14 @@ Return ONLY valid JSON in this format. Calculate the number of days from ${start
     },
     {
       "day": 2,
-      "title": "Day title",
+      "title": "${hasDayDates && dayDateLabels[1] ? dayDateLabels[1] + ': Day theme' : 'Day title'}",
       "location": "Location name",
       "image": "/images/location.jpg",
       "activities": ["09:00 - Activity with timestamp"],
       "what_to_expect": "Description paragraph",
       "optional_activities": ["Optional activity"]
     }
-    ... continue creating day objects until you reach the day corresponding to ${endDateFormatted}
+    ... continue creating day objects until you reach the day corresponding to ${endDateFormatted}${hasDayDates ? ', each with title starting with that day\'s date label' : ''}
   ],
   "total_kilometers": <number>
 }
@@ -467,6 +490,24 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
       }
     }
     
+    // When travel dates exist, add "date" to each day and ensure title starts with the date label (e.g. "Day 1 – Saturday, March 15, 2025: ...")
+    if (hasDayDates && dayDateLabels.length > 0 && newOption.days && Array.isArray(newOption.days)) {
+      const start = new Date(requestData.start_date)
+      start.setHours(0, 0, 0, 0)
+      for (let i = 0; i < newOption.days.length; i++) {
+        const day = newOption.days[i]
+        const d = new Date(start)
+        d.setDate(d.getDate() + i)
+        day.date = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+        if (dayDateLabels[i]) {
+          const alreadyHasDateLabel = /^Day \d+ – .+, .+ \d{4}/.test(day.title || '')
+          if (!alreadyHasDateLabel && day.title) {
+            day.title = `${dayDateLabels[i]}: ${day.title.trim()}`
+          }
+        }
+      }
+    }
+
     // Ensure every day has an image (using actual file names that exist)
     const locationImageMap: Record<string, string> = {
       "Colombo": "/images/arrivalincolombo.jpg",

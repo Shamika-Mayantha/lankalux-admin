@@ -11,6 +11,15 @@ interface Day {
   activities: string[]
   optional_activities?: string[]
   what_to_expect?: string
+  date?: string
+}
+
+/** Format start_date + day index as "6 June" (or "6 June 2025") for client display */
+function getDayDateLabel(startDate: string | null, dayNumber: number): string | null {
+  if (!startDate) return null
+  const d = new Date(startDate)
+  d.setDate(d.getDate() + (dayNumber - 1))
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 interface ItineraryOption {
@@ -459,9 +468,19 @@ export default function PublicItineraryPage() {
                   {/* Day Card */}
                   <div className="bg-white border-2 border-[#c8a45d] rounded-lg p-8 shadow-lg print-shadow">
                     <div className="mb-6">
-                      <h3 className="text-3xl font-serif font-bold text-[#2c2c2c] mb-2">
-                        Day {day.day} – {day.title}
-                      </h3>
+                      {request?.start_date && getDayDateLabel(request.start_date, day.day) ? (
+                        <>
+                          <h3 className="text-3xl font-serif font-bold text-[#2c2c2c] mb-0.5">
+                            {getDayDateLabel(request.start_date, day.day)}
+                          </h3>
+                          <p className="text-sm text-gray-500 font-medium mb-2">Day {day.day}</p>
+                          <p className="text-xl font-serif text-[#2c2c2c] mb-2">{day.title}</p>
+                        </>
+                      ) : (
+                        <h3 className="text-3xl font-serif font-bold text-[#2c2c2c] mb-2">
+                          Day {day.day} – {day.title}
+                        </h3>
+                      )}
                       <p className="text-lg text-[#c8a45d] font-semibold uppercase tracking-wide">
                         {day.location}
                       </p>
