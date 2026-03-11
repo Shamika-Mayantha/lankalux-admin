@@ -1516,7 +1516,7 @@ LankaLux Team`
                     <p className="text-gray-800">
                       {request.whatsapp ? (
                         <a
-                          href={`https://wa.me/${request.whatsapp.replace(/[^0-9]/g, '')}`}
+                          href={`https://wa.me/${request.whatsapp.replace(new RegExp('[^0-9]', 'g'), '')}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-[#d4af37] hover:text-[#b8941f] transition-colors duration-200"
