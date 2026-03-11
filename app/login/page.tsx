@@ -80,16 +80,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-[#0a0a0a] to-black flex items-center justify-center px-4 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-[#d4af37]/5 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-[#d4af37]/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-      </div>
-
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 relative overflow-hidden">
       <div className="w-full max-w-md relative z-10 animate-fade-in">
-        <div className="bg-[#1a1a1a]/95 backdrop-blur-sm border border-[#333] rounded-xl p-8 shadow-2xl hover:shadow-[#d4af37]/20 transition-all duration-300">
-          {/* Logo */}
+        <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-lg">
           <div className="flex justify-center mb-6">
             <div className="relative">
               <img 
@@ -100,14 +93,14 @@ export default function LoginPage() {
             </div>
           </div>
           
-          <h1 className="text-3xl font-bold text-[#d4af37] mb-2 text-center bg-gradient-to-r from-[#d4af37] to-[#b8941f] bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-[#b8860b] mb-2 text-center">
             LankaLux Admin
           </h1>
-          <p className="text-gray-400 text-center mb-8">Sign in to your account</p>
+          <p className="text-gray-600 text-center mb-8">Sign in to your account</p>
 
           <div className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email
               </label>
               <input
@@ -117,13 +110,13 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Enter your email"
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-all hover:border-[#444]"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-all"
                 disabled={loading}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
               <input
@@ -133,14 +126,14 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Enter your password"
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-all hover:border-[#444]"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-[#d4af37] transition-all"
                 disabled={loading}
               />
             </div>
 
             {error && (
-              <div className="bg-red-900/20 border border-red-700 rounded-md p-3">
-                <p className="text-red-400 text-sm">{error}</p>
+              <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                <p className="text-red-700 text-sm">{error}</p>
               </div>
             )}
 

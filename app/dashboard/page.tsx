@@ -117,10 +117,10 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-amber-500/20 border-t-amber-400/70 mb-4" />
-          <p className="text-gray-500">Loading...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-amber-200 border-t-amber-600 mb-4" />
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     )
@@ -140,27 +140,27 @@ export default function DashboardPage() {
   }
 
   const getStatusColor = (status: string | null) => {
-    if (!status) return 'text-gray-400'
+    if (!status) return 'text-gray-600'
     const statusLower = status.toLowerCase()
-    if (statusLower === 'new') return 'text-blue-300'
-    if (statusLower === 'follow_up') return 'text-amber-300'
-    if (statusLower === 'deposit') return 'text-cyan-300'
-    if (statusLower === 'sold') return 'text-emerald-300'
-    if (statusLower === 'after_sales') return 'text-violet-300'
-    if (statusLower === 'cancelled') return 'text-rose-400'
-    return 'text-gray-400'
+    if (statusLower === 'new') return 'text-blue-700'
+    if (statusLower === 'follow_up') return 'text-amber-700'
+    if (statusLower === 'deposit') return 'text-cyan-700'
+    if (statusLower === 'sold') return 'text-emerald-700'
+    if (statusLower === 'after_sales') return 'text-violet-700'
+    if (statusLower === 'cancelled') return 'text-rose-700'
+    return 'text-gray-600'
   }
 
   const getStatusBgColor = (status: string | null) => {
-    if (!status) return 'bg-gray-700/20'
+    if (!status) return 'bg-gray-100'
     const statusLower = status.toLowerCase()
-    if (statusLower === 'new') return 'bg-blue-500/15'
-    if (statusLower === 'follow_up') return 'bg-amber-500/15'
-    if (statusLower === 'deposit') return 'bg-cyan-500/15'
-    if (statusLower === 'sold') return 'bg-emerald-500/15'
-    if (statusLower === 'after_sales') return 'bg-violet-500/15'
-    if (statusLower === 'cancelled') return 'bg-rose-500/15'
-    return 'bg-gray-700/20'
+    if (statusLower === 'new') return 'bg-blue-50'
+    if (statusLower === 'follow_up') return 'bg-amber-50'
+    if (statusLower === 'deposit') return 'bg-cyan-50'
+    if (statusLower === 'sold') return 'bg-emerald-50'
+    if (statusLower === 'after_sales') return 'bg-violet-50'
+    if (statusLower === 'cancelled') return 'bg-rose-50'
+    return 'bg-gray-100'
   }
 
   const activeRequests = requests.filter(
@@ -174,10 +174,10 @@ export default function DashboardPage() {
   const cancelledRequests = requests.filter((r) => r.status?.toLowerCase() === 'cancelled')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-[#0d0d0d] to-gray-950">
+    <div className="min-h-screen bg-gray-100">
       <div className="w-full mx-auto px-6 sm:px-10 lg:px-14 xl:px-20 py-10">
         {/* Header */}
-        <div className="flex flex-wrap justify-between items-center gap-6 mb-12 bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-2xl px-8 py-6 shadow-xl">
+        <div className="flex flex-wrap justify-between items-center gap-6 mb-12 bg-white border border-gray-200 rounded-2xl px-8 py-6 shadow-sm">
           <div className="flex items-center gap-5">
             <img 
               src="/favicon.png" 
@@ -185,12 +185,12 @@ export default function DashboardPage() {
               className="h-14 w-14 object-cover rounded-xl"
             />
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-amber-100/90 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                 LankaLux Admin
               </h1>
               {user?.email && (
                 <p className="text-gray-500 text-sm mt-0.5">
-                  <span className="text-gray-400">{user.email}</span>
+                  <span className="text-gray-600">{user.email}</span>
                 </p>
               )}
             </div>
@@ -199,11 +199,11 @@ export default function DashboardPage() {
             <button
               onClick={fetchRequests}
               disabled={requestsLoading}
-              className="px-4 py-2.5 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-gray-300 font-medium rounded-xl transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-medium rounded-xl transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               title="Refresh requests"
             >
               <svg
-                className={`w-4 h-4 shrink-0 ${requestsLoading ? 'animate-spin' : ''} text-amber-400/70`}
+                className={`w-4 h-4 shrink-0 ${requestsLoading ? 'animate-spin' : ''} text-amber-600`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -214,24 +214,24 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => window.open('/dashboard/vehicle-reservations', '_blank')}
-              className="px-4 py-2.5 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-gray-300 font-medium rounded-xl transition-all text-sm flex items-center gap-2"
+              className="px-4 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-medium rounded-xl transition-all text-sm flex items-center gap-2"
               title="View and manage vehicle availability"
             >
-              <svg className="w-4 h-4 shrink-0 text-amber-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span className="hidden sm:inline">Vehicle Availability</span>
             </button>
             <button
               onClick={() => router.push('/requests/new')}
-              className="px-5 py-2.5 bg-amber-500/25 hover:bg-amber-500/35 border border-amber-500/40 text-amber-50 font-semibold rounded-xl transition-all text-sm shadow-sm"
+              className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 border border-amber-600 text-white font-semibold rounded-xl transition-all text-sm shadow-sm"
             >
               New Request
             </button>
-            <span className="hidden sm:block w-px h-8 bg-white/[0.1] mx-1" aria-hidden />
+            <span className="hidden sm:block w-px h-8 bg-gray-200 mx-1" aria-hidden />
             <button
               onClick={handleLogout}
-              className="px-4 py-2.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-gray-400 hover:text-gray-300 font-medium rounded-xl transition-all text-sm"
+              className="px-4 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 hover:text-gray-800 font-medium rounded-xl transition-all text-sm"
             >
               Logout
             </button>
@@ -240,22 +240,22 @@ export default function DashboardPage() {
 
         {/* Active Requests Section */}
         <section className="mb-12 animate-slide-in">
-          <h2 className="text-xl font-semibold text-gray-300 mb-6 flex items-center gap-3">
-            <span className="w-1 h-6 bg-amber-500/60 rounded-full" />
+          <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-3">
+            <span className="w-1 h-6 bg-amber-500 rounded-full" />
             Active Requests
             <span className="text-sm text-gray-500 font-normal">({activeRequests.length})</span>
           </h2>
           
           {requestsLoading ? (
-            <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl py-16 px-8">
+            <div className="bg-white border border-gray-200 rounded-2xl py-16 px-8">
               <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-amber-500/20 border-t-amber-400/60 mb-5" />
-                <p className="text-gray-500">Loading requests...</p>
+                <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-amber-200 border-t-amber-600 mb-5" />
+                <p className="text-gray-600">Loading requests...</p>
               </div>
             </div>
           ) : activeRequests.length === 0 ? (
-            <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl py-16 px-8">
-              <p className="text-gray-500 text-center">No active requests</p>
+            <div className="bg-white border border-gray-200 rounded-2xl py-16 px-8">
+              <p className="text-gray-600 text-center">No active requests</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -263,11 +263,11 @@ export default function DashboardPage() {
                 <div
                   key={request.id}
                   onClick={() => router.push(`/requests/${request.id}`)}
-                  className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 hover:border-amber-500/30 hover:bg-white/[0.05] transition-all cursor-pointer animate-fade-in"
+                  className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-amber-400 hover:shadow-md transition-all cursor-pointer animate-fade-in"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-100 mb-1.5 truncate">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1.5 truncate">
                       {request.client_name || 'Unnamed Client'}
                     </h3>
                     <p className="text-sm text-gray-500">
@@ -281,7 +281,7 @@ export default function DashboardPage() {
                         <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">
                           Travel Dates
                         </p>
-                        <p className="text-gray-400">
+                        <p className="text-gray-700">
                           {request.start_date && request.end_date
                             ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
                             : request.start_date
@@ -313,8 +313,8 @@ export default function DashboardPage() {
         {/* Deposit Collected Section */}
         {depositRequests.length > 0 && (
           <section className="mb-12 animate-slide-in">
-            <h2 className="text-xl font-semibold text-gray-300 mb-6 flex items-center gap-3">
-              <span className="w-1 h-6 bg-cyan-500/60 rounded-full" />
+            <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-3">
+              <span className="w-1 h-6 bg-cyan-500 rounded-full" />
               Deposit Collected
               <span className="text-sm text-gray-500 font-normal">({depositRequests.length})</span>
             </h2>
@@ -323,11 +323,11 @@ export default function DashboardPage() {
                 <div
                   key={request.id}
                   onClick={() => router.push(`/requests/${request.id}`)}
-                  className="bg-white/[0.03] border border-cyan-500/15 rounded-2xl p-6 hover:border-cyan-500/30 hover:bg-white/[0.05] transition-all cursor-pointer animate-fade-in"
+                  className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-cyan-400 hover:shadow-md transition-all cursor-pointer animate-fade-in"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-100 mb-1.5 truncate">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1.5 truncate">
                       {request.client_name || 'Unnamed Client'}
                     </h3>
                     <p className="text-sm text-gray-500">
@@ -341,7 +341,7 @@ export default function DashboardPage() {
                         <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">
                           Travel Dates
                         </p>
-                        <p className="text-gray-400">
+                        <p className="text-gray-700">
                           {request.start_date && request.end_date
                             ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
                             : request.start_date
@@ -373,8 +373,8 @@ export default function DashboardPage() {
         {/* Sold Section */}
         {soldRequests.length > 0 && (
           <section className="mb-12 animate-slide-in">
-            <h2 className="text-xl font-semibold text-gray-300 mb-6 flex items-center gap-3">
-              <span className="w-1 h-6 bg-emerald-500/60 rounded-full" />
+            <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-3">
+              <span className="w-1 h-6 bg-emerald-500 rounded-full" />
               Sold
               <span className="text-sm text-gray-500 font-normal">({soldRequests.length})</span>
             </h2>
@@ -383,11 +383,11 @@ export default function DashboardPage() {
                 <div
                   key={request.id}
                   onClick={() => router.push(`/requests/${request.id}`)}
-                  className="bg-white/[0.03] border border-emerald-500/15 rounded-2xl p-6 hover:border-emerald-500/30 hover:bg-white/[0.05] transition-all cursor-pointer animate-fade-in"
+                  className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer animate-fade-in"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-100 mb-1.5 truncate">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1.5 truncate">
                       {request.client_name || 'Unnamed Client'}
                     </h3>
                     <p className="text-sm text-gray-500">
@@ -401,7 +401,7 @@ export default function DashboardPage() {
                         <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">
                           Travel Dates
                         </p>
-                        <p className="text-gray-400">
+                        <p className="text-gray-700">
                           {request.start_date && request.end_date
                             ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
                             : request.start_date
@@ -435,14 +435,14 @@ export default function DashboardPage() {
           <section className="mb-12 animate-slide-in">
             <button
               onClick={() => setCancelledExpanded(!cancelledExpanded)}
-              className="flex items-center justify-between w-full mb-6 px-6 py-4 bg-white/[0.03] border border-white/[0.08] rounded-2xl hover:border-rose-500/25 transition-all"
+              className="flex items-center justify-between w-full mb-6 px-6 py-4 bg-white border border-gray-200 rounded-2xl hover:border-rose-300 transition-all shadow-sm"
             >
-              <h2 className="text-xl font-semibold text-gray-300 flex items-center gap-3">
-                <span className="w-1 h-6 bg-rose-500/60 rounded-full" />
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-3">
+                <span className="w-1 h-6 bg-rose-500 rounded-full" />
                 Cancelled Trips ({cancelledRequests.length})
               </h2>
               <svg
-                className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${cancelledExpanded ? 'rotate-180' : ''}`}
+                className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${cancelledExpanded ? 'rotate-180' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -462,11 +462,11 @@ export default function DashboardPage() {
                   <div
                     key={request.id}
                     onClick={() => router.push(`/requests/${request.id}`)}
-                    className="bg-white/[0.03] border border-rose-500/15 rounded-2xl p-6 hover:border-rose-500/30 hover:bg-white/[0.05] transition-all cursor-pointer opacity-90 animate-fade-in"
+                    className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-rose-300 hover:shadow-md transition-all cursor-pointer animate-fade-in"
                     style={{ animationDelay: `${index * 0.05}s` }}
                   >
                     <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-gray-100 mb-1.5 truncate">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-1.5 truncate">
                         {request.client_name || 'Unnamed Client'}
                       </h3>
                       <p className="text-sm text-gray-500">
@@ -480,7 +480,7 @@ export default function DashboardPage() {
                           <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">
                             Travel Dates
                           </p>
-                          <p className="text-gray-400">
+                          <p className="text-gray-700">
                             {request.start_date && request.end_date
                               ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
                               : request.start_date
@@ -502,7 +502,7 @@ export default function DashboardPage() {
                           {(request.status || 'cancelled').toUpperCase()}
                         </span>
                         {request.cancellation_reason && (
-                          <p className="text-sm text-gray-400 mt-2 line-clamp-2" title={request.cancellation_reason}>
+                          <p className="text-sm text-gray-600 mt-2 line-clamp-2" title={request.cancellation_reason}>
                             <span className="text-gray-500">Reason: </span>
                             {request.cancellation_reason}
                           </p>

@@ -29,10 +29,10 @@ export default function Home() {
 
   // Show loading state while checking session
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-[#0a0a0a] to-black flex items-center justify-center">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="text-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#d4af37] mb-4"></div>
-        <p className="text-gray-400">Loading...</p>
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-amber-200 border-t-amber-600 mb-4"></div>
+        <p className="text-gray-600">Loading...</p>
       </div>
     </div>
   )

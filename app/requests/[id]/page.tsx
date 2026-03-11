@@ -275,27 +275,27 @@ export default function RequestDetailsPage() {
   }
 
   const getStatusColor = (status: string | null) => {
-    if (!status) return 'text-gray-400'
+    if (!status) return 'text-gray-600'
     const statusLower = status.toLowerCase()
-    if (statusLower === 'new') return 'text-blue-400'
-    if (statusLower === 'follow_up') return 'text-orange-400'
-    if (statusLower === 'deposit') return 'text-cyan-400'
-    if (statusLower === 'sold') return 'text-green-400'
-    if (statusLower === 'after_sales') return 'text-purple-400'
-    if (statusLower === 'cancelled') return 'text-red-400'
-    return 'text-gray-400'
+    if (statusLower === 'new') return 'text-blue-700'
+    if (statusLower === 'follow_up') return 'text-amber-700'
+    if (statusLower === 'deposit') return 'text-cyan-700'
+    if (statusLower === 'sold') return 'text-emerald-700'
+    if (statusLower === 'after_sales') return 'text-violet-700'
+    if (statusLower === 'cancelled') return 'text-rose-700'
+    return 'text-gray-600'
   }
 
   const getStatusBgColor = (status: string | null) => {
-    if (!status) return 'bg-gray-800'
+    if (!status) return 'bg-gray-100'
     const statusLower = status.toLowerCase()
-    if (statusLower === 'new') return 'bg-blue-900/30'
-    if (statusLower === 'follow_up') return 'bg-orange-900/30'
-    if (statusLower === 'deposit') return 'bg-cyan-900/30'
-    if (statusLower === 'sold') return 'bg-green-900/30'
-    if (statusLower === 'after_sales') return 'bg-purple-900/30'
-    if (statusLower === 'cancelled') return 'bg-red-900/30'
-    return 'bg-gray-800'
+    if (statusLower === 'new') return 'bg-blue-50'
+    if (statusLower === 'follow_up') return 'bg-amber-50'
+    if (statusLower === 'deposit') return 'bg-cyan-50'
+    if (statusLower === 'sold') return 'bg-emerald-50'
+    if (statusLower === 'after_sales') return 'bg-violet-50'
+    if (statusLower === 'cancelled') return 'bg-rose-50'
+    return 'bg-gray-100'
   }
 
   const fetchRequestData = async (id: string) => {
@@ -1179,7 +1179,7 @@ LankaLux Team`
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#d4af37] mb-4"></div>
           <p className="text-gray-400">Loading request details...</p>
@@ -1190,7 +1190,7 @@ LankaLux Team`
 
   if (notFound || !request) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-[#d4af37] mb-4">Request not found</h1>
           <p className="text-gray-400 mb-6">The request you're looking for doesn't exist or has been removed.</p>
@@ -1231,14 +1231,14 @@ LankaLux Team`
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-[#0a0a0a] to-black">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen bg-gray-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-6 bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 shadow-lg animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
+        <div className="mb-10 bg-white border border-gray-200 rounded-xl p-6 md:p-8 shadow-sm animate-fade-in">
+          <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => router.push('/dashboard')}
-              className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-all duration-200 flex items-center gap-2 hover:scale-105 active:scale-95"
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-all duration-200 flex items-center gap-2 hover:scale-105 active:scale-95"
             >
               <svg
                 className="w-5 h-5"
@@ -1257,18 +1257,18 @@ LankaLux Team`
               Back to Dashboard
             </button>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             <img 
               src="/favicon.png" 
               alt="LankaLux Logo" 
-              className="h-12 w-12 object-cover"
+              className="h-14 w-14 object-cover rounded-lg"
             />
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-[#d4af37] to-[#b8941f] bg-clip-text text-transparent">
+              <h1 className="text-2xl md:text-3xl font-bold text-[#b8860b]">
                 Request Details
               </h1>
-              <p className="text-gray-400 text-sm">
-                Request ID: <span className="text-gray-300 font-mono">{request.id}</span>
+              <p className="text-gray-600 text-sm mt-1">
+                Request ID: <span className="text-gray-900 font-mono">{request.id}</span>
               </p>
             </div>
           </div>
@@ -1276,11 +1276,11 @@ LankaLux Team`
 
         {/* Cancelled Warning Banner */}
         {isCancelled && (
-          <div className="mb-6 bg-red-900/20 border-2 border-red-500 rounded-lg p-4">
+          <div className="mb-10 bg-red-50 border-2 border-red-300 rounded-xl p-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <svg
-                  className="w-6 h-6 text-red-400"
+                  className="w-6 h-6 text-red-600 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1293,8 +1293,8 @@ LankaLux Team`
                   />
                 </svg>
                 <div>
-                  <h3 className="text-lg font-semibold text-red-400">Trip Cancelled</h3>
-                  <p className="text-sm text-red-300">This trip has been cancelled. Itinerary generation is disabled.</p>
+                  <h3 className="text-lg font-semibold text-red-800">Trip Cancelled</h3>
+                  <p className="text-sm text-red-700 mt-0.5">This trip has been cancelled. Itinerary generation is disabled.</p>
                 </div>
               </div>
               <button
@@ -1320,19 +1320,17 @@ LankaLux Team`
           </div>
         )}
 
-        {/* Request Details Card */}
-        <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 md:p-6 mb-6">
-          <div className="space-y-6">
-            {/* Status Badge */}
-            <div className="flex items-center justify-between pb-6 border-b border-[#333]">
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Status</p>
+        {/* Overview: Status & Created */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-6">
+            <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Status</p>
                 {editingStatus ? (
                   <div className="flex items-center gap-2">
                     <select
                       value={statusValue}
                       onChange={(e) => setStatusValue(e.target.value)}
-                      className="px-3 py-1 bg-[#0a0a0a] border border-[#333] rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
+                      className="px-3 py-1 bg-gray-50 border border-gray-200 rounded-md text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
                     >
                       <option value="new">NEW</option>
                       <option value="follow_up">FOLLOW_UP</option>
@@ -1353,7 +1351,7 @@ LankaLux Team`
                         setStatusValue(request.status || '')
                         setEditingStatus(false)
                       }}
-                      className="px-3 py-1 bg-[#333] hover:bg-[#444] text-white text-sm font-semibold rounded-md"
+                      className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-semibold rounded-md"
                     >
                       Cancel
                     </button>
@@ -1377,16 +1375,17 @@ LankaLux Team`
                   </div>
                 )}
               </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Created At</p>
-                <p className="text-gray-300">{formatDate(request.created_at)}</p>
+            <div className="text-right">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Created At</p>
+                <p className="text-gray-800 font-medium">{formatDate(request.created_at)}</p>
               </div>
-            </div>
+          </div>
+        </div>
 
-            {/* Client Information */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-semibold text-[#d4af37]">Client Information</h2>
+        {/* Client Information */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b]">Client Information</h2>
                 {!editingClientInfo && (
                   <button
                     onClick={() => setEditingClientInfo(true)}
@@ -1410,17 +1409,17 @@ LankaLux Team`
                 )}
               </div>
               {editingClientInfo ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                     <div>
-                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-3">
                         Client Name
                       </label>
                       <input
                         type="text"
                         value={clientNameValue}
                         onChange={(e) => setClientNameValue(e.target.value)}
-                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                       />
                     </div>
                     <div>
@@ -1431,7 +1430,7 @@ LankaLux Team`
                         type="email"
                         value={emailValue}
                         onChange={(e) => setEmailValue(e.target.value)}
-                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                       />
                     </div>
                     <div>
@@ -1442,14 +1441,14 @@ LankaLux Team`
                         type="text"
                         value={whatsappValue}
                         onChange={(e) => setWhatsappValue(e.target.value)}
-                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                       />
                     </div>
                     <div>
                       <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
                         Origin Country
                       </label>
-                      <p className="text-gray-300 py-3">{request.origin_country || 'N/A'}</p>
+                      <p className="text-gray-800 py-3">{request.origin_country || 'N/A'}</p>
                     </div>
                   </div>
                   <div className="flex gap-3">
@@ -1483,23 +1482,23 @@ LankaLux Team`
                         setEditingClientInfo(false)
                       }}
                       disabled={saving}
-                      className="px-6 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Client Name</p>
-                    <p className="text-white text-lg font-medium">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Client Name</p>
+                    <p className="text-gray-900 text-lg font-medium">
                       {request.client_name || 'N/A'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Email</p>
-                    <p className="text-gray-300">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Email</p>
+                    <p className="text-gray-800">
                       {request.email ? (
                         <a
                           href={`mailto:${request.email}`}
@@ -1513,8 +1512,8 @@ LankaLux Team`
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">WhatsApp</p>
-                    <p className="text-gray-300">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">WhatsApp</p>
+                    <p className="text-gray-800">
                       {request.whatsapp ? (
                         <a
                           href={`https://wa.me/${request.whatsapp.replace(/[^0-9]/g, '')}`}
@@ -1530,28 +1529,30 @@ LankaLux Team`
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Origin Country</p>
-                    <p className="text-gray-300">{request.origin_country || 'N/A'}</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Origin Country</p>
+                    <p className="text-gray-900">{request.origin_country || 'N/A'}</p>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Travel Information */}
-            <div className="pt-6 border-t border-[#333]">
-              <h2 className="text-2xl font-semibold text-[#d4af37] mb-4">Travel Information</h2>
+        </div>
+
+        {/* Travel Information */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
+              <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b] mb-6">Travel Information</h2>
               {editingClientInfo ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                     <div>
-                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-3">
                         Start Date
                       </label>
                       <input
                         type="date"
                         value={startDateValue}
                         onChange={(e) => setStartDateValue(e.target.value)}
-                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
                       />
                     </div>
                     <div>
@@ -1563,12 +1564,12 @@ LankaLux Team`
                         value={endDateValue}
                         onChange={(e) => setEndDateValue(e.target.value)}
                         min={startDateValue || undefined}
-                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
                       />
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Duration</p>
-                      <p className="text-gray-300 py-3">
+                      <p className="text-gray-800 py-3">
                         {startDateValue && endDateValue
                           ? (() => {
                               const start = new Date(startDateValue)
@@ -1598,7 +1599,7 @@ LankaLux Team`
                         min="1"
                         value={numberOfAdultsValue}
                         onChange={(e) => setNumberOfAdultsValue(e.target.value)}
-                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                       />
                     </div>
                     <div>
@@ -1624,7 +1625,7 @@ LankaLux Team`
                             setChildrenAgesValue([])
                           }
                         }}
-                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                       />
                     </div>
                   </div>
@@ -1650,7 +1651,7 @@ LankaLux Team`
                                 setChildrenAgesValue(newAges)
                               }}
                               placeholder={`Age of child ${index + 1}`}
-                              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                             />
                           </div>
                         ))}
@@ -1663,25 +1664,25 @@ LankaLux Team`
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Start Date</p>
-                      <p className="text-gray-300">{formatDate(request.start_date)}</p>
+                      <p className="text-gray-800">{formatDate(request.start_date)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">End Date</p>
-                      <p className="text-gray-300">{formatDate(request.end_date)}</p>
+                      <p className="text-gray-800">{formatDate(request.end_date)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Duration</p>
-                      <p className="text-gray-300">{request.duration ? `${request.duration} days` : 'N/A'}</p>
+                      <p className="text-gray-800">{request.duration ? `${request.duration} days` : 'N/A'}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Number of Adults</p>
-                      <p className="text-gray-300">{request.number_of_adults || 'N/A'}</p>
+                      <p className="text-gray-800">{request.number_of_adults || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Number of Children</p>
-                      <p className="text-gray-300">{request.number_of_children || 'N/A'}</p>
+                      <p className="text-gray-800">{request.number_of_children || 'N/A'}</p>
                     </div>
                     {request.children_ages && (() => {
                       try {
@@ -1690,7 +1691,7 @@ LankaLux Team`
                           return (
                             <div className="md:col-span-2">
                               <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Children Ages</p>
-                              <p className="text-gray-300">
+                              <p className="text-gray-800">
                                 {ages.map((age: number, index: number) => (
                                   <span key={index}>
                                     Child {index + 1}: {age} years{index < ages.length - 1 ? ', ' : ''}
@@ -1706,39 +1707,39 @@ LankaLux Team`
                   </div>
                 </div>
               )}
-            </div>
+        </div>
 
-            {/* Additional Preferences */}
-            <div className="pt-6 border-t border-[#333]">
-              <h2 className="text-2xl font-semibold text-[#d4af37] mb-4">Additional Preferences</h2>
+        {/* Additional Preferences */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
+              <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b] mb-6">Additional Preferences</h2>
               {editingClientInfo ? (
                 <textarea
                   value={additionalPreferencesValue}
                   onChange={(e) => setAdditionalPreferencesValue(e.target.value)}
                   rows={6}
-                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y"
                   placeholder="e.g., honeymoon, wildlife safari, luxury focus, train journeys, ayurveda retreat, family friendly, adventure"
                 />
               ) : (
-                <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-4">
-                  <p className="text-gray-300 whitespace-pre-wrap">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+                  <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
                     {request.additional_preferences || 'No preferences specified'}
                   </p>
                 </div>
               )}
-            </div>
+        </div>
 
-            {/* Notes */}
-            <div className="pt-6 border-t border-[#333]">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-semibold text-[#d4af37]">Notes</h2>
+        {/* Notes */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b]">Notes</h2>
               </div>
               {editingNotes ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <textarea
                     value={notesValue}
                     onChange={(e) => setNotesValue(e.target.value)}
-                    className="w-full h-32 bg-[#0a0a0a] border border-[#333] rounded-md p-4 text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#d4af37] resize-y"
+                    className="w-full min-h-[140px] bg-gray-50 border border-gray-200 rounded-lg p-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#d4af37] resize-y"
                     placeholder="Add internal notes..."
                   />
                   <div className="flex gap-2">
@@ -1754,37 +1755,35 @@ LankaLux Team`
                         setNotesValue(request.notes || '')
                         setEditingNotes(false)
                       }}
-                      className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md"
+                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md"
                     >
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="bg-[#0a0a0a] border border-[#333] rounded-md p-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
                   {request.notes ? (
-                    <p className="text-gray-300 whitespace-pre-wrap">{request.notes}</p>
+                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{request.notes}</p>
                   ) : (
                     <p className="text-gray-500 italic">No notes added yet.</p>
                   )}
                   <button
                     onClick={() => setEditingNotes(true)}
-                    className="mt-3 text-sm text-[#d4af37] hover:text-[#b8941f] transition-colors"
+                    className="mt-4 text-sm font-medium text-[#b8860b] hover:text-[#996f09] transition-colors"
                   >
                     {request.notes ? 'Edit Notes' : 'Add Notes'}
                   </button>
                 </div>
               )}
-            </div>
-          </div>
         </div>
 
         {/* Success Message */}
         {sendSuccess && (
-          <div className="mb-6 bg-green-900/20 border-2 border-green-500 rounded-lg p-4">
+          <div className="mb-10 bg-green-50 border-2 border-green-300 rounded-xl p-5">
             <div className="flex items-center gap-3">
               <svg
-                className="w-6 h-6 text-green-400"
+                className="w-6 h-6 text-green-600 shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -1796,25 +1795,25 @@ LankaLux Team`
                   d="M5 13l4 4L19 7"
                 />
               </svg>
-              <p className="text-green-400 font-semibold">Itinerary sent successfully!</p>
+              <p className="text-green-800 font-semibold">Itinerary sent successfully!</p>
             </div>
           </div>
         )}
 
         {/* Follow-up email: before itinerary options, with collapsible sent log */}
         {request.email && (
-          <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-6 md:p-8 mt-8">
-            <h2 className="text-2xl font-semibold text-[#d4af37] mb-2">Follow-up email</h2>
-            <p className="text-gray-400 mb-6 max-w-xl">
+          <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
+            <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b] mb-3">Follow-up email</h2>
+            <p className="text-gray-600 mb-8 max-w-xl leading-relaxed">
               Send a friendly, humanized email to the client. Choose a template, preview and edit in the popup, then send. The client will see a button linking to their itinerary when available.
             </p>
-            <div className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-wrap items-end gap-6">
               <div className="min-w-[260px]">
-                <label className="block text-sm font-medium text-gray-400 mb-2">Template</label>
+                <label className="block text-sm font-medium text-gray-600 mb-3">Template</label>
                 <select
                   value={selectedTemplateId}
                   onChange={(e) => setSelectedTemplateId(e.target.value as TemplateId)}
-                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
                 >
                   {FOLLOW_UP_TEMPLATES.map((t) => (
                     <option key={t.id} value={t.id}>{t.name}</option>
@@ -1839,13 +1838,13 @@ LankaLux Team`
             </div>
 
             {request.follow_up_emails_sent && request.follow_up_emails_sent.length > 0 && (
-              <div className="mt-10 pt-8 border-t border-[#333]">
+              <div className="mt-12 pt-10 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setFollowUpEmailsSentExpanded((v) => !v)}
                   className="flex items-center justify-between w-full text-left"
                 >
-                  <h3 className="text-lg font-semibold text-gray-300">
+                  <h3 className="text-lg font-semibold text-gray-800">
                     Follow-up emails sent ({request.follow_up_emails_sent.length})
                   </h3>
                   <svg
@@ -1868,13 +1867,13 @@ LankaLux Team`
                         .map((entry, index) => (
                           <li
                             key={`${entry.sent_at}-${index}`}
-                            className="flex flex-wrap items-baseline gap-3 py-2 text-gray-300"
+                            className="flex flex-wrap items-baseline gap-3 py-2 text-gray-800"
                           >
                             <time className="text-sm text-gray-500 shrink-0" dateTime={entry.sent_at}>
                               {formatDateTime(entry.sent_at)}
                             </time>
                             <span className="text-gray-600">·</span>
-                            <span className="text-gray-300" title={entry.subject}>
+                            <span className="text-gray-800" title={entry.subject}>
                               {entry.template_name}: {entry.subject}
                             </span>
                           </li>
@@ -1886,13 +1885,13 @@ LankaLux Team`
             )}
 
             {request.link_opens && request.link_opens.length > 0 && (
-              <div className="mt-10 pt-8 border-t border-[#333]">
+              <div className="mt-12 pt-10 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setLinkOpensExpanded((v) => !v)}
                   className="flex items-center justify-between w-full text-left"
                 >
-                  <h3 className="text-lg font-semibold text-gray-300">
+                  <h3 className="text-lg font-semibold text-gray-800">
                     Link opens ({request.link_opens.length})
                   </h3>
                   <svg
@@ -1916,7 +1915,7 @@ LankaLux Team`
                         .map((entry, index) => (
                           <li
                             key={`${entry.opened_at}-${index}`}
-                            className="flex flex-wrap items-baseline gap-3 py-2 text-gray-300"
+                            className="flex flex-wrap items-baseline gap-3 py-2 text-gray-800"
                           >
                             <time className="text-sm text-gray-500 shrink-0" dateTime={entry.opened_at}>
                               {formatDateTime(entry.opened_at)}
@@ -1938,9 +1937,9 @@ LankaLux Team`
         )}
 
         {/* Itinerary Options Section */}
-        <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 md:p-6 mt-8">
-          <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-            <h2 className="text-2xl font-semibold text-[#d4af37]">Itinerary Options</h2>
+        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
+          <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+            <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b]">Itinerary Options</h2>
             {!isCancelled && (
               <div className="flex gap-2 flex-wrap">
                 {[0, 1, 2].map((optionIndex) => {
@@ -2038,7 +2037,7 @@ LankaLux Team`
             })() : null}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {[0, 1, 2].map((index) => {
               const option = itineraryOptions[index]
               const optionExists = option !== null && option !== undefined
@@ -2050,10 +2049,10 @@ LankaLux Team`
                 return (
                   <div
                     key={index}
-                    className="bg-[#0a0a0a] border border-[#333] rounded-lg p-6 flex flex-col items-center justify-center min-h-[300px]"
+                    className="bg-gray-50 border border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center min-h-[320px]"
                   >
                     <div className="text-center">
-                      <div className="w-16 h-16 bg-[#333] rounded-full flex items-center justify-center mb-4 mx-auto">
+                      <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4 mx-auto">
                         <span className="text-2xl text-gray-500">{index + 1}</span>
                       </div>
                       <p className="text-gray-500 mb-4">Option {index + 1} not generated yet</p>
@@ -2077,7 +2076,7 @@ LankaLux Team`
                 return (
                   <div
                     key={index}
-                    className="bg-[#0a0a0a] border border-[#333] rounded-lg p-6 flex flex-col items-center justify-center min-h-[300px]"
+                    className="bg-gray-50 border border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center min-h-[320px]"
                   >
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#d4af37] mb-4"></div>
                     <p className="text-gray-400">Generating Option {index + 1}...</p>
@@ -2093,10 +2092,10 @@ LankaLux Team`
               return (
                 <div
                   key={index}
-                  className={`bg-[#0a0a0a] border rounded-lg p-6 flex flex-col ${
+                  className={`bg-gray-50 border rounded-lg p-6 flex flex-col ${
                     isSelected
                       ? 'border-[#d4af37] ring-2 ring-[#d4af37]'
-                      : 'border-[#333]'
+                      : 'border-gray-200'
                   }`}
                 >
                   <div className="flex items-start justify-between mb-4">
@@ -2111,8 +2110,8 @@ LankaLux Team`
                   </div>
                   <div className="mb-4 flex-1">
                     <p className="text-sm text-gray-400 mb-3">{option.summary}</p>
-                    <div className="bg-[#1a1a1a] border border-[#333] rounded-md p-4 max-h-64 overflow-y-auto">
-                      <p className="text-gray-300 text-sm whitespace-pre-wrap font-mono">
+                    <div className="bg-gray-50 border border-gray-200 rounded-md p-4 max-h-64 overflow-y-auto">
+                      <p className="text-gray-800 text-sm whitespace-pre-wrap font-mono">
                         {Array.isArray(option.days) 
                           ? option.days.map((day: any) => 
                               `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities?.map((act: string) => `  • ${act}`).join('\n') || ''}`
@@ -2123,7 +2122,7 @@ LankaLux Team`
                     </div>
                     {/* Total Kilometers - Admin Only */}
                     {typeof option.total_kilometers === 'number' && (
-                      <div className="mt-3 bg-[#1a1a1a] border border-[#333] rounded-md p-3">
+                      <div className="mt-3 bg-gray-50 border border-gray-200 rounded-md p-3">
                         <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">
                           Total Kilometers
                         </label>
@@ -2139,7 +2138,7 @@ LankaLux Team`
                       disabled={selectingOption !== null}
                       className={`flex-1 py-2 px-4 rounded-md font-semibold transition-colors duration-200 ${
                         isSelected
-                          ? 'bg-[#666] hover:bg-[#777] text-white'
+                          ? 'bg-amber-600 hover:bg-amber-700 text-white'
                           : 'bg-[#d4af37] hover:bg-[#b8941f] text-black'
                       } disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
                     >
@@ -2157,7 +2156,7 @@ LankaLux Team`
                     <button
                       onClick={() => handleGenerateSingleOption(index)}
                       disabled={generatingOption !== null || generatingItinerary || isCancelled}
-                      className="px-3 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Regenerate this option"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2175,7 +2174,7 @@ LankaLux Team`
             const allOpts = getOptionsArray()
             const manualIndices = allOpts.length > 3 ? Array.from({ length: allOpts.length - 3 }, (_, i) => 3 + i) : []
             return (
-              <div className="mt-8 pt-8 border-t border-[#333]">
+              <div className="mt-8 pt-8 border-t border-gray-200">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-[#d4af37]">Manual itineraries</h3>
                   {!isCancelled && (
@@ -2191,7 +2190,7 @@ LankaLux Team`
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   {manualIndices.map((index) => {
                     const option = allOpts[index] as ItineraryOption | null
                     if (!option) return null
@@ -2207,7 +2206,7 @@ LankaLux Team`
                     return (
                       <div
                         key={index}
-                        className={`bg-[#0a0a0a] border rounded-lg p-6 flex flex-col ${isSelected ? 'border-[#d4af37] ring-2 ring-[#d4af37]' : 'border-[#333]'}`}
+                        className={`bg-gray-50 border rounded-lg p-6 flex flex-col ${isSelected ? 'border-[#d4af37] ring-2 ring-[#d4af37]' : 'border-gray-200'}`}
                       >
                         <div className="flex items-center justify-between mb-3">
                           <span className="text-xs text-gray-500 uppercase">Manual {index - 2}</span>
@@ -2222,7 +2221,7 @@ LankaLux Team`
                               type="text"
                               value={draft.title}
                               onChange={(e) => setManualDrafts((d) => ({ ...d, [index]: { ...draft, title: e.target.value } }))}
-                              className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#333] rounded-md text-white text-sm"
+                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-white text-sm"
                               placeholder="Itinerary title"
                             />
                           </div>
@@ -2232,7 +2231,7 @@ LankaLux Team`
                               value={draft.summary}
                               onChange={(e) => setManualDrafts((d) => ({ ...d, [index]: { ...draft, summary: e.target.value } }))}
                               rows={2}
-                              className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#333] rounded-md text-white text-sm resize-y"
+                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-white text-sm resize-y"
                               placeholder="Short summary"
                             />
                           </div>
@@ -2242,13 +2241,13 @@ LankaLux Team`
                               value={draft.days}
                               onChange={(e) => setManualDrafts((d) => ({ ...d, [index]: { ...draft, days: e.target.value } }))}
                               rows={6}
-                              className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#333] rounded-md text-white text-sm font-mono resize-y"
+                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-white text-sm font-mono resize-y"
                               placeholder="Day 1: ...&#10;Day 2: ..."
                             />
                           </div>
                         </div>
                         {publicLink && isSelected && (
-                          <div className="mb-3 p-2 bg-[#1a1a1a] rounded text-xs text-gray-400 break-all">
+                          <div className="mb-3 p-2 bg-gray-100 rounded text-xs text-gray-600 break-all">
                             Public link: <a href={publicLink} target="_blank" rel="noopener noreferrer" className="text-[#d4af37] hover:underline">{publicLink}</a>
                           </div>
                         )}
@@ -2265,7 +2264,7 @@ LankaLux Team`
                             type="button"
                             onClick={() => handleSelectOption(index)}
                             disabled={selectingOption !== null}
-                            className={`px-3 py-2 rounded-md text-sm font-semibold ${isSelected ? 'bg-[#666] hover:bg-[#777] text-white' : 'bg-[#333] hover:bg-[#444] text-white'} disabled:opacity-50`}
+                            className={`px-3 py-2 rounded-md text-sm font-semibold ${isSelected ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} disabled:opacity-50`}
                           >
                             {selectingOption === index ? '...' : isSelected ? 'Deselect' : 'Select'}
                           </button>
@@ -2296,14 +2295,14 @@ LankaLux Team`
           if (!shouldShow) return null
           
           return (
-            <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 md:p-6 mt-8">
+            <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 mt-8">
               <button
                 type="button"
                 onClick={() => setSentItineraryExpanded((v) => !v)}
                 className="flex items-center justify-between w-full text-left"
               >
                 <div>
-                  <h2 className="text-2xl font-semibold text-[#d4af37]">Sent Itinerary</h2>
+                  <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b]">Sent Itinerary</h2>
                   {request.sent_at && (
                     <p className="text-sm text-gray-400 mt-1">
                       First sent: {formatDateTime(request.sent_at)}
@@ -2359,7 +2358,7 @@ LankaLux Team`
                 const showLimitNote = sentOptionsList.length >= 10
                 
                 return (
-                <div className="mb-6 mt-6 pt-6 border-t border-[#333]">
+                <div className="mb-8 mt-8 pt-8 border-t border-gray-200">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-[#d4af37]">All Sent Options ({sentOptionsList.length})</h3>
                     {showLimitNote && (
@@ -2413,7 +2412,7 @@ LankaLux Team`
                       return (
                         <div 
                           key={`sent-option-${index}-${optionIndex}`} 
-                          className="bg-[#0a0a0a] border border-[#333] rounded-lg p-6 hover:border-[#d4af37]/50 transition-colors"
+                          className="bg-gray-50 border border-gray-200 rounded-lg p-6 hover:border-[#d4af37]/50 transition-colors"
                         >
                           <div className="space-y-4">
                             {/* Header with title and sent date */}
@@ -2428,7 +2427,7 @@ LankaLux Team`
                                   )}
                                 </div>
                                 {optionSummary && (
-                                  <p className="text-gray-300 text-sm mt-2">{optionSummary}</p>
+                                  <p className="text-gray-800 text-sm mt-2">{optionSummary}</p>
                                 )}
                               </div>
                             </div>
@@ -2439,8 +2438,8 @@ LankaLux Team`
                                 <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
                                   Day-by-Day Itinerary
                                 </label>
-                                <div className="bg-[#1a1a1a] border border-[#333] rounded-md p-4 max-h-64 overflow-y-auto">
-                                  <p className="text-gray-300 text-sm whitespace-pre-wrap font-mono">
+                                <div className="bg-gray-50 border border-gray-200 rounded-md p-4 max-h-64 overflow-y-auto">
+                                  <p className="text-gray-800 text-sm whitespace-pre-wrap font-mono">
                                     {optionDays}
                                   </p>
                                 </div>
@@ -2449,11 +2448,11 @@ LankaLux Team`
 
                             {/* Total Kilometers - Admin Only */}
                             {option && typeof option.total_kilometers === 'number' && (
-                              <div className="pt-4 border-t border-[#333]">
+                              <div className="pt-4 border-t border-gray-200">
                                 <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
                                   Total Kilometers
                                 </label>
-                                <div className="bg-[#1a1a1a] border border-[#333] rounded-md p-3">
+                                <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
                                   <p className="text-[#d4af37] text-lg font-semibold">
                                     {option.total_kilometers.toLocaleString()} km
                                   </p>
@@ -2463,7 +2462,7 @@ LankaLux Team`
 
                             {/* Public Link */}
                             {itineraryUrl && (
-                              <div className="pt-4 border-t border-[#333]">
+                              <div className="pt-4 border-t border-gray-200">
                                 <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
                                   Public Itinerary Link
                                 </label>
@@ -2472,14 +2471,14 @@ LankaLux Team`
                                     type="text"
                                     readOnly
                                     value={itineraryUrl}
-                                    className="flex-1 px-4 py-2 bg-[#1a1a1a] border border-[#333] rounded-md text-gray-300 text-sm font-mono"
+                                    className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-gray-800 text-sm font-mono"
                                   />
                                   <button
                                     onClick={() => {
                                       navigator.clipboard.writeText(itineraryUrl)
                                       alert('Link copied to clipboard!')
                                     }}
-                                    className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
+                                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -2518,21 +2517,21 @@ LankaLux Team`
       {/* Follow-up email preview modal: edit subject/body then send */}
       {templateEmailModalOpen && request?.email && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
           onClick={() => !sendingTemplateEmail && setTemplateEmailModalOpen(false)}
         >
           <div
-            className="bg-[#1a1a1a] border border-[#333] rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col"
+            className="bg-white border border-gray-200 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-[#333]">
+            <div className="p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-[#d4af37]">Preview email</h2>
               <p className="text-sm text-gray-400 mt-1">Edit the subject and message below, then send.</p>
             </div>
             <div className="p-6 overflow-y-auto flex-1 space-y-4">
               <div>
                 <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">To</label>
-                <p className="text-white font-medium">{request.email}</p>
+                <p className="text-gray-900 font-medium">{request.email}</p>
               </div>
               <div>
                 <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Subject</label>
@@ -2540,7 +2539,7 @@ LankaLux Team`
                   type="text"
                   value={previewSubject}
                   onChange={(e) => setPreviewSubject(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
                   placeholder="Email subject"
                 />
               </div>
@@ -2551,17 +2550,17 @@ LankaLux Team`
                   value={previewBody}
                   onChange={(e) => setPreviewBody(e.target.value)}
                   rows={12}
-                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent resize-y font-mono text-sm"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent resize-y font-mono text-sm"
                   placeholder="Email body (plain text)"
                 />
               </div>
             </div>
-            <div className="p-6 border-t border-[#333] flex justify-end gap-3">
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => !sendingTemplateEmail && setTemplateEmailModalOpen(false)}
                 disabled={sendingTemplateEmail}
-                className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -2593,7 +2592,7 @@ LankaLux Team`
       {/* Cancellation reason modal - in-app styled, no browser prompt */}
       {cancellationReasonModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
           onClick={() => {
             setCancellationReasonModalOpen(false)
             setCancellationReasonInput('')
@@ -2601,10 +2600,10 @@ LankaLux Team`
           }}
         >
           <div
-            className="bg-[#1a1a1a] border border-[#333] rounded-xl shadow-xl max-w-md w-full"
+            className="bg-white border border-gray-200 rounded-xl shadow-xl max-w-md w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-[#333]">
+            <div className="p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-[#d4af37]">Reason for cancellation</h2>
               <p className="text-sm text-gray-400 mt-1">Optional. This will be shown on the request and dashboard.</p>
             </div>
@@ -2615,11 +2614,11 @@ LankaLux Team`
                 onChange={(e) => setCancellationReasonInput(e.target.value)}
                 rows={3}
                 placeholder="e.g. Client postponed trip / Budget change"
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent resize-y"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent resize-y"
                 autoFocus
               />
             </div>
-            <div className="p-6 border-t border-[#333] flex justify-end gap-3">
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -2627,7 +2626,7 @@ LankaLux Team`
                   setCancellationReasonInput('')
                   setCancellationReasonPending(null)
                 }}
-                className="px-4 py-2 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors"
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-colors"
               >
                 Cancel
               </button>

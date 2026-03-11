@@ -158,14 +158,14 @@ export default function NewRequestPage() {
   const today = new Date().toISOString().split('T')[0]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-[#0a0a0a] to-black">
+    <div className="min-h-screen bg-gray-100">
       <div className="max-w-[95%] mx-auto px-3 sm:px-4 lg:px-6 py-4">
         {/* Header */}
-        <div className="mb-6 bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-4 shadow-lg animate-fade-in">
+        <div className="mb-6 bg-white border border-gray-200 rounded-xl p-4 shadow-sm animate-fade-in">
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => router.push('/dashboard')}
-              className="text-gray-400 hover:text-[#d4af37] transition-all duration-200 flex items-center gap-2 hover:scale-105 active:scale-95"
+              className="text-gray-600 hover:text-[#b8860b] transition-all duration-200 flex items-center gap-2"
             >
               <svg
                 className="w-5 h-5"
@@ -190,21 +190,21 @@ export default function NewRequestPage() {
               className="h-12 w-12 object-cover"
             />
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-[#d4af37] to-[#b8941f] bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold text-[#b8860b]">
                 New Request
               </h1>
-              <p className="text-gray-400 text-sm">Create a new travel request</p>
+              <p className="text-gray-600 text-sm">Create a new travel request</p>
             </div>
           </div>
         </div>
 
         {/* Form Content */}
-        <div className="bg-[#1a1a1a]/50 backdrop-blur-sm border border-[#333] rounded-xl p-6">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <div className="space-y-6">
             {/* Client Name */}
             <div>
-              <label htmlFor="client_name" className="block text-sm font-medium text-gray-300 mb-2">
-                Client Name <span className="text-red-400">*</span>
+              <label htmlFor="client_name" className="block text-sm font-medium text-gray-700 mb-2">
+                Client Name <span className="text-red-500">*</span>
               </label>
               <input
                 id="client_name"
@@ -212,15 +212,15 @@ export default function NewRequestPage() {
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="Enter client name"
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                 disabled={loading}
               />
             </div>
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                Email <span className="text-red-400">*</span>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email <span className="text-red-500">*</span>
               </label>
               <input
                 id="email"
@@ -228,14 +228,14 @@ export default function NewRequestPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter email address"
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                 disabled={loading}
               />
             </div>
 
             {/* WhatsApp */}
             <div>
-              <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700 mb-2">
                 WhatsApp
               </label>
               <input
@@ -244,14 +244,14 @@ export default function NewRequestPage() {
                 value={whatsapp}
                 onChange={(e) => setWhatsapp(e.target.value)}
                 placeholder="Enter WhatsApp number"
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                 disabled={loading}
               />
             </div>
 
             {/* Start Date */}
             <div>
-              <label htmlFor="start_date" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-2">
                 Start Date
               </label>
               <input
@@ -272,14 +272,14 @@ export default function NewRequestPage() {
                 }}
                 min={today}
                 max="2099-12-31"
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
                 disabled={loading}
               />
             </div>
 
             {/* End Date */}
             <div>
-              <label htmlFor="end_date" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-2">
                 End Date
               </label>
               <input
@@ -309,14 +309,14 @@ export default function NewRequestPage() {
                 }}
                 min={startDate || today}
                 max="2099-12-31"
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
                 disabled={loading}
               />
             </div>
 
             {/* Duration */}
             <div>
-              <label htmlFor="duration" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-2">
                 Duration (days)
               </label>
               <input
@@ -324,14 +324,14 @@ export default function NewRequestPage() {
                 type="text"
                 value={duration !== null ? `${duration} days` : ''}
                 readOnly
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-gray-400 cursor-not-allowed"
+                className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-md text-gray-600 cursor-not-allowed"
                 disabled={true}
               />
             </div>
 
             {/* Number of Adults */}
             <div>
-              <label htmlFor="number_of_adults" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="number_of_adults" className="block text-sm font-medium text-gray-700 mb-2">
                 Number of Adults
               </label>
               <input
@@ -341,14 +341,14 @@ export default function NewRequestPage() {
                 value={numberOfAdults}
                 onChange={(e) => setNumberOfAdults(e.target.value)}
                 placeholder="Enter number of adults"
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                 disabled={loading}
               />
             </div>
 
             {/* Number of Children */}
             <div>
-              <label htmlFor="number_of_children" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="number_of_children" className="block text-sm font-medium text-gray-700 mb-2">
                 Number of Children
               </label>
               <input
@@ -373,7 +373,7 @@ export default function NewRequestPage() {
                   }
                 }}
                 placeholder="Enter number of children"
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                 disabled={loading}
               />
             </div>
@@ -381,7 +381,7 @@ export default function NewRequestPage() {
             {/* Children Ages (show if any children) */}
             {parseInt(numberOfChildren) > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   {parseInt(numberOfChildren) === 1 ? 'Child Age (years)' : 'Children Ages (years)'}
                 </label>
                 <div className={`grid gap-3 ${parseInt(numberOfChildren) <= 3 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
@@ -401,7 +401,7 @@ export default function NewRequestPage() {
                           setChildrenAges(newAges)
                         }}
                         placeholder={`Enter age of child ${index + 1}`}
-                        className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                         disabled={loading}
                       />
                     </div>
@@ -412,7 +412,7 @@ export default function NewRequestPage() {
 
             {/* Origin Country */}
             <div>
-              <label htmlFor="origin_country" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="origin_country" className="block text-sm font-medium text-gray-700 mb-2">
                 Origin Country
               </label>
               <input
@@ -421,14 +421,14 @@ export default function NewRequestPage() {
                 value={originCountry}
                 onChange={(e) => setOriginCountry(e.target.value)}
                 placeholder="Enter origin country"
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
                 disabled={loading}
               />
             </div>
 
             {/* Additional Preferences */}
             <div>
-              <label htmlFor="additional_preferences" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="additional_preferences" className="block text-sm font-medium text-gray-700 mb-2">
                 Additional Preferences
               </label>
               <textarea
@@ -438,7 +438,7 @@ export default function NewRequestPage() {
                 onKeyPress={handleKeyPress}
                 placeholder="e.g., honeymoon, wildlife safari, luxury focus, train journeys, ayurveda retreat, family friendly, adventure"
                 rows={6}
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#333] rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y"
                 disabled={loading}
               />
               <p className="mt-2 text-xs text-gray-500">
@@ -449,7 +449,7 @@ export default function NewRequestPage() {
             {/* Error Message */}
             {error && (
               <div className="bg-red-900/20 border border-red-700 rounded-md p-3">
-                <p className="text-red-400 text-sm">{error}</p>
+                <p className="text-red-600 text-sm">{error}</p>
               </div>
             )}
 
@@ -491,7 +491,7 @@ export default function NewRequestPage() {
               <button
                 onClick={() => router.push('/dashboard')}
                 disabled={loading}
-                className="px-6 py-3 bg-[#333] hover:bg-[#444] text-white font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
