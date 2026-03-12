@@ -1239,7 +1239,7 @@ LankaLux Team`
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-10">
         {/* Header */}
         <div className="mb-12 bg-panel border border-panel-border rounded-xl p-6 md:p-8 shadow-sm animate-fade-in">
           <div className="flex items-center justify-between mb-6">
@@ -1326,68 +1326,6 @@ LankaLux Team`
             </div>
           </div>
         )}
-
-        {/* Overview: Status & Created */}
-        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-8">
-            <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Status</p>
-                {editingStatus ? (
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={statusValue}
-                      onChange={(e) => setStatusValue(e.target.value)}
-                      className="px-3 py-1 bg-gray-50 border border-gray-200 rounded-md text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                    >
-                      <option value="new">NEW</option>
-                      <option value="follow_up">FOLLOW_UP</option>
-                      <option value="deposit">DEPOSIT</option>
-                      <option value="sold">SOLD</option>
-                      <option value="after_sales">AFTER_SALES</option>
-                      <option value="cancelled">CANCELLED</option>
-                    </select>
-                    <button
-                      onClick={handleSaveStatus}
-                      disabled={saving}
-                      className="px-3 py-1 bg-[#d4af37] hover:bg-[#b8941f] text-black text-sm font-semibold rounded-md disabled:opacity-50"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => {
-                        setStatusValue(request.status || '')
-                        setEditingStatus(false)
-                      }}
-                      className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-semibold rounded-md"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-block px-4 py-2 rounded-md font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current border-opacity-20`}
-                      title={request.status?.toLowerCase() === 'cancelled' && request.cancellation_reason ? request.cancellation_reason : undefined}
-                    >
-                      {(request.status || 'new').toUpperCase()}
-                    </span>
-                    <button
-                      onClick={() => setEditingStatus(true)}
-                      className="text-gray-400 hover:text-[#d4af37] transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
-              </div>
-            <div className="text-right">
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Created At</p>
-                <p className="text-gray-800 font-medium">{formatDate(request.created_at)}</p>
-              </div>
-          </div>
-        </div>
 
         {/* Client Information */}
         <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
@@ -1542,6 +1480,68 @@ LankaLux Team`
                 </div>
               )}
             </div>
+
+        {/* Status & Created */}
+        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-8">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Status</p>
+              {editingStatus ? (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={statusValue}
+                    onChange={(e) => setStatusValue(e.target.value)}
+                    className="px-3 py-1 bg-gray-50 border border-gray-200 rounded-md text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
+                  >
+                    <option value="new">NEW</option>
+                    <option value="follow_up">FOLLOW_UP</option>
+                    <option value="deposit">DEPOSIT</option>
+                    <option value="sold">SOLD</option>
+                    <option value="after_sales">AFTER_SALES</option>
+                    <option value="cancelled">CANCELLED</option>
+                  </select>
+                  <button
+                    onClick={handleSaveStatus}
+                    disabled={saving}
+                    className="px-3 py-1 bg-[#d4af37] hover:bg-[#b8941f] text-black text-sm font-semibold rounded-md disabled:opacity-50"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => {
+                      setStatusValue(request.status || '')
+                      setEditingStatus(false)
+                    }}
+                    className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-semibold rounded-md"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-block px-4 py-2 rounded-md font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current border-opacity-20`}
+                    title={request.status?.toLowerCase() === 'cancelled' && request.cancellation_reason ? request.cancellation_reason : undefined}
+                  >
+                    {(request.status || 'new').toUpperCase()}
+                  </span>
+                  <button
+                    onClick={() => setEditingStatus(true)}
+                    className="text-gray-400 hover:text-[#d4af37] transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Created At</p>
+              <p className="text-gray-800 font-medium">{formatDate(request.created_at)}</p>
+            </div>
+          </div>
+        </div>
 
         {/* Travel Information */}
         <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
