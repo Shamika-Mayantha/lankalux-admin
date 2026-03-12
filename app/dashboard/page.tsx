@@ -117,7 +117,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-amber-200 border-t-amber-600 mb-4" />
           <p className="text-gray-600">Loading...</p>
@@ -174,10 +174,10 @@ export default function DashboardPage() {
   const cancelledRequests = requests.filter((r) => r.status?.toLowerCase() === 'cancelled')
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-background">
       <div className="w-full mx-auto px-6 sm:px-10 lg:px-14 xl:px-20 py-10">
         {/* Header */}
-        <div className="flex flex-wrap justify-between items-center gap-6 mb-12 bg-white border border-gray-200 rounded-2xl px-8 py-6 shadow-sm">
+        <div className="flex flex-wrap justify-between items-center gap-6 mb-12 bg-panel border border-panel-border rounded-2xl px-8 py-6 shadow-sm">
           <div className="flex items-center gap-5">
             <img 
               src="/favicon.png" 
@@ -247,15 +247,15 @@ export default function DashboardPage() {
           </h2>
           
           {requestsLoading ? (
-            <div className="bg-white border border-gray-200 rounded-2xl py-16 px-8">
+            <div className="bg-panel border border-panel-border rounded-2xl py-16 px-8">
               <div className="text-center">
                 <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-amber-200 border-t-amber-600 mb-5" />
-                <p className="text-gray-600">Loading requests...</p>
+                <p className="text-muted">Loading requests...</p>
               </div>
             </div>
           ) : activeRequests.length === 0 ? (
-            <div className="bg-white border border-gray-200 rounded-2xl py-16 px-8">
-              <p className="text-gray-600 text-center">No active requests</p>
+            <div className="bg-panel border border-panel-border rounded-2xl py-16 px-8">
+              <p className="text-muted text-center">No active requests</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -263,7 +263,7 @@ export default function DashboardPage() {
                 <div
                   key={request.id}
                   onClick={() => router.push(`/requests/${request.id}`)}
-                  className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-amber-400 hover:shadow-md transition-all cursor-pointer animate-fade-in"
+                  className="bg-panel border border-panel-border rounded-2xl p-6 hover:border-amber-400 hover:shadow-md transition-all cursor-pointer animate-fade-in"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className="mb-4">
@@ -323,7 +323,7 @@ export default function DashboardPage() {
                 <div
                   key={request.id}
                   onClick={() => router.push(`/requests/${request.id}`)}
-                  className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-cyan-400 hover:shadow-md transition-all cursor-pointer animate-fade-in"
+                  className="bg-panel border border-panel-border rounded-2xl p-6 hover:border-cyan-400 hover:shadow-md transition-all cursor-pointer animate-fade-in"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className="mb-4">
@@ -383,7 +383,7 @@ export default function DashboardPage() {
                 <div
                   key={request.id}
                   onClick={() => router.push(`/requests/${request.id}`)}
-                  className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer animate-fade-in"
+                  className="bg-panel border border-panel-border rounded-2xl p-6 hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer animate-fade-in"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className="mb-4">
@@ -435,7 +435,7 @@ export default function DashboardPage() {
           <section className="mb-12 animate-slide-in">
             <button
               onClick={() => setCancelledExpanded(!cancelledExpanded)}
-              className="flex items-center justify-between w-full mb-6 px-6 py-4 bg-white border border-gray-200 rounded-2xl hover:border-rose-300 transition-all shadow-sm"
+              className="flex items-center justify-between w-full mb-6 px-6 py-4 bg-panel border border-panel-border rounded-2xl hover:border-rose-300 transition-all shadow-sm"
             >
               <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-3">
                 <span className="w-1 h-6 bg-rose-500 rounded-full" />
@@ -462,7 +462,7 @@ export default function DashboardPage() {
                   <div
                     key={request.id}
                     onClick={() => router.push(`/requests/${request.id}`)}
-                    className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-rose-300 hover:shadow-md transition-all cursor-pointer animate-fade-in"
+                    className="bg-panel border border-panel-border rounded-2xl p-6 hover:border-rose-300 hover:shadow-md transition-all cursor-pointer animate-fade-in"
                     style={{ animationDelay: `${index * 0.05}s` }}
                   >
                     <div className="mb-4">

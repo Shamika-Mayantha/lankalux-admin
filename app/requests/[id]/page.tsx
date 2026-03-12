@@ -1238,10 +1238,10 @@ LankaLux Team`
     : ''
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Header */}
-        <div className="mb-10 bg-white border border-gray-200 rounded-xl p-6 md:p-8 shadow-sm animate-fade-in">
+        <div className="mb-12 bg-panel border border-panel-border rounded-xl p-6 md:p-8 shadow-sm animate-fade-in">
           <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => router.push("/dashboard")}
@@ -1283,7 +1283,7 @@ LankaLux Team`
 
         {/* Cancelled Warning Banner */}
         {isCancelled && (
-          <div className="mb-10 bg-red-50 border-2 border-red-300 rounded-xl p-5">
+          <div className="mb-12 bg-red-50 border-2 border-red-300 rounded-xl p-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <svg
@@ -1328,8 +1328,8 @@ LankaLux Team`
         )}
 
         {/* Overview: Status & Created */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-6">
+        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-8">
             <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Status</p>
                 {editingStatus ? (
@@ -1390,8 +1390,8 @@ LankaLux Team`
         </div>
 
         {/* Client Information */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
+          <div className="flex items-center justify-between mb-8">
                 <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b]">Client Information</h2>
                 {!editingClientInfo && (
                   <button
@@ -1544,8 +1544,8 @@ LankaLux Team`
             </div>
 
         {/* Travel Information */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
-              <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b] mb-6">Travel Information</h2>
+        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
+              <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b] mb-8">Travel Information</h2>
               {editingClientInfo ? (
                 <div className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
@@ -1663,8 +1663,8 @@ LankaLux Team`
                   )}
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Start Date</p>
                       <p className="text-gray-800">{formatDate(request.start_date)}</p>
@@ -1678,7 +1678,7 @@ LankaLux Team`
                       <p className="text-gray-800">{request.duration ? `${request.duration} days` : "N/A"}</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Number of Adults</p>
                       <p className="text-gray-800">{request.number_of_adults ?? "N/A"}</p>
@@ -1713,8 +1713,8 @@ LankaLux Team`
         </div>
 
         {/* Additional Preferences */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
-              <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b] mb-6">Additional Preferences</h2>
+        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
+              <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b] mb-8">Additional Preferences</h2>
               {editingClientInfo ? (
                 <textarea
                   value={additionalPreferencesValue}
@@ -1733,8 +1733,8 @@ LankaLux Team`
         </div>
 
         {/* Notes */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
+        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
+              <div className="flex items-center justify-between mb-8">
                 <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b]">Notes</h2>
               </div>
               {editingNotes ? (
@@ -1783,7 +1783,7 @@ LankaLux Team`
 
         {/* Success Message */}
         {sendSuccess && (
-          <div className="mb-10 bg-green-50 border-2 border-green-300 rounded-xl p-5">
+          <div className="mb-12 bg-green-50 border-2 border-green-300 rounded-xl p-5">
             <div className="flex items-center gap-3">
               <svg
                 className="w-6 h-6 text-green-600 shrink-0"
@@ -1805,9 +1805,9 @@ LankaLux Team`
 
         {/* Follow-up email: before itinerary options, with collapsible sent log */}
         {request.email && (
-          <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
-            <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b] mb-3">Follow-up email</h2>
-            <p className="text-gray-600 mb-8 max-w-xl leading-relaxed">
+          <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
+            <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b] mb-4">Follow-up Email</h2>
+            <p className="text-muted mb-8 max-w-xl leading-relaxed">
               Send a friendly, humanized email to the client. Choose a template, preview and edit in the popup, then send. The client will see a button linking to their itinerary when available.
             </p>
             <div className="flex flex-wrap items-end gap-6">
@@ -1940,7 +1940,7 @@ LankaLux Team`
         )}
 
         {/* Itinerary Options Section */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
+        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
           <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
             <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b]">Itinerary Options</h2>
             {!isCancelled && (
@@ -2298,7 +2298,7 @@ LankaLux Team`
           if (!shouldShow) return null
           
           return (
-            <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 mt-8">
+            <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mt-12">
               <button
                 type="button"
                 onClick={() => setSentItineraryExpanded((v) => !v)}
@@ -2524,10 +2524,10 @@ LankaLux Team`
           onClick={() => !sendingTemplateEmail && setTemplateEmailModalOpen(false)}
         >
           <div
-            className="bg-white border border-gray-200 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col"
+            className="bg-panel border border-panel-border rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-6 border-b border-panel-border">
               <h2 className="text-xl font-semibold text-[#d4af37]">Preview email</h2>
               <p className="text-sm text-gray-400 mt-1">Edit the subject and message below, then send.</p>
             </div>
@@ -2558,7 +2558,7 @@ LankaLux Team`
                 />
               </div>
             </div>
-            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+            <div className="p-6 border-t border-panel-border flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => !sendingTemplateEmail && setTemplateEmailModalOpen(false)}
@@ -2603,10 +2603,10 @@ LankaLux Team`
           }}
         >
           <div
-            className="bg-white border border-gray-200 rounded-xl shadow-xl max-w-md w-full"
+            className="bg-panel border border-panel-border rounded-xl shadow-xl max-w-md w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-6 border-b border-panel-border">
               <h2 className="text-xl font-semibold text-[#d4af37]">Reason for cancellation</h2>
               <p className="text-sm text-gray-400 mt-1">Optional. This will be shown on the request and dashboard.</p>
             </div>
@@ -2621,7 +2621,7 @@ LankaLux Team`
                 autoFocus
               />
             </div>
-            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+            <div className="p-6 border-t border-panel-border flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => {

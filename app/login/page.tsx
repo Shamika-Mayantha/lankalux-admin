@@ -80,9 +80,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 relative overflow-hidden">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
       <div className="w-full max-w-md relative z-10 animate-fade-in">
-        <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-lg">
+        <div className="bg-panel border border-panel-border rounded-xl p-8 shadow-lg">
           <div className="flex justify-center mb-6">
             <div className="relative">
               <img 

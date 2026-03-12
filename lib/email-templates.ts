@@ -112,7 +112,7 @@ export function buildHtmlFromBody(opts: {
 export const FOLLOW_UP_TEMPLATES: TemplateConfig[] = [
   {
     id: 'friendly_checkin',
-    name: 'A quick note',
+    name: 'A Quick Note',
     subject: 'A quick note about your Sri Lanka journey',
     getHtml: ({ clientName, itineraryUrl }) => {
       const firstName = clientName?.split(' ')[0] || 'there'
@@ -164,7 +164,7 @@ export const FOLLOW_UP_TEMPLATES: TemplateConfig[] = [
   },
   {
     id: 'gentle_reminder',
-    name: 'When you are ready',
+    name: 'When You Are Ready',
     subject: 'Your itinerary is ready when you are',
     getHtml: ({ clientName, itineraryUrl }) => {
       const firstName = clientName?.split(' ')[0] || 'there'
@@ -216,7 +216,7 @@ export const FOLLOW_UP_TEMPLATES: TemplateConfig[] = [
   },
   {
     id: 'here_when_ready',
-    name: 'Always here for you',
+    name: 'Always Here For You',
     subject: 'We are here whenever you need us',
     getHtml: ({ clientName, itineraryUrl }) => {
       const firstName = clientName?.split(' ')[0] || 'there'
@@ -320,7 +320,7 @@ export const FOLLOW_UP_TEMPLATES: TemplateConfig[] = [
   },
   {
     id: 'your_trip_your_way',
-    name: 'Your trip, your way',
+    name: 'Your Trip, Your Way',
     subject: 'Your trip, your way: we are here to get it right',
     getHtml: ({ clientName, itineraryUrl }) => {
       const firstName = clientName?.split(' ')[0] || 'there'
@@ -372,7 +372,7 @@ export const FOLLOW_UP_TEMPLATES: TemplateConfig[] = [
   },
   {
     id: 'spots_youll_love',
-    name: 'Spots we think you will love',
+    name: 'Spots We Think You Will Love',
     subject: 'A few spots we think you will love',
     getHtml: ({ clientName, itineraryUrl }) => {
       const firstName = clientName?.split(' ')[0] || 'there'
@@ -424,7 +424,7 @@ export const FOLLOW_UP_TEMPLATES: TemplateConfig[] = [
   },
   {
     id: 'one_step_closer',
-    name: 'One step closer',
+    name: 'One Step Closer',
     subject: 'You are one step away from your Sri Lanka journey',
     getHtml: ({ clientName, itineraryUrl }) => {
       const firstName = clientName?.split(' ')[0] || 'there'
