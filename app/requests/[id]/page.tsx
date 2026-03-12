@@ -921,7 +921,7 @@ LankaLux Team`
       `Your personalized LankaLux Sri Lanka itinerary is ready! View it here: ${itineraryUrl}`
     )
 
-    const whatsappNumber = request.whatsapp?.replace(new RegExp('[^0-9]', 'g'), '') || ''
+    const whatsappNumber = request.whatsapp?.replace(new RegExp("[^0-9]", "g"), "") || ""
     if (whatsappNumber) {
       window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank')
     } else {
@@ -1052,7 +1052,7 @@ LankaLux Team`
     const clientName = request.client_name || 'Valued Client'
     const itineraryUrl =
       request.public_token != null && request.selected_option != null
-        ? 'https://admin.lankalux.com/itinerary/' + request.public_token + '/' + request.selected_option
+        ? "https://admin.lankalux.com/itinerary/" + request.public_token + "/" + request.selected_option
         : null
     setPreviewSubject(template.subject)
     setPreviewBody(template.getText({ clientName, itineraryUrl }))
@@ -1234,7 +1234,7 @@ LankaLux Team`
   }
 
   const waHref = request?.whatsapp
-    ? 'https://wa.me/' + request.whatsapp.replace(new RegExp('[^0-9]', 'g'), '')
+    ? "https://wa.me/" + request.whatsapp.replace(new RegExp("[^0-9]", "g"), "")
     : ''
 
   return (
@@ -1542,8 +1542,6 @@ LankaLux Team`
                 </div>
               )}
             </div>
-
-        </div>
 
         {/* Travel Information */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-10 shadow-sm">
