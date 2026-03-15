@@ -92,7 +92,8 @@ export async function GET(request: Request) {
               duration: data.duration,
               selected_option: data.selected_option
             },
-            itinerary: sentOption.itinerary_data
+            itinerary: sentOption.itinerary_data,
+            send_options: sentOption.send_options || null
           })
         }
 

@@ -6,7 +6,22 @@ export async function POST(request: Request) {
   try {
     // Parse request body
     const body = await request.json()
-    const { id: requestId } = body
+    const { id: requestId, send_options: sendOptionsBody } = body
+    const sendOptions = sendOptionsBody && typeof sendOptionsBody === 'object'
+      ? {
+          include_vehicle: !!sendOptionsBody.include_vehicle,
+          include_price: !!sendOptionsBody.include_price,
+          price: typeof sendOptionsBody.price === 'string' ? sendOptionsBody.price.trim() || null : null,
+          vehicle_option: sendOptionsBody.vehicle_option && typeof sendOptionsBody.vehicle_option === 'object'
+            ? {
+                id: sendOptionsBody.vehicle_option.id,
+                name: sendOptionsBody.vehicle_option.name,
+                description: sendOptionsBody.vehicle_option.description,
+                images: Array.isArray(sendOptionsBody.vehicle_option.images) ? sendOptionsBody.vehicle_option.images : [],
+              }
+            : null,
+        }
+      : { include_vehicle: false, include_price: false, price: null, vehicle_option: null }
 
     // Validate request ID
     if (!requestId || typeof requestId !== 'string') {
@@ -652,8 +667,9 @@ Your journey to Sri Lanka begins here.
       option_index: requestData.selected_option,
       sent_at: now,
       option_title: selectedOption.title,
-      itinerary_url: itineraryUrl, // Store the unique URL for this option
-      itinerary_data: itinerarySnapshot, // Store full snapshot of itinerary data
+      itinerary_url: itineraryUrl,
+      itinerary_data: itinerarySnapshot,
+      send_options: sendOptions,
     })
     
     // Sort by sent_at (most recent first) and keep only the most recent 10 entries

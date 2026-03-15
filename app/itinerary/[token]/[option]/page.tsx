@@ -43,6 +43,13 @@ interface Request {
   selected_option: number | null
 }
 
+interface SendOptions {
+  include_vehicle?: boolean
+  include_price?: boolean
+  price?: string | null
+  vehicle_option?: { id: string; name: string; description: string; images: string[] } | null
+}
+
 // Location image mapping (using actual file names that exist)
 const locationImages: Record<string, string> = {
   "Colombo": "/images/arrivalincolombo.jpg",
@@ -71,6 +78,7 @@ export default function PublicItineraryPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [selectedItinerary, setSelectedItinerary] = useState<ItineraryOption | null>(null)
+  const [sendOptions, setSendOptions] = useState<SendOptions | null>(null)
   const [showContactModal, setShowContactModal] = useState(false)
   const [contactName, setContactName] = useState('')
   const [contactEmail, setContactEmail] = useState('')
@@ -154,6 +162,7 @@ export default function PublicItineraryPage() {
         console.log('Successfully loaded itinerary option:', selectedItineraryOption.title)
         setRequest(requestData)
         setSelectedItinerary(selectedItineraryOption)
+        setSendOptions(apiData.send_options || null)
         setLoading(false)
 
         if (!recordedOpenRef.current) {
@@ -456,6 +465,41 @@ export default function PublicItineraryPage() {
             </p>
           </div>
         </div>
+
+        {/* Price Section - when included at send time */}
+        {sendOptions?.include_price && sendOptions?.price && (
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+            <div className="bg-white border-2 border-[#c8a45d] rounded-lg p-8 shadow-md">
+              <h2 className="text-2xl font-serif font-bold text-[#2c2c2c] mb-4">Trip Price</h2>
+              <p className="text-2xl font-semibold text-[#c8a45d]">{sendOptions.price}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Vehicle Section - when included at send time */}
+        {sendOptions?.include_vehicle && sendOptions?.vehicle_option && (
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+            <div className="bg-white border-2 border-[#c8a45d] rounded-lg p-8 shadow-md">
+              <h2 className="text-2xl font-serif font-bold text-[#2c2c2c] mb-2">Your Vehicle</h2>
+              <h3 className="text-xl font-serif font-semibold text-[#c8a45d] mb-4">{sendOptions.vehicle_option.name}</h3>
+              <p className="text-gray-700 leading-relaxed font-serif mb-6">{sendOptions.vehicle_option.description}</p>
+              {sendOptions.vehicle_option.images && sendOptions.vehicle_option.images.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {sendOptions.vehicle_option.images.map((src, i) => (
+                    <div key={i} className="rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src={src}
+                        alt={`${sendOptions.vehicle_option!.name} ${i + 1}`}
+                        className="w-full h-48 object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Day Cards */}
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">

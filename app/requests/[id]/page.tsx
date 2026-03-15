@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { FOLLOW_UP_TEMPLATES, getTemplate, type TemplateId } from '@/lib/email-templates'
+import { FLEET_VEHICLES, getFleetVehicleById } from '@/lib/fleet'
 
 interface ItineraryOption {
   title: string
@@ -99,6 +100,10 @@ export default function RequestDetailsPage() {
   const [cancellationReasonModalOpen, setCancellationReasonModalOpen] = useState(false)
   const [cancellationReasonInput, setCancellationReasonInput] = useState('')
   const [cancellationReasonPending, setCancellationReasonPending] = useState<'status' | 'trip' | null>(null)
+  const [includeVehicleInItinerary, setIncludeVehicleInItinerary] = useState(false)
+  const [includePriceInItinerary, setIncludePriceInItinerary] = useState(false)
+  const [sendPriceValue, setSendPriceValue] = useState('')
+  const [sendVehicleId, setSendVehicleId] = useState('')
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -986,12 +991,19 @@ LankaLux Team`
       setSendingItinerary(true)
       setSendSuccess(false)
 
+      const vehicleOption = includeVehicleInItinerary && sendVehicleId ? getFleetVehicleById(sendVehicleId) : null
+      const sendOptions = {
+        include_vehicle: includeVehicleInItinerary,
+        include_price: includePriceInItinerary,
+        price: includePriceInItinerary ? sendPriceValue.trim() || null : null,
+        vehicle_option: vehicleOption || null,
+      }
       const response = await fetch("/api/send-itinerary", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id: request.id }),
+        body: JSON.stringify({ id: request.id, send_options: sendOptions }),
       })
 
       const result = await response.json()
@@ -1992,7 +2004,62 @@ LankaLux Team`
                                request.selected_option === request.last_sent_option
               
               return (
-                <div className="flex gap-2 flex-wrap items-center">
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-start gap-6 p-4 bg-gray-50 border border-panel-border rounded-lg">
+                    <p className="text-sm font-medium text-gray-700 w-full mb-1">Add to itinerary before sending:</p>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includeVehicleInItinerary}
+                        onChange={(e) => setIncludeVehicleInItinerary(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-[#d4af37] focus:ring-[#d4af37]"
+                      />
+                      <span className="text-sm font-medium text-gray-800">Include vehicle</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includePriceInItinerary}
+                        onChange={(e) => setIncludePriceInItinerary(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-[#d4af37] focus:ring-[#d4af37]"
+                      />
+                      <span className="text-sm font-medium text-gray-800">Include price</span>
+                    </label>
+                    {includeVehicleInItinerary && (
+                      <div className="w-full mt-2">
+                        <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">Vehicle</label>
+                        <select
+                          value={sendVehicleId}
+                          onChange={(e) => setSendVehicleId(e.target.value)}
+                          className="w-full max-w-md px-3 py-2 bg-white border border-gray-200 rounded-md text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
+                        >
+                          <option value="">Select a vehicle</option>
+                          {FLEET_VEHICLES.map((v) => (
+                            <option key={v.id} value={v.id}>{v.name}</option>
+                          ))}
+                        </select>
+                        {sendVehicleId && (() => {
+                          const v = getFleetVehicleById(sendVehicleId)
+                          return v ? (
+                            <p className="text-xs text-gray-600 mt-2 max-w-md">{v.description}</p>
+                          ) : null
+                        })()}
+                      </div>
+                    )}
+                    {includePriceInItinerary && (
+                      <div className="w-full mt-2">
+                        <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">Price (e.g. USD 2,500)</label>
+                        <input
+                          type="text"
+                          value={sendPriceValue}
+                          onChange={(e) => setSendPriceValue(e.target.value)}
+                          placeholder="Enter price to show on itinerary"
+                          className="w-full max-w-xs px-3 py-2 bg-white border border-gray-200 rounded-md text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 flex-wrap items-center">
                   <button
                     onClick={handleSendItinerary}
                     disabled={sendingItinerary}
@@ -2035,6 +2102,7 @@ LankaLux Team`
                       WhatsApp
                     </button>
                   )}
+                  </div>
                 </div>
               )
             })() : null}
