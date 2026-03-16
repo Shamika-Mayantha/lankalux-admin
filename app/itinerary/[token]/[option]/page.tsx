@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
+import { getFleetVehicleById } from '@/lib/fleet'
 
 interface Day {
   day: number
@@ -14,12 +15,12 @@ interface Day {
   date?: string
 }
 
-/** Format start_date + day index as "6 June" (or "6 June 2025") for client display */
+/** Format start_date + day index as "6 June" (no year) for client display */
 function getDayDateLabel(startDate: string | null, dayNumber: number): string | null {
   if (!startDate) return null
   const d = new Date(startDate)
   d.setDate(d.getDate() + (dayNumber - 1))
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
 }
 
 /** When we already show date + "Day N", show only the activity part of title to avoid doubling "Day 16" */
@@ -94,9 +95,13 @@ export default function PublicItineraryPage() {
   const [selectedItinerary, setSelectedItinerary] = useState<ItineraryOption | null>(null)
   const [sendOptions, setSendOptions] = useState<SendOptions | null>(null)
   const [imageBaseUrl, setImageBaseUrl] = useState('')
+  const [vehicleImageIndex, setVehicleImageIndex] = useState(0)
   useEffect(() => {
     if (typeof window !== 'undefined') setImageBaseUrl(window.location.origin)
   }, [])
+  useEffect(() => {
+    setVehicleImageIndex(0)
+  }, [sendOptions?.vehicle_option?.id])
   const [showContactModal, setShowContactModal] = useState(false)
   const [contactName, setContactName] = useState('')
   const [contactEmail, setContactEmail] = useState('')
@@ -590,36 +595,65 @@ export default function PublicItineraryPage() {
           </div>
         </div>
 
-        {/* Vehicle Section - before About Your Destinations; show fleet photo with absolute URL */}
-        {sendOptions?.include_vehicle && sendOptions?.vehicle_option && (
+        {/* Vehicle Section - before About Your Destinations; resolve images from fleet by id so names match */}
+        {sendOptions?.include_vehicle && sendOptions?.vehicle_option && (() => {
+          const vehicle = sendOptions.vehicle_option.id
+            ? getFleetVehicleById(sendOptions.vehicle_option.id) ?? sendOptions.vehicle_option
+            : sendOptions.vehicle_option
+          const images = vehicle.images && vehicle.images.length > 0 ? vehicle.images : []
+          return (
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <div className="bg-white border-2 border-[#c8a45d] rounded-lg p-8 shadow-md">
               <h2 className="text-2xl font-serif font-bold text-[#2c2c2c] mb-2">Your Vehicle</h2>
-              <h3 className="text-xl font-serif font-semibold text-[#c8a45d] mb-4">{sendOptions.vehicle_option.name}</h3>
-              <p className="text-gray-700 leading-relaxed font-serif mb-6">{sendOptions.vehicle_option.description}</p>
-              {sendOptions.vehicle_option.images && sendOptions.vehicle_option.images.length > 0 ? (
+              <h3 className="text-xl font-serif font-semibold text-[#c8a45d] mb-4">{vehicle.name}</h3>
+              <p className="text-gray-700 leading-relaxed font-serif mb-6">{vehicle.description}</p>
+              {images.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+                  <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
                     <img
-                      src={sendOptions.vehicle_option.images[0].startsWith('/')
-                        ? imageBaseUrl + sendOptions.vehicle_option.images[0]
-                        : sendOptions.vehicle_option.images[0]}
-                      alt={sendOptions.vehicle_option.name}
+                      src={(images[vehicleImageIndex] ?? images[0]).startsWith('/') ? imageBaseUrl + (images[vehicleImageIndex] ?? images[0]) : (images[vehicleImageIndex] ?? images[0])}
+                      alt={`${vehicle.name} ${vehicleImageIndex + 1}`}
                       className="w-full h-72 object-cover"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                     />
+                    {images.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setVehicleImageIndex((i) => (i - 1 + images.length) % images.length)}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-md flex items-center justify-center text-[#c8a45d] hover:text-[#b8944d] transition-colors"
+                          aria-label="Previous image"
+                        >
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVehicleImageIndex((i) => (i + 1) % images.length)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-md flex items-center justify-center text-[#c8a45d] hover:text-[#b8944d] transition-colors"
+                          aria-label="Next image"
+                        >
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                        <p className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/50 text-white text-sm font-medium">
+                          {vehicleImageIndex + 1} of {images.length}
+                        </p>
+                      </>
+                    )}
                   </div>
-                  {sendOptions.vehicle_option.images.length > 1 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {sendOptions.vehicle_option.images.slice(1).map((src, i) => (
-                        <div key={i} className="rounded-lg overflow-hidden border border-gray-200">
-                          <img
-                            src={src.startsWith('/') ? imageBaseUrl + src : src}
-                            alt={`${sendOptions.vehicle_option!.name} ${i + 2}`}
-                            className="w-full h-40 object-cover"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                          />
-                        </div>
+                  {images.length > 1 && (
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {images.map((_, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setVehicleImageIndex(i)}
+                          className={`w-2.5 h-2.5 rounded-full transition-colors ${i === vehicleImageIndex ? 'bg-[#c8a45d] scale-110' : 'bg-gray-300 hover:bg-gray-400'}`}
+                          aria-label={`Image ${i + 1}`}
+                        />
                       ))}
                     </div>
                   )}
@@ -631,7 +665,8 @@ export default function PublicItineraryPage() {
               )}
             </div>
           </div>
-        )}
+          )
+        })()}
 
         {/* About Your Destinations Section */}
         {uniqueLocations.length > 0 && (
