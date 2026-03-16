@@ -22,6 +22,15 @@ function getDayDateLabel(startDate: string | null, dayNumber: number): string | 
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+/** When we already show date + "Day N", show only the activity part of title to avoid doubling "Day 16" */
+function getDayTitleDisplay(fullTitle: string): string {
+  const colonIndex = fullTitle.indexOf(': ')
+  if (colonIndex !== -1) return fullTitle.slice(colonIndex + 2).trim()
+  const dashIndex = fullTitle.indexOf(' – ')
+  if (dashIndex !== -1) return fullTitle.slice(dashIndex + 3).trim()
+  return fullTitle
+}
+
 interface ItineraryOption {
   title: string
   summary: string
@@ -79,6 +88,10 @@ export default function PublicItineraryPage() {
   const [notFound, setNotFound] = useState(false)
   const [selectedItinerary, setSelectedItinerary] = useState<ItineraryOption | null>(null)
   const [sendOptions, setSendOptions] = useState<SendOptions | null>(null)
+  const [imageBaseUrl, setImageBaseUrl] = useState('')
+  useEffect(() => {
+    if (typeof window !== 'undefined') setImageBaseUrl(window.location.origin)
+  }, [])
   const [showContactModal, setShowContactModal] = useState(false)
   const [contactName, setContactName] = useState('')
   const [contactEmail, setContactEmail] = useState('')
@@ -510,7 +523,7 @@ export default function PublicItineraryPage() {
                             {getDayDateLabel(request.start_date, day.day)}
                           </h3>
                           <p className="text-sm text-gray-500 font-medium mb-2">Day {day.day}</p>
-                          <p className="text-xl font-serif text-[#2c2c2c] mb-2">{day.title}</p>
+                          <p className="text-xl font-serif text-[#2c2c2c] mb-2">{getDayTitleDisplay(day.title)}</p>
                         </>
                       ) : (
                         <h3 className="text-3xl font-serif font-bold text-[#2c2c2c] mb-2">
@@ -572,7 +585,50 @@ export default function PublicItineraryPage() {
           </div>
         </div>
 
-        {/* About Your Destinations Section (highlights) */}
+        {/* Vehicle Section - before About Your Destinations; show fleet photo with absolute URL */}
+        {sendOptions?.include_vehicle && sendOptions?.vehicle_option && (
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="bg-white border-2 border-[#c8a45d] rounded-lg p-8 shadow-md">
+              <h2 className="text-2xl font-serif font-bold text-[#2c2c2c] mb-2">Your Vehicle</h2>
+              <h3 className="text-xl font-serif font-semibold text-[#c8a45d] mb-4">{sendOptions.vehicle_option.name}</h3>
+              <p className="text-gray-700 leading-relaxed font-serif mb-6">{sendOptions.vehicle_option.description}</p>
+              {sendOptions.vehicle_option.images && sendOptions.vehicle_option.images.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+                    <img
+                      src={sendOptions.vehicle_option.images[0].startsWith('/')
+                        ? imageBaseUrl + sendOptions.vehicle_option.images[0]
+                        : sendOptions.vehicle_option.images[0]}
+                      alt={sendOptions.vehicle_option.name}
+                      className="w-full h-72 object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                  </div>
+                  {sendOptions.vehicle_option.images.length > 1 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {sendOptions.vehicle_option.images.slice(1).map((src, i) => (
+                        <div key={i} className="rounded-lg overflow-hidden border border-gray-200">
+                          <img
+                            src={src.startsWith('/') ? imageBaseUrl + src : src}
+                            alt={`${sendOptions.vehicle_option!.name} ${i + 2}`}
+                            className="w-full h-40 object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-lg bg-gray-100 border border-gray-200 h-48 flex items-center justify-center text-gray-500 font-serif">
+                  No image available
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* About Your Destinations Section */}
         {uniqueLocations.length > 0 && (
           <div className="bg-[#fafafa] py-16">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -594,47 +650,6 @@ export default function PublicItineraryPage() {
                   )
                 })}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Vehicle Section - at bottom, before footer; show fleet photo(s) */}
-        {sendOptions?.include_vehicle && sendOptions?.vehicle_option && (
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-            <div className="bg-white border-2 border-[#c8a45d] rounded-lg p-8 shadow-md">
-              <h2 className="text-2xl font-serif font-bold text-[#2c2c2c] mb-2">Your Vehicle</h2>
-              <h3 className="text-xl font-serif font-semibold text-[#c8a45d] mb-4">{sendOptions.vehicle_option.name}</h3>
-              <p className="text-gray-700 leading-relaxed font-serif mb-6">{sendOptions.vehicle_option.description}</p>
-              {sendOptions.vehicle_option.images && sendOptions.vehicle_option.images.length > 0 ? (
-                <div className="space-y-4">
-                  <div className="rounded-lg overflow-hidden border border-gray-200">
-                    <img
-                      src={sendOptions.vehicle_option.images[0]}
-                      alt={sendOptions.vehicle_option.name}
-                      className="w-full h-72 object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                    />
-                  </div>
-                  {sendOptions.vehicle_option.images.length > 1 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {sendOptions.vehicle_option.images.slice(1).map((src, i) => (
-                        <div key={i} className="rounded-lg overflow-hidden border border-gray-200">
-                          <img
-                            src={src}
-                            alt={`${sendOptions.vehicle_option!.name} ${i + 2}`}
-                            className="w-full h-40 object-cover"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="rounded-lg bg-gray-100 border border-gray-200 h-48 flex items-center justify-center text-gray-500 font-serif">
-                  No image available
-                </div>
-              )}
             </div>
           </div>
         )}
