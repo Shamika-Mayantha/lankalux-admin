@@ -2005,25 +2005,39 @@ LankaLux Team`
               
               return (
                 <div className="space-y-4">
-                  <div className="flex flex-wrap items-start gap-6 p-4 bg-gray-50 border border-panel-border rounded-lg">
-                    <p className="text-sm font-medium text-gray-700 w-full mb-1">Add to itinerary before sending:</p>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={includeVehicleInItinerary}
-                        onChange={(e) => setIncludeVehicleInItinerary(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-[#d4af37] focus:ring-[#d4af37]"
-                      />
-                      <span className="text-sm font-medium text-gray-800">Include vehicle</span>
+                  <div className="flex flex-wrap items-start gap-6 p-5 bg-panel border border-panel-border rounded-xl shadow-sm">
+                    <p className="text-sm font-semibold text-foreground w-full mb-2">Add to itinerary before sending:</p>
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <span className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 bg-white transition-colors group-hover:border-[#d4af37] ${includeVehicleInItinerary ? 'border-[#b8860b] bg-[#b8860b]' : 'border-[#b8860b]'}`}>
+                        <input
+                          type="checkbox"
+                          checked={includeVehicleInItinerary}
+                          onChange={(e) => setIncludeVehicleInItinerary(e.target.checked)}
+                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        />
+                        {includeVehicleInItinerary && (
+                          <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                      <span className="text-sm font-medium text-foreground select-none">Include vehicle</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={includePriceInItinerary}
-                        onChange={(e) => setIncludePriceInItinerary(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-[#d4af37] focus:ring-[#d4af37]"
-                      />
-                      <span className="text-sm font-medium text-gray-800">Include price</span>
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <span className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 bg-white transition-colors group-hover:border-[#d4af37] ${includePriceInItinerary ? 'border-[#b8860b] bg-[#b8860b]' : 'border-[#b8860b]'}`}>
+                        <input
+                          type="checkbox"
+                          checked={includePriceInItinerary}
+                          onChange={(e) => setIncludePriceInItinerary(e.target.checked)}
+                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        />
+                        {includePriceInItinerary && (
+                          <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                      <span className="text-sm font-medium text-foreground select-none">Include price</span>
                     </label>
                     {includeVehicleInItinerary && (
                       <div className="w-full mt-2">
