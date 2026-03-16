@@ -31,6 +31,11 @@ function getDayTitleDisplay(fullTitle: string): string {
   return fullTitle
 }
 
+/** Format price string: add commas to numbers (e.g. "USD 2500" -> "USD 2,500") */
+function formatPriceDisplay(raw: string): string {
+  return raw.replace(/\d{1,3}(?=(\d{3})+(?!\d))/g, (n) => n + ',')
+}
+
 interface ItineraryOption {
   title: string
   summary: string
@@ -482,9 +487,9 @@ export default function PublicItineraryPage() {
         {/* Price Section - when included at send time */}
         {sendOptions?.include_price && sendOptions?.price && (
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-            <div className="bg-white border-2 border-[#c8a45d] rounded-lg p-8 shadow-md">
-              <h2 className="text-2xl font-serif font-bold text-[#2c2c2c] mb-4">Price for the Journey</h2>
-              <p className="text-2xl font-semibold text-[#c8a45d]">{sendOptions.price}</p>
+            <div className="bg-gradient-to-br from-[#faf8f5] to-white border-2 border-[#c8a45d] rounded-xl p-8 shadow-md">
+              <h2 className="text-2xl font-serif font-bold text-[#2c2c2c] mb-3">Your Estimated Journey Price</h2>
+              <p className="text-3xl font-serif font-bold text-[#c8a45d] tracking-wide">{formatPriceDisplay(sendOptions.price)}</p>
             </div>
           </div>
         )}
@@ -519,10 +524,10 @@ export default function PublicItineraryPage() {
                     <div className="mb-6">
                       {request?.start_date && getDayDateLabel(request.start_date, day.day) ? (
                         <>
-                          <h3 className="text-2xl font-serif font-semibold text-[#2c2c2c] mb-1">
+                          <p className="text-3xl font-serif font-bold text-[#c8a45d] tracking-wide mb-1">Day {day.day}</p>
+                          <h3 className="text-xl font-serif font-semibold text-[#2c2c2c] mb-2">
                             {getDayDateLabel(request.start_date, day.day)}
                           </h3>
-                          <p className="text-base font-serif font-semibold text-[#c8a45d] tracking-wide mb-2">Day {day.day}</p>
                           <p className="text-xl font-serif font-semibold text-[#2c2c2c] mb-2">{getDayTitleDisplay(day.title)}</p>
                         </>
                       ) : (
