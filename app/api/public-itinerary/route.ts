@@ -85,7 +85,7 @@ export async function GET(request: Request) {
         if (sentOption && sentOption.itinerary_data) {
           let itinerary = sentOption.itinerary_data
           if (Array.isArray(itinerary.days) && Array.isArray(itinerary.images) && itinerary.images.length > 0) {
-            const srcs = itinerary.images.map((x: { src?: string }) => (typeof x === 'string' ? x : x?.src)?.trim()).filter(Boolean)
+            const srcs = itinerary.images.map((x: { src?: string }) => (typeof x === 'string' ? x : x?.src ?? '').trim()).filter(Boolean)
             itinerary = {
               ...itinerary,
               days: itinerary.days.map((d: { day: number; title?: string; location?: string; activities?: string[]; image?: string }, i: number) => ({
@@ -139,7 +139,7 @@ export async function GET(request: Request) {
           }
           // Ensure each day has .image from option.images (images[0]=hero, images[i+1]=day i)
           if (option && Array.isArray(option.days) && Array.isArray(option.images) && option.images.length > 0) {
-            const srcs = option.images.map((x: { src?: string }) => (typeof x === 'string' ? x : x?.src).trim()).filter(Boolean)
+            const srcs = option.images.map((x: { src?: string }) => (typeof x === 'string' ? x : x?.src ?? '').trim()).filter(Boolean)
             option = {
               ...option,
               days: option.days.map((d: { day: number; title: string; location: string; activities?: string[]; image?: string }, i: number) => ({
