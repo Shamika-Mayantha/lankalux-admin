@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import type { HotelRecord, StarRating } from '@/lib/hotel-types'
 import { emptyHotel } from '@/lib/hotel-types'
-import { ImageUploader } from './ImageUploader'
+import { ImageManager } from '@/components/ImageManager'
+import type { ManagedImageItem } from '@/lib/managed-image'
+import { normalizeManagedImages } from '@/lib/managed-image'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 
 const STARS: StarRating[] = ['3', '4', '5', 'Boutique']
 const ROOM_PRESETS = ['Deluxe', 'Suite', 'Family', 'Executive', 'Villa', 'Presidential']
@@ -31,7 +34,7 @@ export function HotelModal({
   const [showPrice, setShowPrice] = useState(false)
   const [pricePerNight, setPricePerNight] = useState('')
   const [description, setDescription] = useState('')
-  const [images, setImages] = useState<string[]>([])
+  const [images, setImages] = useState<ManagedImageItem[]>([])
 
   useEffect(() => {
     if (!open) return
@@ -44,7 +47,7 @@ export function HotelModal({
       setShowPrice(initial.showPrice)
       setPricePerNight(initial.pricePerNight)
       setDescription(initial.description)
-      setImages([...initial.images])
+      setImages(normalizeManagedImages(initial.images))
     } else {
       const e = emptyHotel()
       setName(e.name)
@@ -55,7 +58,7 @@ export function HotelModal({
       setShowPrice(e.showPrice)
       setPricePerNight(e.pricePerNight)
       setDescription(e.description)
-      setImages([])
+      setImages([] as ManagedImageItem[])
     }
   }, [open, initial])
 
@@ -127,18 +130,16 @@ export function HotelModal({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-zinc-500 uppercase tracking-wide">Star rating</label>
-              <select
+              <Select
+                label="Star rating"
                 value={starRating}
-                onChange={(e) => setStarRating(e.target.value as StarRating)}
-                className="mt-1 w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100"
-              >
-                {STARS.map((s) => (
-                  <option key={s} value={s}>
-                    {s === 'Boutique' ? 'Boutique' : `${s} stars`}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setStarRating(v as StarRating)}
+                options={STARS.map((s) => ({
+                  value: s,
+                  label: s === 'Boutique' ? 'Boutique' : `${s} stars`,
+                }))}
+                fullWidth
+              />
             </div>
             <div className="col-span-2 sm:col-span-1">
               <label className="text-xs text-zinc-500 uppercase tracking-wide">Room type</label>
@@ -186,7 +187,12 @@ export function HotelModal({
               placeholder="Short luxury-style description for the client..."
             />
           </div>
-          <ImageUploader requestId={requestId} images={images} onChange={setImages} />
+          <ImageManager
+            requestId={requestId}
+            items={images}
+            onChange={setImages}
+            sectionLabel="Room images"
+          />
         </div>
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-zinc-800 bg-zinc-900/50">
           <Button variant="ghost" onClick={onClose}>
