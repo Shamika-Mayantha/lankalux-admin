@@ -243,8 +243,10 @@ export async function POST(request: Request) {
         })
       : 'Not specified'
 
-    const emailSubject = 'Your LankaLux itinerary link'
-    const preheader = 'You can view your personalized itinerary using the link below.'
+    const journeyTitle = include_itinerary && selectedOption?.title ? String(selectedOption.title) : null
+    const emailSubject = journeyTitle ? `Your LankaLux itinerary: ${journeyTitle}` : 'Your LankaLux itinerary link'
+    const preheader = 'Your personalized LankaLux itinerary is ready to view.'
+    const logoUrl = `${baseUrl}/favicon.png`
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -253,20 +255,45 @@ export async function POST(request: Request) {
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
             body { font-family: Arial, Helvetica, sans-serif; color: #2c2c2c; background: #f5f5f5; margin: 0; padding: 24px; }
-            .card { max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 24px; }
-            .btn { display: inline-block; margin-top: 14px; background: #c8a45d; color: #fff !important; text-decoration: none; padding: 12px 18px; border-radius: 8px; font-weight: 600; }
-            .link { word-break: break-all; color: #8b6f2a; }
+            .card { max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e5e5; border-radius: 14px; overflow: hidden; }
+            .header { background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%); border-bottom: 4px solid #c8a45d; padding: 28px 24px; text-align: center; }
+            .logo { width: 58px; height: 58px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; }
+            .brand { color: #c8a45d; font-size: 28px; font-family: Georgia, 'Times New Roman', serif; letter-spacing: 1px; margin: 0; }
+            .subtitle { color: #ffffff; opacity: 0.85; font-size: 11px; letter-spacing: 0.12em; margin-top: 4px; text-transform: uppercase; }
+            .content { padding: 24px; }
+            .meta { background: #fafafa; border-left: 4px solid #c8a45d; border-radius: 4px; padding: 14px 16px; margin: 14px 0 18px; }
+            .meta p { margin: 0 0 6px 0; font-size: 14px; color: #555; }
+            .meta p:last-child { margin-bottom: 0; }
+            .btn { display: inline-block; margin-top: 6px; background: #c8a45d; color: #fff !important; text-decoration: none; padding: 12px 18px; border-radius: 8px; font-weight: 600; }
+            .link { word-break: break-all; color: #8b6f2a; font-size: 13px; margin-top: 10px; }
+            .footer { padding: 0 24px 24px; font-size: 13px; color: #666; }
             .preheader { display:none!important; visibility:hidden; opacity:0; color:transparent; height:0; width:0; font-size:1px; line-height:1px; }
           </style>
         </head>
         <body>
           <div class="preheader">${preheader}</div>
           <div class="card">
-            <p>Dear ${requestData.client_name || 'Valued Client'},</p>
-            <p>You can view your personalized itinerary here:</p>
-            <p><a class="btn" href="${itineraryUrl}">Open Itinerary</a></p>
-            <p class="link">${itineraryUrl}</p>
-            <p>Warm regards,<br/>The LankaLux Team</p>
+            <div class="header">
+              <img src="${logoUrl}" alt="LankaLux" class="logo" />
+              <h1 class="brand">LankaLux</h1>
+              <div class="subtitle">Your Journey</div>
+            </div>
+            <div class="content">
+              <p>Dear ${requestData.client_name || 'Valued Client'},</p>
+              <p>Your personalized itinerary is ready.</p>
+              <div class="meta">
+                ${journeyTitle ? `<p><strong>Journey:</strong> ${journeyTitle}</p>` : ''}
+                <p><strong>Start:</strong> ${startDateFormatted}</p>
+                <p><strong>End:</strong> ${endDateFormatted}</p>
+                ${requestData.duration ? `<p><strong>Duration:</strong> ${requestData.duration} Days</p>` : ''}
+              </div>
+              <p>You can view your personalized itinerary here:</p>
+              <p><a class="btn" href="${itineraryUrl}">Open Itinerary</a></p>
+              <p class="link">${itineraryUrl}</p>
+            </div>
+            <div class="footer">
+              Warm regards,<br/>The LankaLux Team
+            </div>
           </div>
         </body>
       </html>
@@ -274,6 +301,11 @@ export async function POST(request: Request) {
 
     const emailText = [
       `Dear ${requestData.client_name || 'Valued Client'},`,
+      '',
+      journeyTitle ? `Journey: ${journeyTitle}` : '',
+      `Start: ${startDateFormatted}`,
+      `End: ${endDateFormatted}`,
+      requestData.duration ? `Duration: ${requestData.duration} Days` : '',
       '',
       'You can view your personalized itinerary here:',
       itineraryUrl,
