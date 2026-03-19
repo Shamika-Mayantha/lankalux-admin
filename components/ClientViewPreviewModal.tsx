@@ -88,16 +88,25 @@ export function ClientViewPreviewModal({
       : null
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-zinc-950 text-stone-900">
-      <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-[#0c0c0b]">
+    <div
+      className="fixed inset-0 z-[100] flex flex-col transition-colors duration-200"
+      style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)' }}
+    >
+      <div
+        className="shrink-0 flex items-center justify-between px-4 py-3 border-b transition-colors duration-200"
+        style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-card)' }}
+      >
         <div>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-[#d4af37]">Client view</p>
-          <p className="text-zinc-300 text-sm">Exactly as structured for your client</p>
+          <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--accent-gold)' }}>
+            Client view
+          </p>
+          <p className="text-sm opacity-80">Exactly as structured for your client</p>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="p-2 rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
+          className="p-2 rounded-xl opacity-70 hover:opacity-100 transition-opacity"
+          style={{ backgroundColor: 'var(--bg-input)' }}
           aria-label="Close"
         >
           <X className="w-6 h-6" />
@@ -121,6 +130,9 @@ export function ClientViewPreviewModal({
 
                 {urls.length > 0 && !daysArr && (
                   <div className="grid gap-3 mb-8">
+                    <p className="text-stone-500 text-xs uppercase tracking-wider mb-1">
+                      Itinerary photos ({urls.length}) — customize below if needed
+                    </p>
                     {urls.map((src, i) => (
                       <div
                         key={i}
@@ -136,10 +148,15 @@ export function ClientViewPreviewModal({
                 {daysArr ? (
                   <>
                     {urls.length > 0 && (
-                      <div className="rounded-2xl overflow-hidden shadow-lg mb-8 ring-1 ring-stone-200">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={urls[0]} alt="" className="w-full max-h-52 object-cover" />
-                      </div>
+                      <>
+                        <p className="text-stone-500 text-xs uppercase tracking-wider mb-2">
+                          Itinerary photos ({urls.length}) — customize below if needed
+                        </p>
+                        <div className="rounded-2xl overflow-hidden shadow-lg mb-8 ring-1 ring-stone-200">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={urls[0]} alt="" className="w-full max-h-52 object-cover" />
+                        </div>
+                      </>
                     )}
                     <h3 className="text-stone-800 font-bold text-sm uppercase tracking-wider border-b border-[#c8a45d] pb-2 mb-6">
                       Itinerary — day by day
@@ -160,6 +177,11 @@ export function ClientViewPreviewModal({
                   </>
                 ) : daysPlain ? (
                   <>
+                    {urls.length > 0 && (
+                      <p className="text-stone-500 text-xs uppercase tracking-wider mb-2">
+                        Itinerary photos ({urls.length}) — customize below if needed
+                      </p>
+                    )}
                     {urls.map((src, i) => (
                       <div key={i} className="rounded-2xl overflow-hidden mb-4 shadow-md">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -250,19 +272,19 @@ export function ClientViewPreviewModal({
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-zinc-800 bg-[#0c0c0b] px-4 py-4 safe-area-pb">
+      <div
+        className="shrink-0 border-t px-4 py-4 safe-area-pb transition-colors duration-200"
+        style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-card)' }}
+      >
         <div className="max-w-2xl mx-auto flex flex-wrap gap-2 justify-center">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-3 rounded-xl border border-zinc-600 text-zinc-300 text-sm font-semibold hover:bg-zinc-800 transition-colors duration-200"
-          >
+          <button type="button" onClick={onClose} className="btn-secondary-theme px-5 py-3 rounded-xl text-sm">
             Back to edit
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-3 rounded-xl text-zinc-500 text-sm hover:text-zinc-300 transition-colors"
+            className="px-5 py-3 rounded-xl text-sm opacity-70 hover:opacity-100 transition-opacity"
+            style={{ color: 'var(--text-secondary)' }}
           >
             Close
           </button>
