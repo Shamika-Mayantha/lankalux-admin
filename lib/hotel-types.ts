@@ -1,3 +1,6 @@
+import type { ManagedImageItem } from '@/lib/managed-image'
+import { normalizeManagedImages } from '@/lib/managed-image'
+
 export type StarRating = '3' | '4' | '5' | 'Boutique'
 
 export interface HotelRecord {
@@ -10,7 +13,7 @@ export interface HotelRecord {
   showPrice: boolean
   pricePerNight: string
   description: string
-  images: string[]
+  images: ManagedImageItem[]
 }
 
 export interface HotelOptionsPayload {
@@ -39,7 +42,12 @@ export function parseHotelOptions(raw: string | null | undefined): HotelOptionsP
   try {
     const p = JSON.parse(raw)
     const hotels = Array.isArray(p.hotels)
-      ? p.hotels.filter((h: unknown) => h && typeof (h as HotelRecord).id === 'string')
+      ? p.hotels
+          .filter((h: unknown) => h && typeof (h as HotelRecord).id === 'string')
+          .map((h: unknown) => {
+            const rec = h as HotelRecord
+            return { ...rec, images: normalizeManagedImages(rec.images) }
+          })
       : []
     return {
       hotels,
