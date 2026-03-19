@@ -5,6 +5,9 @@ import { Building2, ChevronLeft, ChevronRight, Pencil, Trash2, MapPin } from 'lu
 import type { HotelRecord } from '@/lib/hotel-types'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { ImageManager } from '@/components/ImageManager'
+import { imageSrcs, normalizeManagedImages } from '@/lib/managed-image'
+import type { ManagedImageItem } from '@/lib/managed-image'
 
 export function HotelCard({
   hotel,
@@ -13,6 +16,8 @@ export function HotelCard({
   onEdit,
   onDelete,
   disabled,
+  requestId,
+  onRoomImagesChange,
 }: {
   hotel: HotelRecord
   selected: boolean
@@ -20,8 +25,10 @@ export function HotelCard({
   onEdit: () => void
   onDelete: () => void
   disabled?: boolean
+  requestId: string
+  onRoomImagesChange: (items: ManagedImageItem[]) => void
 }) {
-  const imgs = hotel.images.slice(0, 5)
+  const imgs = imageSrcs(normalizeManagedImages(hotel.images)).slice(0, 5)
   const [idx, setIdx] = useState(0)
   const safeIdx = imgs.length ? idx % imgs.length : 0
 
@@ -114,6 +121,15 @@ export function HotelCard({
         {hotel.showPrice && hotel.pricePerNight && (
           <p className="text-sm font-medium text-[#d4af37] mb-4">{hotel.pricePerNight} / night</p>
         )}
+        <div className="mb-4 rounded-xl border border-zinc-700/80 bg-zinc-950/60 p-4">
+          <ImageManager
+            items={normalizeManagedImages(hotel.images)}
+            onChange={onRoomImagesChange}
+            requestId={requestId}
+            sectionLabel="Room images"
+            disabled={!!disabled}
+          />
+        </div>
         <div className="flex flex-wrap gap-2 mt-auto pt-2">
           <Button size="sm" variant="secondary" onClick={onEdit} className="flex-1 min-w-[4rem]">
             <Pencil className="w-4 h-4" />
