@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 interface Request {
   id: string
@@ -117,10 +118,10 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-amber-200 border-t-amber-600 mb-4" />
-          <p className="text-gray-600">Loading...</p>
+      <div className="min-h-screen bg-page flex items-center justify-center">
+        <div className="text-center text-primary">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-[var(--border-color)] border-t-[var(--accent-gold)] mb-4" />
+          <p className="text-secondary">Loading...</p>
         </div>
       </div>
     )
@@ -174,10 +175,10 @@ export default function DashboardPage() {
   const cancelledRequests = requests.filter((r) => r.status?.toLowerCase() === 'cancelled')
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-page text-primary transition-colors duration-300">
       <div className="w-full mx-auto px-6 sm:px-10 lg:px-14 xl:px-20 py-10">
         {/* Header */}
-        <div className="flex flex-wrap justify-between items-center gap-6 mb-12 bg-panel border border-panel-border rounded-2xl px-8 py-6 shadow-sm">
+        <div className="flex flex-wrap justify-between items-center gap-6 mb-12 bg-card border border-theme rounded-2xl px-8 py-6 shadow-card transition-colors duration-300">
           <div className="flex items-center gap-5">
             <img 
               src="/favicon.png" 
@@ -185,17 +186,18 @@ export default function DashboardPage() {
               className="h-14 w-14 object-cover rounded-xl"
             />
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-bold text-primary tracking-tight">
                 LankaLux Admin
               </h1>
               {user?.email && (
-                <p className="text-gray-500 text-sm mt-0.5">
-                  <span className="text-gray-600">{user.email}</span>
+                <p className="text-secondary text-sm mt-0.5">
+                  {user.email}
                 </p>
               )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <ThemeToggle />
             <button
               onClick={fetchRequests}
               disabled={requestsLoading}

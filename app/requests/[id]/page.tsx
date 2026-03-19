@@ -13,12 +13,21 @@ import type { HotelRecord } from '@/lib/hotel-types'
 import { parseHotelOptions } from '@/lib/hotel-types'
 import { formatItineraryDaysPlain, buildHotelSectionPlain } from '@/lib/email-itinerary-hotel'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { ClientViewPreviewModal } from '@/components/ClientViewPreviewModal'
+import { ImageManager } from '@/components/ImageManager'
+import type { ManagedImageItem } from '@/lib/managed-image'
+import { imageSrcs, normalizeManagedImages, absoluteImageSrc } from '@/lib/managed-image'
+
+const PUBLIC_SITE_BASE = 'https://admin.lankalux.com'
 
 interface ItineraryOption {
   title: string
-  days: string
+  days: string | { day: number; title: string; location: string; activities?: string[] }[]
   summary: string
   total_kilometers?: number
+  images?: ManagedImageItem[]
 }
 
 interface ItineraryOptions {
@@ -120,6 +129,8 @@ export default function RequestDetailsPage() {
   const [includeItinerarySend, setIncludeItinerarySend] = useState(true)
   const [includeHotelSend, setIncludeHotelSend] = useState(true)
   const [savingHotels, setSavingHotels] = useState(false)
+  const [clientPreviewOpen, setClientPreviewOpen] = useState(false)
+  const [savingItineraryImages, setSavingItineraryImages] = useState<number | null>(null)
 
   useEffect(() => {
     if (!request) return
@@ -266,7 +277,7 @@ export default function RequestDetailsPage() {
         if (Array.isArray(selectedOption.days)) {
           // New format: convert days array to readable format
           const daysText = selectedOption.days.map(day => 
-            `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities.map((act: string) => `  • ${act}`).join('\n')}`
+            `Day ${day.day}: ${day.title} - ${day.location}\n${(day.activities || []).map((act: string) => `  • ${act}`).join('\n')}`
           ).join('\n\n')
           setSentItineraryDays(daysText)
         } else {
@@ -308,27 +319,27 @@ export default function RequestDetailsPage() {
   }
 
   const getStatusColor = (status: string | null) => {
-    if (!status) return 'text-gray-600'
+    if (!status) return 'text-secondary'
     const statusLower = status.toLowerCase()
-    if (statusLower === 'new') return 'text-blue-700'
-    if (statusLower === 'follow_up') return 'text-amber-700'
-    if (statusLower === 'deposit') return 'text-cyan-700'
-    if (statusLower === 'sold') return 'text-emerald-700'
-    if (statusLower === 'after_sales') return 'text-violet-700'
-    if (statusLower === 'cancelled') return 'text-rose-700'
-    return 'text-gray-600'
+    if (statusLower === 'new') return 'text-blue-300'
+    if (statusLower === 'follow_up') return 'text-amber-300'
+    if (statusLower === 'deposit') return 'text-cyan-300'
+    if (statusLower === 'sold') return 'text-emerald-300'
+    if (statusLower === 'after_sales') return 'text-violet-300'
+    if (statusLower === 'cancelled') return 'text-rose-300'
+    return 'text-secondary'
   }
 
   const getStatusBgColor = (status: string | null) => {
-    if (!status) return 'bg-gray-100'
+    if (!status) return 'bg-zinc-800/80'
     const statusLower = status.toLowerCase()
-    if (statusLower === 'new') return 'bg-blue-50'
-    if (statusLower === 'follow_up') return 'bg-amber-50'
-    if (statusLower === 'deposit') return 'bg-cyan-50'
-    if (statusLower === 'sold') return 'bg-emerald-50'
-    if (statusLower === 'after_sales') return 'bg-violet-50'
-    if (statusLower === 'cancelled') return 'bg-rose-50'
-    return 'bg-gray-100'
+    if (statusLower === 'new') return 'bg-blue-950/50'
+    if (statusLower === 'follow_up') return 'bg-amber-950/40'
+    if (statusLower === 'deposit') return 'bg-cyan-950/40'
+    if (statusLower === 'sold') return 'bg-emerald-950/40'
+    if (statusLower === 'after_sales') return 'bg-violet-950/40'
+    if (statusLower === 'cancelled') return 'bg-rose-950/45'
+    return 'bg-zinc-800/80'
   }
 
   const fetchRequestData = async (id: string) => {
@@ -699,6 +710,60 @@ export default function RequestDetailsPage() {
     }
   }
 
+  const handleUpdateItineraryImages = async (optionIndex: number, items: ManagedImageItem[]) => {
+    if (!request || request.status?.toLowerCase() === 'cancelled') return
+    setSavingItineraryImages(optionIndex)
+    try {
+      const raw = [...(request.itinerary_options?.options ?? [])]
+      while (raw.length <= optionIndex) raw.push(null)
+      const opt = raw[optionIndex] as ItineraryOption | null
+      if (!opt) {
+        setSavingItineraryImages(null)
+        return
+      }
+      raw[optionIndex] = { ...opt, images: items }
+      const { error } = await (supabase.from('Client Requests') as any)
+        .update({
+          itineraryoptions: JSON.stringify({ options: raw }),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+      if (error) throw error
+      const updated = await fetchRequestData(request.id)
+      if (updated) setRequest(updated)
+    } catch (e) {
+      console.error(e)
+      alert('Could not save itinerary images.')
+    } finally {
+      setSavingItineraryImages(null)
+    }
+  }
+
+  const handleUpdateManualItineraryImages = async (optionIndex: number, items: ManagedImageItem[]) => {
+    if (!request || request.status?.toLowerCase() === 'cancelled' || optionIndex < 3) return
+    setSavingManualOption(optionIndex)
+    try {
+      const raw = getOptionsArray()
+      const opt = raw[optionIndex] as ItineraryOption | null
+      if (!opt) return
+      raw[optionIndex] = { ...opt, images: items }
+      const { error } = await (supabase.from('Client Requests') as any)
+        .update({
+          itineraryoptions: JSON.stringify({ options: raw }),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+      if (error) throw error
+      const updated = await fetchRequestData(request.id)
+      if (updated) setRequest(updated)
+    } catch (e) {
+      console.error(e)
+      alert('Could not save images.')
+    } finally {
+      setSavingManualOption(null)
+    }
+  }
+
   const ensurePublicToken = async (): Promise<string> => {
     if (!request) throw new Error('No request')
     if (request.public_token) return request.public_token
@@ -972,6 +1037,12 @@ LankaLux Team`
         '',
         itineraryUrl
       )
+      const itinUrls = imageSrcs(normalizeManagedImages((opt as ItineraryOption).images)).map((s) =>
+        absoluteImageSrc(s, baseUrl)
+      )
+      if (itinUrls.length) {
+        parts.push('', 'Itinerary images:', ...itinUrls)
+      }
     }
     if (includeHotelSend && selectedHotel) {
       parts.push('', buildHotelSectionPlain(hotelToApiPayload(selectedHotel)))
@@ -1073,7 +1144,7 @@ LankaLux Team`
     showPrice: h.showPrice,
     pricePerNight: h.pricePerNight,
     description: h.description,
-    images: h.images,
+    images: imageSrcs(normalizeManagedImages(h.images)).map((s) => absoluteImageSrc(s, PUBLIC_SITE_BASE)),
   })
 
   const handleSendItinerary = async () => {
@@ -1164,8 +1235,8 @@ LankaLux Team`
 
       setSendSuccess(true)
       setSendingItinerary(false)
+      setClientPreviewOpen(false)
 
-      // Clear success message after 3 seconds
       setTimeout(() => {
         setSendSuccess(false)
       }, 3000)
@@ -1313,10 +1384,10 @@ LankaLux Team`
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-page flex items-center justify-center px-6 transition-colors duration-300">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#d4af37] mb-4"></div>
-          <p className="text-gray-400">Loading request details...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[color:var(--accent-gold)] mb-6" />
+          <p className="text-secondary">Loading request details…</p>
         </div>
       </div>
     )
@@ -1324,15 +1395,18 @@ LankaLux Team`
 
   if (notFound || !request) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-[#d4af37] mb-4">Request not found</h1>
-          <p className="text-gray-400 mb-6">The request you're looking for doesn't exist or has been removed.</p>
+      <div className="min-h-screen bg-page flex items-center justify-center px-6 transition-colors duration-300">
+        <div className="text-center max-w-md">
+          <h1 className="text-2xl font-semibold text-accent-theme mb-4">Request not found</h1>
+          <p className="text-secondary mb-8 leading-relaxed">
+            The request you&apos;re looking for doesn&apos;t exist or has been removed.
+          </p>
           <button
-            onClick={() => router.push("/dashboard")}
-            className="px-6 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200"
+            type="button"
+            onClick={() => router.push('/dashboard')}
+            className="btn-primary-theme"
           >
-            Back to Dashboard
+            Back to dashboard
           </button>
         </div>
       </div>
@@ -1368,16 +1442,24 @@ LankaLux Team`
     ? "https://wa.me/" + request.whatsapp.replace(new RegExp("[^0-9]", "g"), "")
     : ''
 
+  const card = 'card-theme w-full p-8 hover:-translate-y-0.5'
+  const field = 'input-field-theme'
+  const lbl = 'label-theme'
+  const btnPri = 'btn-primary-theme'
+  const btnSec = 'btn-secondary-theme'
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-10">
+    <div className="min-h-screen bg-page text-primary antialiased transition-colors duration-300">
+      <div className="w-full max-w-[1400px] mx-auto px-6 py-6 flex flex-col gap-12 pb-20">
         {/* Header */}
-        <div className="mb-12 bg-panel border border-panel-border rounded-xl p-6 md:p-8 shadow-sm animate-fade-in">
-          <div className="flex items-center justify-between mb-6">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-all duration-200 flex items-center gap-2 hover:scale-105 active:scale-95"
-            >
+        <div className={`${card} animate-fade-in`}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-8">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => router.push("/dashboard")}
+                className={`${btnSec} w-fit shrink-0`}
+              >
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -1394,19 +1476,21 @@ LankaLux Team`
               </svg>
               Back to Dashboard
             </button>
+              <ThemeToggle />
+            </div>
           </div>
-          <div className="flex items-center gap-5">
-            <img 
-              src="/favicon.png" 
-              alt="LankaLux Logo" 
-              className="h-14 w-14 object-cover rounded-lg"
+          <div className="flex items-center gap-6">
+            <img
+              src="/favicon.png"
+              alt="LankaLux Logo"
+              className="h-16 w-16 object-cover rounded-xl ring-1 border-accent ring-[color:var(--border-accent)]"
             />
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-[#b8860b]">
-                Request Details
+            <div className="text-left min-w-0">
+              <h1 className="text-2xl md:text-3xl font-bold text-accent-theme tracking-tight">
+                Request details
               </h1>
-              <p className="text-gray-600 text-sm mt-1">
-                Request ID: <span className="text-gray-900 font-mono">{request.id}</span>
+              <p className="text-secondary text-sm mt-2 font-mono break-all">
+                ID: {request.id}
               </p>
             </div>
           </div>
@@ -1414,11 +1498,11 @@ LankaLux Team`
 
         {/* Cancelled Warning Banner */}
         {isCancelled && (
-          <div className="mb-12 bg-red-50 border-2 border-red-300 rounded-xl p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+          <div className="rounded-2xl border border-red-900/50 bg-red-950/40 p-6 md:p-8 shadow-lg shadow-black/30">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+              <div className="flex items-start gap-4">
                 <svg
-                  className="w-6 h-6 text-red-600 shrink-0"
+                  className="w-7 h-7 text-red-400 shrink-0 mt-0.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1430,15 +1514,18 @@ LankaLux Team`
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                   />
                 </svg>
-                <div>
-                  <h3 className="text-lg font-semibold text-red-800">Trip Cancelled</h3>
-                  <p className="text-sm text-red-700 mt-0.5">This trip has been cancelled. Itinerary generation is disabled.</p>
+                <div className="text-left">
+                  <h3 className="text-xl font-semibold text-red-300">Trip cancelled</h3>
+                  <p className="text-sm text-red-200/80 mt-2 leading-relaxed">
+                    Itinerary generation is disabled for this trip.
+                  </p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={handleReopenTrip}
                 disabled={reopening}
-                className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className={`${btnPri} disabled:opacity-50 shrink-0`}
               >
                 {reopening ? (
                   <>
@@ -1459,13 +1546,14 @@ LankaLux Team`
         )}
 
         {/* Client Information */}
-        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b]">Client Information</h2>
+        <div className={card}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-8">
+                <h2 className="text-left text-2xl font-semibold text-accent-theme">Client information</h2>
                 {!editingClientInfo && (
                   <button
+                    type="button"
                     onClick={() => setEditingClientInfo(true)}
-                    className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
+                    className={`${btnPri} shrink-0`}
                   >
                     <svg
                       className="w-5 h-5"
@@ -1488,54 +1576,48 @@ LankaLux Team`
                 <div className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                     <div>
-                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-3">
-                        Client Name
-                      </label>
+                      <label className={lbl}>Client name</label>
                       <input
                         type="text"
                         value={clientNameValue}
                         onChange={(e) => setClientNameValue(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        className={field}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                        Email
-                      </label>
+                      <label className={lbl}>Email</label>
                       <input
                         type="email"
                         value={emailValue}
                         onChange={(e) => setEmailValue(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        className={field}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                        WhatsApp
-                      </label>
+                      <label className={lbl}>WhatsApp</label>
                       <input
                         type="text"
                         value={whatsappValue}
                         onChange={(e) => setWhatsappValue(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        className={field}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                        Origin Country
-                      </label>
-                      <p className="text-gray-800 py-3">{request.origin_country ?? "N/A"}</p>
+                      <label className={lbl}>Origin country</label>
+                      <p className="text-secondary py-3">{request.origin_country ?? 'N/A'}</p>
                     </div>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-4">
                     <button
+                      type="button"
                       onClick={handleSaveClientInfo}
                       disabled={saving}
-                      className="px-6 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`${btnPri} disabled:opacity-50`}
                     >
-                      {saving ? 'Saving...' : 'Save Changes'}
+                      {saving ? 'Saving...' : 'Save changes'}
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         setClientNameValue(request.client_name || '')
                         setEmailValue(request.email || '')
@@ -1558,107 +1640,111 @@ LankaLux Team`
                         setEditingClientInfo(false)
                       }}
                       disabled={saving}
-                      className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`${btnSec} disabled:opacity-50`}
                     >
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8 text-left">
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Client Name</p>
-                    <p className="text-gray-900 text-lg font-medium">
-                      {request.client_name ?? "N/A"}
+                    <p className={lbl}>Client name</p>
+                    <p className="text-primary text-lg font-medium">
+                      {request.client_name ?? 'N/A'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Email</p>
-                    <p className="text-gray-800">
+                    <p className={lbl}>Email</p>
+                    <p className="text-secondary">
                       {request.email ? (
                         <a
                           href={`mailto:${request.email}`}
-                          className="text-[#d4af37] hover:text-[#b8941f] transition-colors duration-200"
+                          className="text-accent-theme hover:text-[#d4b35c] transition-colors"
                         >
                           {request.email}
                         </a>
                       ) : (
-                        "N/A"
+                        'N/A'
                       )}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">WhatsApp</p>
-                    <p className="text-gray-800">
+                    <p className={lbl}>WhatsApp</p>
+                    <p className="text-secondary">
                       {request.whatsapp ? (
                         <a
                           href={waHref}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[#d4af37] hover:text-[#b8941f] transition-colors duration-200"
+                          className="text-accent-theme hover:text-[#d4b35c] transition-colors"
                         >
                           {request.whatsapp}
                         </a>
                       ) : (
-                        "N/A"
+                        'N/A'
                       )}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Origin Country</p>
-                    <p className="text-gray-900">{request.origin_country ?? "N/A"}</p>
+                    <p className={lbl}>Origin country</p>
+                    <p className="text-primary">{request.origin_country ?? 'N/A'}</p>
                   </div>
                 </div>
               )}
             </div>
 
         {/* Status & Created */}
-        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-8">
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Status</p>
+        <div className={card}>
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8 text-left">
+            <div className="flex-1 min-w-0">
+              <p className={lbl}>Status</p>
               {editingStatus ? (
-                <div className="flex items-center gap-2">
-                  <select
+                <div className="flex flex-wrap items-center gap-3">
+                  <Select
                     value={statusValue}
-                    onChange={(e) => setStatusValue(e.target.value)}
-                    className="px-3 py-1 bg-gray-50 border border-gray-200 rounded-md text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                  >
-                    <option value="new">NEW</option>
-                    <option value="follow_up">FOLLOW_UP</option>
-                    <option value="deposit">DEPOSIT</option>
-                    <option value="sold">SOLD</option>
-                    <option value="after_sales">AFTER_SALES</option>
-                    <option value="cancelled">CANCELLED</option>
-                  </select>
+                    onChange={setStatusValue}
+                    options={[
+                      { value: 'new', label: 'NEW' },
+                      { value: 'follow_up', label: 'FOLLOW_UP' },
+                      { value: 'deposit', label: 'DEPOSIT' },
+                      { value: 'sold', label: 'SOLD' },
+                      { value: 'after_sales', label: 'AFTER_SALES' },
+                      { value: 'cancelled', label: 'CANCELLED' },
+                    ]}
+                    minWidth="180px"
+                  />
                   <button
+                    type="button"
                     onClick={handleSaveStatus}
                     disabled={saving}
-                    className="px-3 py-1 bg-[#d4af37] hover:bg-[#b8941f] text-black text-sm font-semibold rounded-md disabled:opacity-50"
+                    className={`${btnPri} text-sm px-4 disabled:opacity-50`}
                   >
                     Save
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       setStatusValue(request.status || '')
                       setEditingStatus(false)
                     }}
-                    className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-semibold rounded-md"
+                    className={`${btnSec} text-sm px-4`}
                   >
                     Cancel
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <span
-                    className={`inline-block px-4 py-2 rounded-md font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current border-opacity-20`}
+                    className={`inline-block px-4 py-2.5 rounded-xl font-semibold ${getStatusColor(request.status)} ${getStatusBgColor(request.status)} border border-current border-opacity-20`}
                     title={request.status?.toLowerCase() === 'cancelled' && request.cancellation_reason ? request.cancellation_reason : undefined}
                   >
                     {(request.status || 'new').toUpperCase()}
                   </span>
                   <button
+                    type="button"
                     onClick={() => setEditingStatus(true)}
-                    className="text-gray-400 hover:text-[#d4af37] transition-colors"
+                    className="text-secondary hover:text-accent-theme transition-colors p-2 rounded-lg hover:bg-[var(--bg-btn-secondary)]"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1667,45 +1753,41 @@ LankaLux Team`
                 </div>
               )}
             </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Created At</p>
-              <p className="text-gray-800 font-medium">{formatDate(request.created_at)}</p>
+            <div className="text-left md:text-right shrink-0">
+              <p className={lbl}>Created</p>
+              <p className="text-primary font-medium text-lg">{formatDate(request.created_at)}</p>
             </div>
           </div>
         </div>
 
         {/* Travel Information */}
-        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
-              <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b] mb-8">Travel Information</h2>
+        <div className={card}>
+              <h2 className="text-left text-2xl font-semibold text-accent-theme mb-8">Travel information</h2>
               {editingClientInfo ? (
                 <div className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                     <div>
-                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-3">
-                        Start Date
-                      </label>
+                      <label className={lbl}>Start date</label>
                       <input
                         type="date"
                         value={startDateValue}
                         onChange={(e) => setStartDateValue(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
+                        className={`${field} [color-scheme:dark]`}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                        End Date
-                      </label>
+                      <label className={lbl}>End date</label>
                       <input
                         type="date"
                         value={endDateValue}
                         onChange={(e) => setEndDateValue(e.target.value)}
                         min={startDateValue || undefined}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
+                        className={`${field} [color-scheme:dark]`}
                       />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Duration</p>
-                      <p className="text-gray-800 py-3">
+                      <p className={lbl}>Duration</p>
+                      <p className="text-secondary py-3">
                         {startDateValue && endDateValue
                           ? (() => {
                               const start = new Date(startDateValue)
@@ -1723,23 +1805,19 @@ LankaLux Team`
                       </p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                     <div>
-                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                        Number of Adults
-                      </label>
+                      <label className={lbl}>Number of adults</label>
                       <input
                         type="number"
                         min="1"
                         value={numberOfAdultsValue}
                         onChange={(e) => setNumberOfAdultsValue(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        className={field}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                        Number of Children
-                      </label>
+                      <label className={lbl}>Number of children</label>
                       <input
                         type="number"
                         min="0"
@@ -1759,20 +1837,20 @@ LankaLux Team`
                             setChildrenAgesValue([])
                           }
                         }}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                        className={field}
                       />
                     </div>
                   </div>
                   {parseInt(numberOfChildrenValue) > 0 && (
                     <div>
-                      <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                        {parseInt(numberOfChildrenValue) === 1 ? 'Child Age (years)' : 'Children Ages (years)'}
+                      <label className={lbl}>
+                        {parseInt(numberOfChildrenValue) === 1 ? 'Child age (years)' : 'Children ages (years)'}
                       </label>
                       <div className={`grid gap-3 ${parseInt(numberOfChildrenValue) <= 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
                         {childrenAgesValue.map((age, index) => (
                           <div key={index}>
-                            <label className="block text-xs text-gray-400 mb-1">
-                              Child {index + 1} Age
+                            <label className="block text-xs text-secondary mb-1.5">
+                              Child {index + 1}
                             </label>
                             <input
                               type="number"
@@ -1785,7 +1863,7 @@ LankaLux Team`
                                 setChildrenAgesValue(newAges)
                               }}
                               placeholder={`Age of child ${index + 1}`}
-                              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all"
+                              className={field}
                             />
                           </div>
                         ))}
@@ -1794,29 +1872,29 @@ LankaLux Team`
                   )}
                 </div>
               ) : (
-                <div className="space-y-8">
+                <div className="space-y-8 text-left">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Start Date</p>
-                      <p className="text-gray-800">{formatDate(request.start_date)}</p>
+                      <p className={lbl}>Start date</p>
+                      <p className="text-primary">{formatDate(request.start_date)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">End Date</p>
-                      <p className="text-gray-800">{formatDate(request.end_date)}</p>
+                      <p className={lbl}>End date</p>
+                      <p className="text-primary">{formatDate(request.end_date)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Duration</p>
-                      <p className="text-gray-800">{request.duration ? `${request.duration} days` : "N/A"}</p>
+                      <p className={lbl}>Duration</p>
+                      <p className="text-primary">{request.duration ? `${request.duration} days` : 'N/A'}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Number of Adults</p>
-                      <p className="text-gray-800">{request.number_of_adults ?? "N/A"}</p>
+                      <p className={lbl}>Number of adults</p>
+                      <p className="text-primary">{request.number_of_adults ?? 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Number of Children</p>
-                      <p className="text-gray-800">{request.number_of_children ?? "N/A"}</p>
+                      <p className={lbl}>Number of children</p>
+                      <p className="text-primary">{request.number_of_children ?? 'N/A'}</p>
                     </div>
                     {request.children_ages && (() => {
                       try {
@@ -1824,8 +1902,8 @@ LankaLux Team`
                         if (Array.isArray(ages) && ages.length > 0) {
                           return (
                             <div className="md:col-span-2">
-                              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Children Ages</p>
-                              <p className="text-gray-800">
+                              <p className={lbl}>Children ages</p>
+                              <p className="text-secondary">
                                 {ages.map((age: number, index: number) => (
                                   <span key={index}>
                                     Child {index + 1}: {age} years{index < ages.length - 1 ? ', ' : ''}
@@ -1843,20 +1921,20 @@ LankaLux Team`
               )}
         </div>
 
-        {/* Additional Preferences */}
-        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
-              <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b] mb-8">Additional Preferences</h2>
+        {/* Additional preferences */}
+        <div className={card}>
+              <h2 className="text-left text-2xl font-semibold text-accent-theme mb-8">Additional preferences</h2>
               {editingClientInfo ? (
                 <textarea
                   value={additionalPreferencesValue}
                   onChange={(e) => setAdditionalPreferencesValue(e.target.value)}
                   rows={6}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y"
+                  className={`${field} resize-y min-h-[160px]`}
                   placeholder="e.g., honeymoon, wildlife safari, luxury focus, train journeys, ayurveda retreat, family friendly, adventure"
                 />
               ) : (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
-                  <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                <div className="rounded-xl border border-accent bg-inner-theme p-6 md:p-8">
+                  <p className="text-secondary whitespace-pre-wrap leading-relaxed">
                     {request.additional_preferences || 'No preferences specified'}
                   </p>
                 </div>
@@ -1864,83 +1942,84 @@ LankaLux Team`
         </div>
 
         {/* Notes */}
-        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
+        <div className={card}>
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b]">Notes</h2>
+                <h2 className="text-left text-2xl font-semibold text-accent-theme">Notes</h2>
               </div>
               {editingNotes ? (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <textarea
                     value={notesValue}
                     onChange={(e) => setNotesValue(e.target.value)}
-                    className="w-full min-h-[140px] bg-gray-50 border border-gray-200 rounded-lg p-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#d4af37] resize-y"
-                    placeholder="Add internal notes..."
+                    className={`${field} resize-y min-h-[160px]`}
+                    placeholder="Add internal notes…"
                   />
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-4">
                     <button
+                      type="button"
                       onClick={handleSaveNotes}
                       disabled={saving}
-                      className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md disabled:opacity-50"
+                      className={`${btnPri} disabled:opacity-50`}
                     >
                       Save
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         setNotesValue(request.notes || '')
                         setEditingNotes(false)
                       }}
-                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md"
+                      className={btnSec}
                     >
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+                <div className="rounded-xl border border-accent bg-inner-theme p-6 md:p-8 text-left">
                   {request.notes ? (
-                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{request.notes}</p>
+                    <p className="text-secondary whitespace-pre-wrap leading-relaxed">{request.notes}</p>
                   ) : (
-                    <p className="text-gray-500 italic">No notes added yet.</p>
+                    <p className="text-secondary italic">No notes added yet.</p>
                   )}
                   <button
+                    type="button"
                     onClick={() => setEditingNotes(true)}
-                    className="mt-4 text-sm font-medium text-[#b8860b] hover:text-[#996f09] transition-colors"
+                    className="mt-6 text-sm font-semibold text-accent-theme hover:text-[#d4b35c] transition-colors"
                   >
-                    {request.notes ? 'Edit Notes' : 'Add Notes'}
+                    {request.notes ? 'Edit notes' : 'Add notes'}
                   </button>
                 </div>
               )}
         </div>
 
-        <div className="max-w-5xl mx-auto w-full space-y-14 mb-16 px-1 sm:px-2">
-        {/* Follow-up email: before itinerary options, with collapsible sent log */}
+        <div className="w-full flex flex-col gap-10">
+        {/* Follow-up email */}
         {request.email && (
-          <div className="rounded-2xl border border-zinc-800 bg-gradient-to-b from-[#1c1a18] to-[#141210] p-8 md:p-10 shadow-xl shadow-black/30">
-            <h2 className="text-xl md:text-2xl font-semibold text-[#d4af37] mb-2 flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4af37]/15 text-[#d4af37]">
+          <div className={card}>
+            <h2 className="text-left text-2xl font-semibold text-accent-theme mb-2 flex items-center gap-4">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[color:var(--accent-gold)]/15 text-accent-theme shrink-0">
                 <Mail className="w-5 h-5" />
               </span>
               Follow-up email
             </h2>
-            <p className="text-zinc-500 mb-8 max-w-xl leading-relaxed text-sm">
+            <p className="text-secondary mb-8 max-w-2xl leading-relaxed text-sm text-left">
               Friendly templates with preview. Itinerary link is included when available.
             </p>
             <div className="flex flex-wrap items-end gap-6">
-              <div className="min-w-[260px]">
-                <label className="block text-sm font-medium text-gray-600 mb-3">Template</label>
-                <select
+              <div className="min-w-[280px] flex-1 max-w-md">
+                <Select
+                  label="Template"
                   value={selectedTemplateId}
-                  onChange={(e) => setSelectedTemplateId(e.target.value as TemplateId)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
-                >
-                  {FOLLOW_UP_TEMPLATES.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
+                  onChange={(v) => setSelectedTemplateId(v as TemplateId)}
+                  options={FOLLOW_UP_TEMPLATES.map((t) => ({ value: t.id, label: t.name }))}
+                  fullWidth
+                />
               </div>
               <button
+                type="button"
                 onClick={openTemplateEmailModal}
-                className="px-5 py-3 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-lg transition-colors duration-200 flex items-center gap-2"
+                className={btnPri}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1956,17 +2035,17 @@ LankaLux Team`
             </div>
 
             {request.follow_up_emails_sent && request.follow_up_emails_sent.length > 0 && (
-              <div className="mt-12 pt-10 border-t border-gray-200">
+              <div className="mt-10 pt-10 border-t border-accent">
                 <button
                   type="button"
                   onClick={() => setFollowUpEmailsSentExpanded((v) => !v)}
-                  className="flex items-center justify-between w-full text-left"
+                  className="flex items-center justify-between w-full text-left gap-4"
                 >
-                  <h3 className="text-lg font-semibold text-gray-800">
+                  <h3 className="text-lg font-semibold text-accent-theme">
                     Follow-up emails sent ({request.follow_up_emails_sent.length})
                   </h3>
                   <svg
-                    className={`w-5 h-5 text-gray-400 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${followUpEmailsSentExpanded ? 'rotate-180' : ''}`}
+                    className={`w-5 h-5 text-secondary shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${followUpEmailsSentExpanded ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -1985,13 +2064,13 @@ LankaLux Team`
                         .map((entry, index) => (
                           <li
                             key={`${entry.sent_at}-${index}`}
-                            className="flex flex-wrap items-baseline gap-3 py-2 text-gray-800"
+                            className="flex flex-wrap items-baseline gap-3 py-2.5 text-secondary border-b border-accent last:border-0"
                           >
-                            <time className="text-sm text-gray-500 shrink-0" dateTime={entry.sent_at}>
+                            <time className="text-sm text-secondary shrink-0" dateTime={entry.sent_at}>
                               {formatDateTime(entry.sent_at)}
                             </time>
-                            <span className="text-gray-600">·</span>
-                            <span className="text-gray-800" title={entry.subject}>
+                            <span className="text-zinc-600">·</span>
+                            <span className="text-primary" title={entry.subject}>
                               {entry.template_name}: {entry.subject}
                             </span>
                           </li>
@@ -2003,17 +2082,17 @@ LankaLux Team`
             )}
 
             {request.link_opens && request.link_opens.length > 0 && (
-              <div className="mt-12 pt-10 border-t border-gray-200">
+              <div className="mt-10 pt-10 border-t border-accent">
                 <button
                   type="button"
                   onClick={() => setLinkOpensExpanded((v) => !v)}
-                  className="flex items-center justify-between w-full text-left"
+                  className="flex items-center justify-between w-full text-left gap-4"
                 >
-                  <h3 className="text-lg font-semibold text-gray-800">
+                  <h3 className="text-lg font-semibold text-accent-theme">
                     Link opens ({request.link_opens.length})
                   </h3>
                   <svg
-                    className={`w-5 h-5 text-gray-400 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${linkOpensExpanded ? 'rotate-180' : ''}`}
+                    className={`w-5 h-5 text-secondary shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${linkOpensExpanded ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -2026,22 +2105,22 @@ LankaLux Team`
                   style={{ transition: 'grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}
                 >
                   <div className="min-h-0 overflow-hidden">
-                    <p className="text-sm text-gray-500 mt-2 mb-3">When the client opened the itinerary link (most recent first).</p>
-                    <ul className="space-y-3">
+                    <p className="text-sm text-secondary mt-4 mb-4 text-left">When the client opened the itinerary link (most recent first).</p>
+                    <ul className="space-y-1">
                       {[...request.link_opens]
                         .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
                         .map((entry, index) => (
                           <li
                             key={`${entry.opened_at}-${index}`}
-                            className="flex flex-wrap items-baseline gap-3 py-2 text-gray-800"
+                            className="flex flex-wrap items-baseline gap-3 py-2.5 text-secondary border-b border-accent last:border-0"
                           >
-                            <time className="text-sm text-gray-500 shrink-0" dateTime={entry.opened_at}>
+                            <time className="text-sm text-secondary shrink-0" dateTime={entry.opened_at}>
                               {formatDateTime(entry.opened_at)}
                             </time>
                             {entry.option_index !== undefined && entry.option_index !== null && (
                               <>
-                                <span className="text-gray-600">·</span>
-                                <span className="text-gray-400">Option {entry.option_index + 1}</span>
+                                <span className="text-zinc-600">·</span>
+                                <span className="text-secondary">Option {entry.option_index + 1}</span>
                               </>
                             )}
                           </li>
@@ -2054,11 +2133,11 @@ LankaLux Team`
           </div>
         )}
 
-        {/* Itinerary Options Section */}
-        <div className="rounded-2xl border border-zinc-800 bg-gradient-to-b from-[#1c1a18] to-[#141210] p-8 md:p-10 shadow-xl shadow-black/30">
-          <div className="flex items-center justify-between mb-10 flex-wrap gap-4">
-            <h2 className="text-xl md:text-2xl font-semibold text-[#d4af37] flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4af37]/15 text-[#d4af37]">
+        {/* Itinerary options */}
+        <div className={card}>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-10 text-left">
+            <h2 className="text-2xl font-semibold text-accent-theme flex items-center gap-4">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[color:var(--accent-gold)]/15 text-accent-theme shrink-0">
                 <Map className="w-5 h-5" />
               </span>
               Itinerary options
@@ -2071,9 +2150,10 @@ LankaLux Team`
                   return (
                     <button
                       key={optionIndex}
+                      type="button"
                       onClick={() => handleGenerateSingleOption(optionIndex)}
                       disabled={isGenerating || generatingItinerary}
-                      className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className={`${btnPri} text-sm px-4 disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       {isGenerating ? (
                         <>
@@ -2101,7 +2181,7 @@ LankaLux Team`
               </div>
             )}
             {isCancelled && (
-              <p className="text-sm text-zinc-500 italic">Itinerary generation disabled for cancelled trips</p>
+              <p className="text-sm text-secondary italic">Itinerary generation disabled for cancelled trips</p>
             )}
           </div>
 
@@ -2138,6 +2218,9 @@ LankaLux Team`
                   selectingOption={selectingOption}
                   onSelect={() => handleSelectOption(index)}
                   onRegenerate={() => handleGenerateSingleOption(index)}
+                  requestId={request.id}
+                  onImagesChange={(items) => void handleUpdateItineraryImages(index, items)}
+                  savingImages={savingItineraryImages === index}
                 />
               )
             })}
@@ -2148,14 +2231,14 @@ LankaLux Team`
             const allOpts = getOptionsArray()
             const manualIndices = allOpts.length > 3 ? Array.from({ length: allOpts.length - 3 }, (_, i) => 3 + i) : []
             return (
-              <div className="mt-8 pt-8 border-t border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-[#d4af37]">Manual itineraries</h3>
+              <div className="mt-10 pt-10 border-t border-accent">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 text-left">
+                  <h3 className="text-xl font-semibold text-accent-theme">Manual itineraries</h3>
                   {!isCancelled && (
                     <button
                       type="button"
                       onClick={handleAddManualItinerary}
-                      className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
+                      className={`${btnPri} text-sm shrink-0`}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -2180,57 +2263,69 @@ LankaLux Team`
                     return (
                       <div
                         key={index}
-                        className={`bg-gray-50 border rounded-lg p-6 flex flex-col ${isSelected ? 'border-[#d4af37] ring-2 ring-[#d4af37]' : 'border-gray-200'}`}
+                        className={`rounded-2xl border bg-inner-theme p-6 md:p-8 flex flex-col gap-6 transition-all hover:-translate-y-0.5 ${isSelected ? 'border-[color:var(--accent-gold)] ring-2 ring-[color:var(--accent-gold)]/30 shadow-lg' : 'border-accent'}`}
                       >
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-xs text-gray-500 uppercase">Manual {index - 2}</span>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs font-medium text-secondary uppercase tracking-wider">Manual {index - 2}</span>
                           {isSelected && (
-                            <span className="px-2 py-1 bg-[#d4af37] text-black text-xs font-semibold rounded">SELECTED</span>
+                            <span className="px-3 py-1 bg-accent text-black text-xs font-semibold rounded-lg">Selected</span>
                           )}
                         </div>
-                        <div className="space-y-3 mb-4">
+                        <div className="space-y-5 flex-1 text-left">
                           <div>
-                            <label className="block text-xs text-gray-500 mb-1">Title</label>
+                            <label className={lbl}>Title</label>
                             <input
                               type="text"
                               value={draft.title}
                               onChange={(e) => setManualDrafts((d) => ({ ...d, [index]: { ...draft, title: e.target.value } }))}
-                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-white text-sm"
+                              className={`${field} text-sm py-2.5`}
                               placeholder="Itinerary title"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-500 mb-1">Summary</label>
+                            <label className={lbl}>Summary</label>
                             <textarea
                               value={draft.summary}
                               onChange={(e) => setManualDrafts((d) => ({ ...d, [index]: { ...draft, summary: e.target.value } }))}
                               rows={2}
-                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-white text-sm resize-y"
+                              className={`${field} text-sm py-2.5 resize-y`}
                               placeholder="Short summary"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-500 mb-1">Days and itinerary (one line or day per line)</label>
+                            <label className={lbl}>Days & itinerary</label>
                             <textarea
                               value={draft.days}
                               onChange={(e) => setManualDrafts((d) => ({ ...d, [index]: { ...draft, days: e.target.value } }))}
                               rows={6}
-                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-white text-sm font-mono resize-y"
+                              className={`${field} text-sm font-mono resize-y`}
                               placeholder="Day 1: ...&#10;Day 2: ..."
+                            />
+                          </div>
+                          <div className="rounded-xl border border-accent bg-inner-deep p-5">
+                            <ImageManager
+                              items={normalizeManagedImages((option as ItineraryOption).images)}
+                              onChange={(items) => void handleUpdateManualItineraryImages(index, items)}
+                              requestId={request.id}
+                              sectionLabel="Images"
+                              disabled={savingManualOption === index || isCancelled}
                             />
                           </div>
                         </div>
                         {publicLink && isSelected && (
-                          <div className="mb-3 p-2 bg-gray-100 rounded text-xs text-gray-600 break-all">
-                            Public link: <a href={publicLink} target="_blank" rel="noopener noreferrer" className="text-[#d4af37] hover:underline">{publicLink}</a>
+                          <div className="rounded-lg border border-accent bg-inner-deep p-4 text-xs text-secondary break-all">
+                            Public link:{' '}
+                            <a href={publicLink} target="_blank" rel="noopener noreferrer" className="text-accent-theme hover:underline">
+                              {publicLink}
+                            </a>
                           </div>
                         )}
-                        <div className="flex flex-wrap gap-2 mt-auto">
+                        <div className="flex flex-wrap gap-3 mt-auto pt-2">
                           <button
                             type="button"
                             onClick={() => handleSaveManualItinerary(index, draft)}
                             disabled={savingManualOption === index}
-                            className="px-3 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md text-sm disabled:opacity-50"
+                            className={`${btnPri} text-sm px-4 disabled:opacity-50`}
                           >
                             {savingManualOption === index ? 'Saving...' : 'Save'}
                           </button>
@@ -2238,14 +2333,14 @@ LankaLux Team`
                             type="button"
                             onClick={() => handleSelectOption(index)}
                             disabled={selectingOption !== null}
-                            className={`px-3 py-2 rounded-md text-sm font-semibold ${isSelected ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} disabled:opacity-50`}
+                            className={`min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 ${isSelected ? 'bg-amber-700/90 hover:bg-amber-600 text-white' : `${btnSec}`}`}
                           >
-                            {selectingOption === index ? '...' : isSelected ? 'Deselect' : 'Select'}
+                            {selectingOption === index ? '…' : isSelected ? 'Deselect' : 'Select'}
                           </button>
                           <button
                             type="button"
                             onClick={() => handleRemoveManualItinerary(index)}
-                            className="px-3 py-2 text-red-300 rounded-md text-sm font-semibold bg-red-900 bg-opacity-50 hover:bg-red-900 hover:bg-opacity-70"
+                            className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold text-red-200 bg-red-950/50 border border-red-900/50 hover:bg-red-900/40"
                           >
                             Remove
                           </button>
@@ -2259,11 +2354,11 @@ LankaLux Team`
           })()}
         </div>
 
-        {/* Hotel Options */}
-        <div className="rounded-2xl border border-zinc-800 bg-gradient-to-b from-[#1c1a18] to-[#141210] p-8 md:p-10 shadow-xl shadow-black/30">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-            <h2 className="text-xl md:text-2xl font-semibold text-[#d4af37] flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4af37]/15 text-[#d4af37]">
+        {/* Hotel options */}
+        <div className={card}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-10 text-left">
+            <h2 className="text-2xl font-semibold text-accent-theme flex items-center gap-4">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[color:var(--accent-gold)]/15 text-accent-theme shrink-0">
                 <Building2 className="w-5 h-5" />
               </span>
               Hotel options
@@ -2280,7 +2375,7 @@ LankaLux Team`
             </Button>
           </div>
           {hotels.length === 0 ? (
-            <p className="text-zinc-500 text-sm py-8 text-center border border-dashed border-zinc-700 rounded-2xl">
+            <p className="text-secondary text-sm py-10 px-6 text-center border border-dashed border-accent rounded-2xl bg-inner-theme/50">
               No hotels yet. Add properties the client can compare and select.
             </p>
           ) : (
@@ -2304,6 +2399,11 @@ LankaLux Team`
                     void persistHotelOptions(next, nextSel)
                   }}
                   disabled={savingHotels}
+                  requestId={request.id}
+                  onRoomImagesChange={(items) => {
+                    const next = hotels.map((x) => (x.id === h.id ? { ...x, images: items } : x))
+                    void persistHotelOptions(next, selectedHotelId)
+                  }}
                 />
               ))}
             </div>
@@ -2311,9 +2411,9 @@ LankaLux Team`
         </div>
 
         {/* Send to client */}
-        <div className="rounded-2xl border-2 border-[#d4af37]/30 bg-gradient-to-b from-[#1f1d1a] to-[#161513] p-8 md:p-10 shadow-2xl shadow-[#d4af37]/5">
-          <h2 className="text-xl font-semibold text-[#d4af37] mb-6 flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4af37]/20 text-[#d4af37]">
+        <div className={`${card} ring-1 ring-[color:var(--border-accent)]`}>
+          <h2 className="text-left text-2xl font-semibold text-accent-theme mb-8 flex items-center gap-4">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[color:var(--accent-gold)]/15 text-accent-theme shrink-0">
               <Send className="w-5 h-5" />
             </span>
             Send to client
@@ -2323,11 +2423,11 @@ LankaLux Team`
               <span className="text-lg">✓</span> Message sent successfully.
             </div>
           )}
-          <div className="space-y-6">
-            <div className="flex flex-col gap-4">
-              <label className="flex items-center gap-3 cursor-pointer group w-fit">
+          <div className="space-y-8 text-left">
+            <div className="flex flex-col gap-5">
+              <label className="flex items-center gap-4 cursor-pointer group w-fit">
                 <span
-                  className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${includeItinerarySend ? 'border-[#d4af37] bg-[#d4af37]' : 'border-zinc-500 bg-zinc-800'}`}
+                  className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${includeItinerarySend ? 'border-[color:var(--accent-gold)] bg-accent' : 'border-theme bg-inner-theme'}`}
                 >
                   <input
                     type="checkbox"
@@ -2341,11 +2441,11 @@ LankaLux Team`
                     </svg>
                   )}
                 </span>
-                <span className="text-zinc-200 font-medium">Include itinerary</span>
+                <span className="text-primary font-medium">Include itinerary</span>
               </label>
-              <label className="flex items-center gap-3 cursor-pointer group w-fit">
+              <label className="flex items-center gap-4 cursor-pointer group w-fit">
                 <span
-                  className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${includeHotelSend ? 'border-[#d4af37] bg-[#d4af37]' : 'border-zinc-500 bg-zinc-800'}`}
+                  className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${includeHotelSend ? 'border-[color:var(--accent-gold)] bg-accent' : 'border-theme bg-inner-theme'}`}
                 >
                   <input
                     type="checkbox"
@@ -2359,87 +2459,75 @@ LankaLux Team`
                     </svg>
                   )}
                 </span>
-                <span className="text-zinc-200 font-medium">Include hotel</span>
+                <span className="text-primary font-medium">Include hotel</span>
               </label>
             </div>
 
             {includeItinerarySend && (
-              <div className="rounded-xl border border-zinc-700 bg-zinc-900/40 p-5 space-y-4">
-                <p className="text-xs uppercase tracking-wider text-zinc-500">On public itinerary page</p>
-                <div className="flex flex-wrap gap-6">
-                  <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+              <div className="rounded-2xl border border-accent bg-inner-theme p-6 md:p-8 space-y-6">
+                <p className="text-xs font-medium uppercase tracking-wider text-secondary">On public itinerary page</p>
+                <div className="flex flex-wrap gap-8">
+                  <label className="flex items-center gap-3 text-sm text-secondary cursor-pointer">
                     <input
                       type="checkbox"
                       checked={includeVehicleInItinerary}
                       onChange={(e) => setIncludeVehicleInItinerary(e.target.checked)}
-                      className="rounded border-zinc-600 text-[#d4af37]"
+                      className="rounded border-accent text-accent-theme"
                     />
                     Include vehicle
                   </label>
-                  <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                  <label className="flex items-center gap-3 text-sm text-secondary cursor-pointer">
                     <input
                       type="checkbox"
                       checked={includePriceInItinerary}
                       onChange={(e) => setIncludePriceInItinerary(e.target.checked)}
-                      className="rounded border-zinc-600 text-[#d4af37]"
+                      className="rounded border-accent text-accent-theme"
                     />
                     Include price
                   </label>
                 </div>
                 {includeVehicleInItinerary && (
-                  <div>
-                    <label className="block text-xs text-zinc-500 mb-1">Vehicle</label>
-                    <select
+                  <div className="max-w-md">
+                    <Select
+                      label="Vehicle"
                       value={sendVehicleId}
-                      onChange={(e) => setSendVehicleId(e.target.value)}
-                      className="w-full max-w-md px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-100 text-sm"
-                    >
-                      <option value="">Select vehicle</option>
-                      {FLEET_VEHICLES.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setSendVehicleId}
+                      options={[
+                        { value: '', label: 'Select vehicle' },
+                        ...FLEET_VEHICLES.map((v) => ({ value: v.id, label: v.name })),
+                      ]}
+                      placeholder="Select vehicle"
+                      fullWidth
+                    />
                   </div>
                 )}
                 {includePriceInItinerary && (
                   <div>
-                    <label className="block text-xs text-zinc-500 mb-1">Price</label>
+                    <label className={lbl}>Price</label>
                     <input
                       value={sendPriceValue}
                       onChange={(e) => setSendPriceValue(e.target.value)}
                       placeholder="e.g. USD 2,500"
-                      className="w-full max-w-xs px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-100 text-sm"
+                      className={`${field} max-w-xs text-sm py-2.5`}
                     />
                   </div>
                 )}
               </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <p className="text-secondary text-sm">
+              You must open the client preview before sending. Email and WhatsApp are only available from the preview screen.
+            </p>
+            <div className="flex flex-wrap items-center gap-4 pt-4">
               <Button
-                onClick={() => void handleSendItinerary()}
-                disabled={sendingItinerary || !request.email}
-                className="min-w-[180px]"
+                onClick={() => setClientPreviewOpen(true)}
+                className="min-w-[200px]"
               >
-                {sendingItinerary ? (
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-                Send to client
+                <Send className="w-4 h-4" />
+                Preview & send
               </Button>
-              {request.whatsapp ? (
-                <Button variant="whatsapp" onClick={handleWhatsAppShare} className="min-w-[180px]">
-                  <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                  </svg>
-                  Send via WhatsApp
-                </Button>
-              ) : null}
               {request.sent_at && request.last_sent_at && (
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-secondary">
                   Last email: {formatDateTime(request.last_sent_at)}
                 </span>
               )}
@@ -2451,6 +2539,30 @@ LankaLux Team`
         </div>
 
         </div>
+
+        <ClientViewPreviewModal
+          open={clientPreviewOpen}
+          onClose={() => setClientPreviewOpen(false)}
+          clientName={request.client_name || 'Valued Client'}
+          includeItinerary={includeItinerarySend}
+          includeHotel={includeHotelSend}
+          itineraryOption={
+            includeItinerarySend &&
+            request.selected_option !== null &&
+            request.selected_option !== undefined &&
+            request.itinerary_options?.options?.[request.selected_option]
+              ? (request.itinerary_options.options[request.selected_option] as import('@/components/requests/itinerary-types').ItineraryOption)
+              : null
+          }
+          hotel={includeHotelSend && selectedHotel ? selectedHotel : null}
+          onSendEmail={() => void handleSendItinerary()}
+          onSendWhatsApp={() => {
+            handleWhatsAppShare()
+            setClientPreviewOpen(false)
+          }}
+          sending={sendingItinerary}
+          hasWhatsApp={!!request.whatsapp?.trim()}
+        />
 
         <HotelModal
           open={hotelModalOpen}
@@ -2476,16 +2588,16 @@ LankaLux Team`
           if (!shouldShow) return null
           
           return (
-            <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mt-12">
+            <div className={card}>
               <button
                 type="button"
                 onClick={() => setSentItineraryExpanded((v) => !v)}
-                className="flex items-center justify-between w-full text-left"
+                className="flex items-center justify-between w-full text-left gap-4"
               >
-                <div>
-                  <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b]">Sent Itinerary</h2>
+                <div className="min-w-0 text-left">
+                  <h2 className="text-2xl font-semibold text-accent-theme">Sent itinerary</h2>
                   {request.sent_at && (
-                    <p className="text-sm text-gray-400 mt-1">
+                    <p className="text-sm text-secondary mt-2 leading-relaxed">
                       First sent: {formatDateTime(request.sent_at)}
                       {request.email_sent_count && request.email_sent_count > 1 && (
                         <span className="ml-2">• Sent {request.email_sent_count} time{request.email_sent_count > 1 ? 's' : ''}</span>
@@ -2497,7 +2609,7 @@ LankaLux Team`
                   )}
                 </div>
                 <svg
-                  className={`w-6 h-6 text-gray-400 shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${sentItineraryExpanded ? 'rotate-180' : ''}`}
+                  className={`w-6 h-6 text-secondary shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${sentItineraryExpanded ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -2539,14 +2651,14 @@ LankaLux Team`
                 const showLimitNote = sentOptionsList.length >= 10
                 
                 return (
-                <div className="mb-8 mt-8 pt-8 border-t border-gray-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-[#d4af37]">All Sent Options ({sentOptionsList.length})</h3>
+                <div className="mb-4 mt-10 pt-10 border-t border-accent text-left">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+                    <h3 className="text-xl font-semibold text-accent-theme">All sent options ({sentOptionsList.length})</h3>
                     {showLimitNote && (
-                      <span className="text-xs text-gray-500">Showing most recent 10</span>
+                      <span className="text-xs text-secondary">Showing most recent 10</span>
                     )}
                   </div>
-                  <div className="space-y-6">
+                  <div className="space-y-8">
                     {sentOptionsList.map((sentOption: any, index: number) => {
                       // Ensure option_index is a valid number
                       const optionIndex = typeof sentOption.option_index === 'number' ? sentOption.option_index : null
@@ -2608,48 +2720,41 @@ LankaLux Team`
                       return (
                         <div
                           key={`sent-option-${index}-${optionIndex ?? 'h'}-${(hotelSnap as { name?: string })?.name ?? ''}`}
-                          className="bg-gray-50 border border-gray-200 rounded-lg p-6 transition-colors hover:border-[#d4af37] hover:border-opacity-50"
+                          className="rounded-2xl border border-accent bg-inner-theme p-6 md:p-8 transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-lg hover:shadow-black/30"
                         >
-                          <div className="space-y-4">
-                            {/* Header with title and sent date */}
+                          <div className="space-y-6">
                             <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <h4 className="text-xl font-semibold text-[#d4af37]">{String(optionTitle)}</h4>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-3 mb-2">
+                                  <h4 className="text-xl font-semibold text-accent-theme">{String(optionTitle)}</h4>
                                   {sentAt && (
-                                    <span className="text-xs text-gray-500">
+                                    <span className="text-xs text-secondary">
                                       Sent: {formatDateTime(sentAt)}
                                     </span>
                                   )}
                                 </div>
                                 {optionSummary && (
-                                  <p className="text-gray-800 text-sm mt-2">{optionSummary}</p>
+                                  <p className="text-secondary text-sm mt-2 leading-relaxed">{optionSummary}</p>
                                 )}
                               </div>
                             </div>
 
-                            {/* Days and details */}
                             {optionDays && (
                               <div>
-                                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                                  Day-by-Day Itinerary
-                                </label>
-                                <div className="bg-gray-50 border border-gray-200 rounded-md p-4 max-h-64 overflow-y-auto">
-                                  <p className="text-gray-800 text-sm whitespace-pre-wrap font-mono">
+                                <label className={lbl}>Day-by-day itinerary</label>
+                                <div className="rounded-xl border border-accent bg-inner-deep p-5 max-h-64 overflow-y-auto">
+                                  <p className="text-secondary text-sm whitespace-pre-wrap font-mono leading-relaxed">
                                     {optionDays}
                                   </p>
                                 </div>
                               </div>
                             )}
 
-                            {/* Total Kilometers - Admin Only */}
                             {option && typeof option.total_kilometers === 'number' && (
-                              <div className="pt-4 border-t border-gray-200">
-                                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                                  Total Kilometers
-                                </label>
-                                <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
-                                  <p className="text-[#d4af37] text-lg font-semibold">
+                              <div className="pt-6 border-t border-accent">
+                                <label className={lbl}>Total kilometers</label>
+                                <div className="rounded-xl border border-accent bg-inner-deep p-4">
+                                  <p className="text-accent-theme text-lg font-semibold">
                                     {option.total_kilometers.toLocaleString()} km
                                   </p>
                                 </div>
@@ -2657,11 +2762,9 @@ LankaLux Team`
                             )}
 
                             {hotelSnap && typeof hotelSnap === 'object' && (hotelSnap as { name?: string }).name && (
-                              <div className="pt-4 border-t border-gray-200">
-                                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                                  Hotel in this send
-                                </label>
-                                <p className="text-gray-800 text-sm font-medium">
+                              <div className="pt-6 border-t border-accent">
+                                <label className={lbl}>Hotel in this send</label>
+                                <p className="text-primary text-sm font-medium">
                                   {(hotelSnap as { name: string }).name}
                                   {(hotelSnap as { location?: string }).location
                                     ? ` — ${(hotelSnap as { location: string }).location}`
@@ -2672,23 +2775,22 @@ LankaLux Team`
 
                             {/* Public Link */}
                             {itineraryUrl && (
-                              <div className="pt-4 border-t border-gray-200">
-                                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
-                                  Public Itinerary Link
-                                </label>
-                                <div className="flex items-center gap-2">
+                              <div className="pt-6 border-t border-accent">
+                                <label className={lbl}>Public itinerary link</label>
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                                   <input
                                     type="text"
                                     readOnly
                                     value={itineraryUrl}
-                                    className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-gray-800 text-sm font-mono"
+                                    className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-inner-deep border border-accent text-secondary text-sm font-mono"
                                   />
                                   <button
+                                    type="button"
                                     onClick={() => {
                                       navigator.clipboard.writeText(itineraryUrl)
                                       alert('Link copied to clipboard!')
                                     }}
-                                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
+                                    className={`${btnSec} text-sm shrink-0`}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -2699,7 +2801,7 @@ LankaLux Team`
                                     href={itineraryUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
+                                    className={`${btnPri} text-sm shrink-0 no-underline`}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -2727,50 +2829,50 @@ LankaLux Team`
       {/* Follow-up email preview modal: edit subject and body then send */}
       {templateEmailModalOpen && request?.email && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-40"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
           onClick={() => !sendingTemplateEmail && setTemplateEmailModalOpen(false)}
         >
           <div
-            className="bg-panel border border-panel-border rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col"
+            className="rounded-2xl bg-card border border-accent shadow-card max-w-2xl w-full max-h-[90vh] flex flex-col transition-colors duration-300"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-panel-border">
-              <h2 className="text-xl font-semibold text-[#d4af37]">Preview email</h2>
-              <p className="text-sm text-gray-400 mt-1">Edit the subject and message below, then send.</p>
+            <div className="p-6 md:p-8 border-b border-accent text-left">
+              <h2 className="text-xl font-semibold text-accent-theme">Preview email</h2>
+              <p className="text-sm text-secondary mt-2">Edit the subject and message below, then send.</p>
             </div>
-            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+            <div className="p-6 md:p-8 overflow-y-auto flex-1 space-y-6 text-left">
               <div>
-                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">To</label>
-                <p className="text-gray-900 font-medium">{request.email}</p>
+                <label className={lbl}>To</label>
+                <p className="text-primary font-medium">{request.email}</p>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Subject</label>
+                <label className={lbl}>Subject</label>
                 <input
                   type="text"
                   value={previewSubject}
                   onChange={(e) => setPreviewSubject(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent"
+                  className={field}
                   placeholder="Email subject"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Message</label>
-                <p className="text-xs text-gray-500 mb-1">A “View your itinerary” button and our signature will be added automatically.</p>
+                <label className={lbl}>Message</label>
+                <p className="text-xs text-secondary mb-2">A “View your itinerary” button and our signature will be added automatically.</p>
                 <textarea
                   value={previewBody}
                   onChange={(e) => setPreviewBody(e.target.value)}
                   rows={12}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent resize-y font-mono text-sm"
+                  className={`${field} resize-y font-mono text-sm min-h-[200px]`}
                   placeholder="Email body (plain text)"
                 />
               </div>
             </div>
-            <div className="p-6 border-t border-panel-border flex justify-end gap-3">
+            <div className="p-6 md:p-8 border-t border-accent flex flex-wrap justify-end gap-4">
               <button
                 type="button"
                 onClick={() => !sendingTemplateEmail && setTemplateEmailModalOpen(false)}
                 disabled={sendingTemplateEmail}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-colors disabled:opacity-50"
+                className={`${btnSec} disabled:opacity-50`}
               >
                 Cancel
               </button>
@@ -2778,7 +2880,7 @@ LankaLux Team`
                 type="button"
                 onClick={handleSendTemplateEmail}
                 disabled={sendingTemplateEmail}
-                className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className={`${btnPri} disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {sendingTemplateEmail ? (
                   <>
@@ -2802,7 +2904,7 @@ LankaLux Team`
       {/* Cancellation reason modal - in-app styled, no browser prompt */}
       {cancellationReasonModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-40"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
           onClick={() => {
             setCancellationReasonModalOpen(false)
             setCancellationReasonInput('')
@@ -2810,25 +2912,25 @@ LankaLux Team`
           }}
         >
           <div
-            className="bg-panel border border-panel-border rounded-xl shadow-xl max-w-md w-full"
+            className="rounded-2xl bg-card border border-accent shadow-card max-w-md w-full transition-colors duration-300"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-panel-border">
-              <h2 className="text-xl font-semibold text-[#d4af37]">Reason for cancellation</h2>
-              <p className="text-sm text-gray-400 mt-1">Optional. This will be shown on the request and dashboard.</p>
+            <div className="p-6 md:p-8 border-b border-accent text-left">
+              <h2 className="text-xl font-semibold text-accent-theme">Reason for cancellation</h2>
+              <p className="text-sm text-secondary mt-2">Optional. This will be shown on the request and dashboard.</p>
             </div>
-            <div className="p-6">
-              <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1.5">Reason (optional)</label>
+            <div className="p-6 md:p-8 text-left">
+              <label className={lbl}>Reason (optional)</label>
               <textarea
                 value={cancellationReasonInput}
                 onChange={(e) => setCancellationReasonInput(e.target.value)}
                 rows={3}
-                placeholder="e.g. Client postponed trip or Budget change"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent resize-y"
+                placeholder="e.g. Client postponed trip or budget change"
+                className={`${field} resize-y`}
                 autoFocus
               />
             </div>
-            <div className="p-6 border-t border-panel-border flex justify-end gap-3">
+            <div className="p-6 md:p-8 border-t border-accent flex flex-wrap justify-end gap-4">
               <button
                 type="button"
                 onClick={() => {
@@ -2836,7 +2938,7 @@ LankaLux Team`
                   setCancellationReasonInput('')
                   setCancellationReasonPending(null)
                 }}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-colors"
+                className={btnSec}
               >
                 Cancel
               </button>
@@ -2844,7 +2946,7 @@ LankaLux Team`
                 type="button"
                 onClick={handleSubmitCancellationReason}
                 disabled={saving || cancelling}
-                className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`${btnPri} disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {saving || cancelling ? "Saving..." : "Confirm"}
               </button>
