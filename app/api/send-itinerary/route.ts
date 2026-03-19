@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import {
-  formatItineraryDaysHtml,
+  buildItineraryHtmlWithImages,
   formatItineraryDaysPlain,
   buildHotelSectionHtml,
   buildHotelSectionPlain,
 } from '@/lib/email-itinerary-hotel'
+import { absoluteImageSrc } from '@/lib/managed-image'
 const nodemailer = require('nodemailer')
 
 export async function POST(request: Request) {
@@ -191,7 +192,13 @@ export async function POST(request: Request) {
         showPrice: !!h.showPrice,
         pricePerNight: typeof h.pricePerNight === 'string' ? h.pricePerNight : '',
         description: typeof h.description === 'string' ? h.description : '',
-        images: Array.isArray(h.images) ? h.images.filter((x): x is string => typeof x === 'string') : [],
+        images: Array.isArray(h.images)
+          ? h.images
+              .map((x: unknown) =>
+                typeof x === 'string' ? x : x && typeof x === 'object' && 'src' in x ? String((x as { src: string }).src) : ''
+              )
+              .filter(Boolean)
+          : [],
       }
     }
 
@@ -284,14 +291,21 @@ export async function POST(request: Request) {
       include_itinerary && selectedOption
         ? `<div class="journey-overview">
               <h3>— Itinerary —</h3>
-              ${formatItineraryDaysHtml(selectedOption)}
+              ${buildItineraryHtmlWithImages(selectedOption, baseUrl)}
             </div>
             <div class="cta-section">
                 <a href="${itineraryUrl}" class="journey-link">View Your Complete Journey</a>
               </div>`
         : ''
 
-    const hotelHtml = include_hotel && hotelPayload ? buildHotelSectionHtml(hotelPayload) : ''
+    const hotelForEmail =
+      hotelPayload && Array.isArray(hotelPayload.images)
+        ? {
+            ...hotelPayload,
+            images: hotelPayload.images.map((s) => absoluteImageSrc(String(s), baseUrl)),
+          }
+        : hotelPayload
+    const hotelHtml = include_hotel && hotelForEmail ? buildHotelSectionHtml(hotelForEmail) : ''
 
     const preheader =
       include_itinerary && include_hotel

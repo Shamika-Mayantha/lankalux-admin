@@ -52,3 +52,18 @@ export const FLEET_VEHICLES: FleetVehicle[] = [
 export function getFleetVehicleById(id: string): FleetVehicle | undefined {
   return FLEET_VEHICLES.find((v) => v.id === id)
 }
+
+/** All unique image paths from the fleet folder (for photo picker). */
+export function getAllFleetImages(): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const v of FLEET_VEHICLES) {
+    for (const src of v.images) {
+      if (!seen.has(src)) {
+        seen.add(src)
+        out.push(src)
+      }
+    }
+  }
+  return out.sort()
+}

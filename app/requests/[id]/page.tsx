@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { FOLLOW_UP_TEMPLATES, getTemplate, type TemplateId } from '@/lib/email-templates'
-import { FLEET_VEHICLES, getFleetVehicleById } from '@/lib/fleet'
+import { FLEET_VEHICLES, getFleetVehicleById, getAllFleetImages } from '@/lib/fleet'
 import { Map, Building2, Send, Mail } from 'lucide-react'
 import { HotelModal } from '@/components/requests/HotelModal'
 import { HotelCard } from '@/components/requests/HotelCard'
@@ -119,6 +119,7 @@ export default function RequestDetailsPage() {
   const [cancellationReasonInput, setCancellationReasonInput] = useState('')
   const [cancellationReasonPending, setCancellationReasonPending] = useState<'status' | 'trip' | null>(null)
   const [includeVehicleInItinerary, setIncludeVehicleInItinerary] = useState(false)
+  const [sendVehiclePhotos, setSendVehiclePhotos] = useState<string[]>([])
   const [includePriceInItinerary, setIncludePriceInItinerary] = useState(false)
   const [sendPriceValue, setSendPriceValue] = useState('')
   const [sendVehicleId, setSendVehicleId] = useState('')
@@ -130,6 +131,8 @@ export default function RequestDetailsPage() {
   const [includeHotelSend, setIncludeHotelSend] = useState(true)
   const [savingHotels, setSavingHotels] = useState(false)
   const [clientPreviewOpen, setClientPreviewOpen] = useState(false)
+  const [previewingOptionIndex, setPreviewingOptionIndex] = useState<number | null>(null)
+  const [defaultImagesByOption, setDefaultImagesByOption] = useState<Record<number, ManagedImageItem[]>>({})
   const [savingItineraryImages, setSavingItineraryImages] = useState<number | null>(null)
 
   useEffect(() => {
@@ -286,6 +289,20 @@ export default function RequestDetailsPage() {
       }
     }
   }, [request, editingSentItinerary])
+
+  // Sync default images from loaded request so "Reset to Default" has a baseline
+  useEffect(() => {
+    if (!request?.itinerary_options?.options) return
+    setDefaultImagesByOption((prev) => {
+      let next = prev
+      request.itinerary_options!.options!.forEach((opt, i) => {
+        if (opt?.images?.length && (next[i] === undefined || next[i]?.length === 0)) {
+          next = { ...next, [i]: opt.images }
+        }
+      })
+      return next
+    })
+  }, [request?.id])
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A'
@@ -538,10 +555,30 @@ export default function RequestDetailsPage() {
       }
 
       // Refresh request data to show the new option
-      const updatedRequest = await fetchRequestData(request.id)
+      let updatedRequest = await fetchRequestData(request.id)
       if (updatedRequest) {
         setRequest(updatedRequest)
       }
+      const newOpt = updatedRequest?.itinerary_options?.options?.[optionIndex] as ItineraryOption | null | undefined
+      const hasNoImages = !newOpt?.images || newOpt.images.length === 0
+      if (updatedRequest && hasNoImages) {
+        try {
+          const libRes = await fetch('/api/image-library')
+          const libData = await libRes.json()
+          const paths: string[] = Array.isArray(libData.paths) ? libData.paths : []
+          const defaultItems: ManagedImageItem[] = paths.map((p: string) => ({ src: p, type: 'default' }))
+          if (defaultItems.length > 0) {
+            await handleUpdateItineraryImages(optionIndex, defaultItems)
+            updatedRequest = await fetchRequestData(request.id) ?? updatedRequest
+            setRequest(updatedRequest)
+            setDefaultImagesByOption((prev) => ({ ...prev, [optionIndex]: defaultItems }))
+          }
+        } catch (e) {
+          console.error('Failed to load default images:', e)
+        }
+      }
+      setPreviewingOptionIndex(optionIndex)
+      setClientPreviewOpen(true)
       setGeneratingOption(null)
     } catch (err) {
       console.error('Unexpected error generating option:', err)
@@ -1175,7 +1212,16 @@ LankaLux Team`
       setSendingItinerary(true)
       setSendSuccess(false)
 
-      const vehicleOption = includeVehicleInItinerary && sendVehicleId ? getFleetVehicleById(sendVehicleId) : null
+      const baseVehicle = includeVehicleInItinerary && sendVehicleId ? getFleetVehicleById(sendVehicleId) : null
+      const vehicleOption = baseVehicle
+        ? {
+            ...baseVehicle,
+            images:
+              sendVehiclePhotos.length >= 3 && sendVehiclePhotos.length <= 4
+                ? sendVehiclePhotos
+                : baseVehicle.images,
+          }
+        : null
       const sendOptions = {
         include_vehicle: includeItinerarySend && includeVehicleInItinerary,
         include_price: includeItinerarySend && includePriceInItinerary,
@@ -2218,9 +2264,10 @@ LankaLux Team`
                   selectingOption={selectingOption}
                   onSelect={() => handleSelectOption(index)}
                   onRegenerate={() => handleGenerateSingleOption(index)}
-                  requestId={request.id}
-                  onImagesChange={(items) => void handleUpdateItineraryImages(index, items)}
-                  savingImages={savingItineraryImages === index}
+                  onPreview={() => {
+                    setPreviewingOptionIndex(index)
+                    setClientPreviewOpen(true)
+                  }}
                 />
               )
             })}
@@ -2471,7 +2518,10 @@ LankaLux Team`
                     <input
                       type="checkbox"
                       checked={includeVehicleInItinerary}
-                      onChange={(e) => setIncludeVehicleInItinerary(e.target.checked)}
+                      onChange={(e) => {
+                        setIncludeVehicleInItinerary(e.target.checked)
+                        if (!e.target.checked) setSendVehiclePhotos([])
+                      }}
                       className="rounded border-accent text-accent-theme"
                     />
                     Include vehicle
@@ -2487,18 +2537,66 @@ LankaLux Team`
                   </label>
                 </div>
                 {includeVehicleInItinerary && (
-                  <div className="max-w-md">
-                    <Select
-                      label="Vehicle"
-                      value={sendVehicleId}
-                      onChange={setSendVehicleId}
-                      options={[
-                        { value: '', label: 'Select vehicle' },
-                        ...FLEET_VEHICLES.map((v) => ({ value: v.id, label: v.name })),
-                      ]}
-                      placeholder="Select vehicle"
-                      fullWidth
-                    />
+                  <div className="space-y-4">
+                    <div className="max-w-md">
+                      <Select
+                        label="Vehicle"
+                        value={sendVehicleId}
+                        onChange={setSendVehicleId}
+                        options={[
+                          { value: '', label: 'Select vehicle' },
+                          ...FLEET_VEHICLES.map((v) => ({ value: v.id, label: v.name })),
+                        ]}
+                        placeholder="Select vehicle"
+                        fullWidth
+                      />
+                    </div>
+                    <div>
+                      <p className="label-theme mb-2">Vehicle photos for public link (select 3–4 from fleet)</p>
+                      <div className="flex flex-wrap gap-2">
+                        {getAllFleetImages().map((src) => {
+                          const selected = sendVehiclePhotos.includes(src)
+                          const count = sendVehiclePhotos.length
+                          const canAdd = count < 4 && !selected
+                          const canRemove = selected
+                          const toggle = () => {
+                            if (selected) {
+                              setSendVehiclePhotos((prev) => prev.filter((p) => p !== src))
+                            } else if (count < 4) {
+                              setSendVehiclePhotos((prev) => [...prev, src].slice(0, 4))
+                            }
+                          }
+                          return (
+                            <button
+                              key={src}
+                              type="button"
+                              onClick={toggle}
+                              disabled={!canAdd && !canRemove}
+                              className={`relative rounded-lg overflow-hidden border-2 transition-all w-20 h-20 shrink-0 ${
+                                selected
+                                  ? 'border-[var(--accent-gold)] ring-2 ring-[var(--accent-gold)]/50'
+                                  : 'border-theme opacity-80 hover:opacity-100'
+                              } ${!canAdd && !canRemove ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={src} alt="" className="w-full h-full object-cover" />
+                              {selected && (
+                                <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white text-lg font-bold">
+                                  {sendVehiclePhotos.indexOf(src) + 1}
+                                </span>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <p className="text-secondary text-xs mt-2">
+                        {sendVehiclePhotos.length < 3
+                          ? `Select 3–4 photos (${sendVehiclePhotos.length} selected). Public link will use vehicle default images until you pick 3–4.`
+                          : sendVehiclePhotos.length <= 4
+                            ? `${sendVehiclePhotos.length} photos selected — these will show on the public link.`
+                            : 'Max 4 photos. Deselect one to change.'}
+                      </p>
+                    </div>
                   </div>
                 )}
                 {includePriceInItinerary && (
@@ -2520,7 +2618,11 @@ LankaLux Team`
             </p>
             <div className="flex flex-wrap items-center gap-4 pt-4">
               <Button
-                onClick={() => setClientPreviewOpen(true)}
+                onClick={() => {
+                  const idx = request.selected_option !== null && request.selected_option !== undefined ? request.selected_option : 0
+                  setPreviewingOptionIndex(idx)
+                  setClientPreviewOpen(true)
+                }}
                 className="min-w-[200px]"
               >
                 <Send className="w-4 h-4" />
@@ -2542,18 +2644,25 @@ LankaLux Team`
 
         <ClientViewPreviewModal
           open={clientPreviewOpen}
-          onClose={() => setClientPreviewOpen(false)}
+          onClose={() => {
+            setClientPreviewOpen(false)
+            setPreviewingOptionIndex(null)
+          }}
           clientName={request.client_name || 'Valued Client'}
           includeItinerary={includeItinerarySend}
           includeHotel={includeHotelSend}
           itineraryOption={
-            includeItinerarySend &&
-            request.selected_option !== null &&
-            request.selected_option !== undefined &&
-            request.itinerary_options?.options?.[request.selected_option]
-              ? (request.itinerary_options.options[request.selected_option] as import('@/components/requests/itinerary-types').ItineraryOption)
+            includeItinerarySend
+              ? (request.itinerary_options?.options?.[previewingOptionIndex ?? request.selected_option ?? 0] as import('@/components/requests/itinerary-types').ItineraryOption | null | undefined) ?? null
               : null
           }
+          defaultItineraryImages={defaultImagesByOption[previewingOptionIndex ?? request.selected_option ?? 0] ?? []}
+          onItineraryImagesChange={(items) => {
+            const idx = previewingOptionIndex ?? request.selected_option
+            if (idx != null) void handleUpdateItineraryImages(idx, items)
+          }}
+          requestId={request.id}
+          savingImages={savingItineraryImages === (previewingOptionIndex ?? request.selected_option ?? 0)}
           hotel={includeHotelSend && selectedHotel ? selectedHotel : null}
           onSendEmail={() => void handleSendItinerary()}
           onSendWhatsApp={() => {

@@ -1,10 +1,12 @@
 'use client'
 
-import { X, Send, MessageCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, Send, MessageCircle, ImageIcon, RotateCcw } from 'lucide-react'
 import type { ManagedImageItem } from '@/lib/managed-image'
 import { imageSrcs, normalizeManagedImages } from '@/lib/managed-image'
 import type { ItineraryOption } from '@/components/requests/itinerary-types'
 import type { HotelRecord } from '@/lib/hotel-types'
+import { ImageManager } from '@/components/ImageManager'
 
 function DayBlock({
   day,
@@ -42,6 +44,10 @@ export function ClientViewPreviewModal({
   includeHotel,
   itineraryOption,
   hotel,
+  defaultItineraryImages = [],
+  onItineraryImagesChange,
+  requestId,
+  savingImages = false,
   onSendEmail,
   onSendWhatsApp,
   sending,
@@ -54,11 +60,19 @@ export function ClientViewPreviewModal({
   includeHotel: boolean
   itineraryOption: ItineraryOption | null
   hotel: HotelRecord | null
+  defaultItineraryImages?: ManagedImageItem[]
+  onItineraryImagesChange?: (items: ManagedImageItem[]) => void
+  requestId?: string
+  savingImages?: boolean
   onSendEmail: () => void
   onSendWhatsApp: () => void
   sending: boolean
   hasWhatsApp: boolean
 }) {
+  const [showImageEditor, setShowImageEditor] = useState(false)
+  useEffect(() => {
+    if (!open) setShowImageEditor(false)
+  }, [open])
   if (!open) return null
 
   const opt = itineraryOption
@@ -187,6 +201,51 @@ export function ClientViewPreviewModal({
             )}
 
             <p className="text-stone-500 text-sm mt-12 pt-8 border-t border-stone-200">Warm regards,<br />The LankaLux Team</p>
+
+            {includeItinerary && opt && requestId && onItineraryImagesChange && (
+              <div className="mt-10 pt-8 border-t border-stone-200">
+                {!showImageEditor ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowImageEditor(true)}
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-[#c8a45d] text-[#b8860b] font-semibold hover:bg-[#c8a45d]/10 transition-colors"
+                  >
+                    <ImageIcon className="w-5 h-5" />
+                    Customize Images
+                  </button>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onItineraryImagesChange(defaultItineraryImages)}
+                        disabled={savingImages || defaultItineraryImages.length === 0}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-stone-300 text-stone-600 text-sm font-medium hover:bg-stone-100 disabled:opacity-50"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Reset to Default Images
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowImageEditor(false)}
+                        className="px-4 py-2 rounded-lg text-stone-500 text-sm hover:bg-stone-100"
+                      >
+                        Done
+                      </button>
+                    </div>
+                    <div className="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
+                      <ImageManager
+                        items={itineraryImages}
+                        onChange={onItineraryImagesChange}
+                        requestId={requestId}
+                        sectionLabel="Itinerary images"
+                        disabled={savingImages}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

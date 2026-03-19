@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { Select } from '@/components/ui/Select'
 
 const VEHICLES = ['Toyota Voxy'] as const
 const TABLE_NAME = 'Vehicle Reservations'
@@ -206,17 +207,14 @@ export default function VehicleReservationsPage() {
                 <span className="w-1 h-4 bg-amber-500/60 rounded-full" />
                 Select Vehicle
               </h2>
-              <select
-                value={vehicle}
-                onChange={(e) => setVehicle(e.target.value as VehicleName)}
-                className="w-full sm:max-w-xs px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/30"
-              >
-                {VEHICLES.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
+              <div className="w-full sm:max-w-xs">
+                <Select
+                  value={vehicle}
+                  onChange={(v) => setVehicle(v as VehicleName)}
+                  options={VEHICLES.map((v) => ({ value: v, label: v }))}
+                  fullWidth
+                />
+              </div>
               <p className="text-gray-500 text-sm mt-3">
                 {reservedDates.size} date{reservedDates.size !== 1 ? 's' : ''} reserved for this vehicle
               </p>
