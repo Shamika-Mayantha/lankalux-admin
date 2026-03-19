@@ -47,6 +47,7 @@ export function ClientViewPreviewModal({
   defaultItineraryImages = [],
   onItineraryImagesChange,
   requestId,
+  itineraryUrl,
   savingImages = false,
   onSendEmail,
   onSendWhatsApp,
@@ -63,6 +64,7 @@ export function ClientViewPreviewModal({
   defaultItineraryImages?: ManagedImageItem[]
   onItineraryImagesChange?: (items: ManagedImageItem[]) => void
   requestId?: string
+  itineraryUrl?: string
   savingImages?: boolean
   onSendEmail: () => void
   onSendWhatsApp: () => void
@@ -116,6 +118,28 @@ export function ClientViewPreviewModal({
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {includeItinerary && itineraryUrl && (
+          <div className="max-w-4xl mx-auto px-4 pt-4">
+            <div className="rounded-2xl border border-stone-300 bg-white p-3 shadow-sm">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <p className="text-sm font-semibold text-stone-700">Exact client link preview</p>
+                <a
+                  href={itineraryUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-[#b8860b] underline underline-offset-2"
+                >
+                  Open full page
+                </a>
+              </div>
+              <iframe
+                src={itineraryUrl}
+                title="Client itinerary preview"
+                className="w-full h-[55vh] rounded-xl border border-stone-200"
+              />
+            </div>
+          </div>
+        )}
         <div className="max-w-lg mx-auto min-h-full bg-white shadow-2xl">
           <header className="bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] text-center py-10 px-6 border-b-4 border-[#c8a45d]">
             <p className="text-[#c8a45d] text-2xl font-light tracking-[0.15em]">LANKALUX</p>

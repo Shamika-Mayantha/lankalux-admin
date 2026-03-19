@@ -1,12 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import {
-  buildItineraryHtmlWithImages,
-  formatItineraryDaysPlain,
-  buildHotelSectionHtml,
-  buildHotelSectionPlain,
-} from '@/lib/email-itinerary-hotel'
-import { absoluteImageSrc } from '@/lib/managed-image'
 const nodemailer = require('nodemailer')
 
 export async function POST(request: Request) {
@@ -288,24 +281,13 @@ export async function POST(request: Request) {
               </div>`
 
     const itineraryDaysHtml =
-      include_itinerary && selectedOption
-        ? `<div class="journey-overview">
-              <h3>— Itinerary —</h3>
-              ${buildItineraryHtmlWithImages(selectedOption, baseUrl)}
-            </div>
-            <div class="cta-section">
-                <a href="${itineraryUrl}" class="journey-link">View Your Complete Journey</a>
+      include_itinerary && itineraryUrl
+        ? `<div class="cta-section">
+                <a href="${itineraryUrl}" class="journey-link">View Your Journey</a>
               </div>`
         : ''
 
-    const hotelForEmail =
-      hotelPayload && Array.isArray(hotelPayload.images)
-        ? {
-            ...hotelPayload,
-            images: hotelPayload.images.map((s) => absoluteImageSrc(String(s), baseUrl)),
-          }
-        : hotelPayload
-    const hotelHtml = include_hotel && hotelForEmail ? buildHotelSectionHtml(hotelForEmail) : ''
+    const hotelHtml = ''
 
     const preheader =
       include_itinerary && include_hotel
@@ -654,21 +636,8 @@ export async function POST(request: Request) {
     `
 
     const textBlocks: string[] = [`Dear ${requestData.client_name || 'Valued Client'},`, '', introMain, '']
-    if (include_itinerary && selectedOption) {
-      textBlocks.push(
-        '--- ITINERARY ---',
-        `Travel Dates: ${startDateFormatted} - ${endDateFormatted}`,
-        `Journey: ${selectedOption.title}`,
-        requestData.duration ? `Duration: ${requestData.duration} Days` : '',
-        '',
-        formatItineraryDaysPlain(selectedOption),
-        '',
-        `View full journey: ${itineraryUrl}`,
-        ''
-      )
-    }
-    if (include_hotel && hotelPayload) {
-      textBlocks.push(buildHotelSectionPlain(hotelPayload), '')
+    if (include_itinerary && itineraryUrl) {
+      textBlocks.push(`View your journey: ${itineraryUrl}`, '')
     }
     textBlocks.push(
       'If you have any questions, please reach out.',

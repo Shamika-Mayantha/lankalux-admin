@@ -2699,6 +2699,11 @@ LankaLux Team`
             if (idx != null) void handleUpdateItineraryImages(idx, items)
           }}
           requestId={request.id}
+          itineraryUrl={
+            includeItinerarySend && request.public_token
+              ? `/itinerary/${request.public_token}/${previewingOptionIndex ?? request.selected_option ?? 0}`
+              : undefined
+          }
           savingImages={savingItineraryImages === (previewingOptionIndex ?? request.selected_option ?? 0)}
           hotel={includeHotelSend && selectedHotel ? selectedHotel : null}
           onSendEmail={() => void handleSendItinerary()}
