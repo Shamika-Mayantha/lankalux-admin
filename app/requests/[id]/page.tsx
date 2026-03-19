@@ -5,6 +5,14 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { FOLLOW_UP_TEMPLATES, getTemplate, type TemplateId } from '@/lib/email-templates'
 import { FLEET_VEHICLES, getFleetVehicleById } from '@/lib/fleet'
+import { Map, Building2, Send, Mail } from 'lucide-react'
+import { HotelModal } from '@/components/requests/HotelModal'
+import { HotelCard } from '@/components/requests/HotelCard'
+import { ItineraryCard, ItineraryPlaceholder, ItineraryGenerating } from '@/components/requests/ItineraryCard'
+import type { HotelRecord } from '@/lib/hotel-types'
+import { parseHotelOptions } from '@/lib/hotel-types'
+import { formatItineraryDaysPlain, buildHotelSectionPlain } from '@/lib/email-itinerary-hotel'
+import { Button } from '@/components/ui/Button'
 
 interface ItineraryOption {
   title: string
@@ -42,6 +50,7 @@ interface Request {
   last_sent_option: number | null
   email_sent_count: number | null
   sent_options: any[] | null
+  hotel_options?: string | null
   follow_up_emails_sent?: { sent_at: string; template_id: string; template_name: string; subject: string }[] | null
   link_opens?: { opened_at: string; option_index?: number | null }[] | null
   created_at: string
@@ -104,6 +113,20 @@ export default function RequestDetailsPage() {
   const [includePriceInItinerary, setIncludePriceInItinerary] = useState(false)
   const [sendPriceValue, setSendPriceValue] = useState('')
   const [sendVehicleId, setSendVehicleId] = useState('')
+  const [hotels, setHotels] = useState<HotelRecord[]>([])
+  const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null)
+  const [hotelModalOpen, setHotelModalOpen] = useState(false)
+  const [editingHotel, setEditingHotel] = useState<HotelRecord | null>(null)
+  const [includeItinerarySend, setIncludeItinerarySend] = useState(true)
+  const [includeHotelSend, setIncludeHotelSend] = useState(true)
+  const [savingHotels, setSavingHotels] = useState(false)
+
+  useEffect(() => {
+    if (!request) return
+    const { hotels: h, selectedHotelId: sid } = parseHotelOptions(request.hotel_options ?? null)
+    setHotels(h)
+    setSelectedHotelId(sid)
+  }, [request?.id, request?.hotel_options])
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -914,19 +937,48 @@ LankaLux Team`
   }
 
   const handleWhatsAppShare = () => {
-    if (!request || !request.public_token || request.selected_option === null || request.selected_option === undefined) {
-      alert('Please select an itinerary option first to generate a shareable link.')
+    if (!request) return
+    if (!includeItinerarySend && !includeHotelSend) {
+      alert('Select at least one: Include itinerary or Include hotel.')
+      return
+    }
+    if (includeItinerarySend) {
+      if (!request.public_token || request.selected_option === null || request.selected_option === undefined) {
+        alert('Select an itinerary option first (or uncheck Include itinerary).')
+        return
+      }
+    }
+    if (includeHotelSend && !selectedHotel) {
+      alert('Select a hotel (or uncheck Include hotel).')
       return
     }
 
-    const baseUrl = "https://admin.lankalux.com"
-    const itineraryUrl = baseUrl + '/itinerary/' + request.public_token + '/' + request.selected_option
+    const baseUrl = 'https://admin.lankalux.com'
+    const itineraryUrl =
+      includeItinerarySend && request.public_token != null && request.selected_option != null
+        ? `${baseUrl}/itinerary/${request.public_token}/${request.selected_option}`
+        : ''
+    const opt =
+      includeItinerarySend && request.itinerary_options?.options?.[request.selected_option!]
+        ? request.itinerary_options.options[request.selected_option!]
+        : null
 
-    const message = encodeURIComponent(
-      `Your personalized LankaLux Sri Lanka itinerary is ready! View it here: ${itineraryUrl}`
-    )
+    const parts: string[] = ['*LankaLux*']
+    if (includeItinerarySend && opt) {
+      parts.push(
+        '',
+        '--- ITINERARY ---',
+        formatItineraryDaysPlain(opt as ItineraryOption),
+        '',
+        itineraryUrl
+      )
+    }
+    if (includeHotelSend && selectedHotel) {
+      parts.push('', buildHotelSectionPlain(hotelToApiPayload(selectedHotel)))
+    }
+    const message = encodeURIComponent(parts.join('\n'))
 
-    const whatsappNumber = request.whatsapp?.replace(new RegExp("[^0-9]", "g"), "") || ""
+    const whatsappNumber = request.whatsapp?.replace(new RegExp('[^0-9]', 'g'), '') || ''
     if (whatsappNumber) {
       window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank')
     } else {
@@ -979,11 +1031,72 @@ LankaLux Team`
     }
   }
 
+  const persistHotelOptions = async (nextHotels: HotelRecord[], nextSelectedId: string | null) => {
+    if (!request) return false
+    setSavingHotels(true)
+    try {
+      const { error } = await (supabase.from('Client Requests') as any)
+        .update({
+          hotel_options: JSON.stringify({ hotels: nextHotels, selectedHotelId: nextSelectedId }),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+      if (error) {
+        console.error(error)
+        alert(
+          'Could not save hotels. Add column hotel_options (text) to Client Requests — see supabase/migrations in the project.'
+        )
+        setSavingHotels(false)
+        return false
+      }
+      setHotels(nextHotels)
+      setSelectedHotelId(nextSelectedId)
+      const u = await fetchRequestData(request.id)
+      if (u) setRequest(u)
+      setSavingHotels(false)
+      return true
+    } catch (e) {
+      console.error(e)
+      setSavingHotels(false)
+      return false
+    }
+  }
+
+  const selectedHotel = hotels.find((h) => h.id === selectedHotelId) ?? null
+
+  const hotelToApiPayload = (h: HotelRecord) => ({
+    name: h.name,
+    location: h.location,
+    mapsUrl: h.mapsUrl,
+    starRating: h.starRating,
+    roomType: h.roomType,
+    showPrice: h.showPrice,
+    pricePerNight: h.pricePerNight,
+    description: h.description,
+    images: h.images,
+  })
+
   const handleSendItinerary = async () => {
     if (!request) return
 
-    if (request.selected_option === null || request.selected_option === undefined) {
-      alert('Please select an itinerary option first.')
+    if (!includeItinerarySend && !includeHotelSend) {
+      alert('Select at least one: Include itinerary or Include hotel.')
+      return
+    }
+    if (includeItinerarySend) {
+      if (request.selected_option === null || request.selected_option === undefined) {
+        alert('Please select an itinerary option first (or uncheck Include itinerary).')
+        return
+      }
+    }
+    if (includeHotelSend) {
+      if (!selectedHotel) {
+        alert('Please select a hotel (or uncheck Include hotel).')
+        return
+      }
+    }
+    if (!request.email?.trim()) {
+      alert('Client email is required to send.')
       return
     }
 
@@ -993,17 +1106,23 @@ LankaLux Team`
 
       const vehicleOption = includeVehicleInItinerary && sendVehicleId ? getFleetVehicleById(sendVehicleId) : null
       const sendOptions = {
-        include_vehicle: includeVehicleInItinerary,
-        include_price: includePriceInItinerary,
-        price: includePriceInItinerary ? sendPriceValue.trim() || null : null,
-        vehicle_option: vehicleOption || null,
+        include_vehicle: includeItinerarySend && includeVehicleInItinerary,
+        include_price: includeItinerarySend && includePriceInItinerary,
+        price: includeItinerarySend && includePriceInItinerary ? sendPriceValue.trim() || null : null,
+        vehicle_option: includeItinerarySend && vehicleOption ? vehicleOption : null,
       }
       const response = await fetch("/api/send-itinerary", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id: request.id, send_options: sendOptions }),
+        body: JSON.stringify({
+          id: request.id,
+          send_options: sendOptions,
+          include_itinerary: includeItinerarySend,
+          include_hotel: includeHotelSend,
+          hotel: includeHotelSend && selectedHotel ? hotelToApiPayload(selectedHotel) : undefined,
+        }),
       })
 
       const result = await response.json()
@@ -1793,34 +1912,18 @@ LankaLux Team`
               )}
         </div>
 
-        {/* Success Message */}
-        {sendSuccess && (
-          <div className="mb-12 bg-green-50 border-2 border-green-300 rounded-xl p-5">
-            <div className="flex items-center gap-3">
-              <svg
-                className="w-6 h-6 text-green-600 shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <p className="text-green-800 font-semibold">Itinerary sent successfully!</p>
-            </div>
-          </div>
-        )}
-
+        <div className="max-w-5xl mx-auto w-full space-y-14 mb-16 px-1 sm:px-2">
         {/* Follow-up email: before itinerary options, with collapsible sent log */}
         {request.email && (
-          <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
-            <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b] mb-4">Follow-up Email</h2>
-            <p className="text-muted mb-8 max-w-xl leading-relaxed">
-              Send a friendly, humanized email to the client. Choose a template, preview and edit in the popup, then send. The client will see a button linking to their itinerary when available.
+          <div className="rounded-2xl border border-zinc-800 bg-gradient-to-b from-[#1c1a18] to-[#141210] p-8 md:p-10 shadow-xl shadow-black/30">
+            <h2 className="text-xl md:text-2xl font-semibold text-[#d4af37] mb-2 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4af37]/15 text-[#d4af37]">
+                <Mail className="w-5 h-5" />
+              </span>
+              Follow-up email
+            </h2>
+            <p className="text-zinc-500 mb-8 max-w-xl leading-relaxed text-sm">
+              Friendly templates with preview. Itinerary link is included when available.
             </p>
             <div className="flex flex-wrap items-end gap-6">
               <div className="min-w-[260px]">
@@ -1952,9 +2055,14 @@ LankaLux Team`
         )}
 
         {/* Itinerary Options Section */}
-        <div className="bg-panel border border-panel-border rounded-xl p-6 md:p-8 mb-12 shadow-sm">
-          <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-            <h2 className="text-xl md:text-2xl font-semibold text-[#b8860b]">Itinerary Options</h2>
+        <div className="rounded-2xl border border-zinc-800 bg-gradient-to-b from-[#1c1a18] to-[#141210] p-8 md:p-10 shadow-xl shadow-black/30">
+          <div className="flex items-center justify-between mb-10 flex-wrap gap-4">
+            <h2 className="text-xl md:text-2xl font-semibold text-[#d4af37] flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4af37]/15 text-[#d4af37]">
+                <Map className="w-5 h-5" />
+              </span>
+              Itinerary options
+            </h2>
             {!isCancelled && (
               <div className="flex gap-2 flex-wrap">
                 {[0, 1, 2].map((optionIndex) => {
@@ -1993,133 +2101,8 @@ LankaLux Team`
               </div>
             )}
             {isCancelled && (
-              <p className="text-sm text-gray-500 italic">Itinerary generation disabled for cancelled trips</p>
+              <p className="text-sm text-zinc-500 italic">Itinerary generation disabled for cancelled trips</p>
             )}
-            {request.selected_option !== null && request.selected_option !== undefined && request.public_token ? (() => {
-              // Check if this is a resend (same option) or new send (different option or first time)
-              // It's a resend only if: sent_at exists AND last_sent_option matches selected_option
-              const isResend = request.sent_at && 
-                               request.last_sent_option !== null && 
-                               request.last_sent_option !== undefined &&
-                               request.selected_option === request.last_sent_option
-              
-              return (
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-start gap-6 p-5 bg-panel border border-panel-border rounded-xl shadow-sm">
-                    <p className="text-sm font-semibold text-foreground w-full mb-2">Add to itinerary before sending:</p>
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                      <span className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 bg-white transition-colors group-hover:border-[#d4af37] ${includeVehicleInItinerary ? 'border-[#b8860b] bg-[#b8860b]' : 'border-[#b8860b]'}`}>
-                        <input
-                          type="checkbox"
-                          checked={includeVehicleInItinerary}
-                          onChange={(e) => setIncludeVehicleInItinerary(e.target.checked)}
-                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                        />
-                        {includeVehicleInItinerary && (
-                          <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </span>
-                      <span className="text-sm font-medium text-foreground select-none">Include vehicle</span>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                      <span className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 bg-white transition-colors group-hover:border-[#d4af37] ${includePriceInItinerary ? 'border-[#b8860b] bg-[#b8860b]' : 'border-[#b8860b]'}`}>
-                        <input
-                          type="checkbox"
-                          checked={includePriceInItinerary}
-                          onChange={(e) => setIncludePriceInItinerary(e.target.checked)}
-                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                        />
-                        {includePriceInItinerary && (
-                          <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </span>
-                      <span className="text-sm font-medium text-foreground select-none">Include price</span>
-                    </label>
-                    {includeVehicleInItinerary && (
-                      <div className="w-full mt-2">
-                        <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">Vehicle</label>
-                        <select
-                          value={sendVehicleId}
-                          onChange={(e) => setSendVehicleId(e.target.value)}
-                          className="w-full max-w-md px-3 py-2 bg-white border border-gray-200 rounded-md text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                        >
-                          <option value="">Select a vehicle</option>
-                          {FLEET_VEHICLES.map((v) => (
-                            <option key={v.id} value={v.id}>{v.name}</option>
-                          ))}
-                        </select>
-                        {sendVehicleId && (() => {
-                          const v = getFleetVehicleById(sendVehicleId)
-                          return v ? (
-                            <p className="text-xs text-gray-600 mt-2 max-w-md">{v.description}</p>
-                          ) : null
-                        })()}
-                      </div>
-                    )}
-                    {includePriceInItinerary && (
-                      <div className="w-full mt-2">
-                        <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">Price (e.g. USD 2,500)</label>
-                        <input
-                          type="text"
-                          value={sendPriceValue}
-                          onChange={(e) => setSendPriceValue(e.target.value)}
-                          placeholder="Enter price to show on itinerary"
-                          className="w-full max-w-xs px-3 py-2 bg-white border border-gray-200 rounded-md text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2 flex-wrap items-center">
-                  <button
-                    onClick={handleSendItinerary}
-                    disabled={sendingItinerary}
-                    className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {sendingItinerary ? (
-                      <>
-                        <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black"></div>
-                        Sending...
-                      </>
-                    ) : isResend ? (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        Resend Itinerary
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        Send Itinerary to Client
-                      </>
-                    )}
-                  </button>
-                  {request.sent_at && request.last_sent_at && (
-                    <div className="flex items-center text-xs text-gray-400 px-2">
-                      Last sent: {formatDateTime(request.last_sent_at)}
-                    </div>
-                  )}
-                  {request.whatsapp && (
-                    <button
-                      onClick={handleWhatsAppShare}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md transition-colors duration-200 flex items-center gap-2"
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                      </svg>
-                      WhatsApp
-                    </button>
-                  )}
-                  </div>
-                </div>
-              )
-            })() : null}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -2128,128 +2111,34 @@ LankaLux Team`
               const optionExists = option !== null && option !== undefined
               const isGenerating = generatingOption === index
               const isSelected = request.selected_option === index
-              
+
               if (!optionExists && !isGenerating) {
-                // Placeholder for option not yet generated
                 return (
-                  <div
+                  <ItineraryPlaceholder
                     key={index}
-                    className="bg-gray-50 border border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center min-h-[320px]"
-                  >
-                    <div className="text-center">
-                      <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4 mx-auto">
-                        <span className="text-2xl text-gray-500">{index + 1}</span>
-                      </div>
-                      <p className="text-gray-500 mb-4">Option {index + 1} not generated yet</p>
-                      <button
-                        onClick={() => handleGenerateSingleOption(index)}
-                        disabled={generatingOption !== null || generatingItinerary || isCancelled}
-                        className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8941f] text-black font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Generate Option {index + 1}
-                      </button>
-                    </div>
-                  </div>
+                    index={index}
+                    isCancelled={isCancelled}
+                    generating={generatingOption !== null || generatingItinerary}
+                    onGenerate={() => handleGenerateSingleOption(index)}
+                  />
                 )
               }
-              
               if (isGenerating) {
-                // Loading state for option being generated
-                return (
-                  <div
-                    key={index}
-                    className="bg-gray-50 border border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center min-h-[320px]"
-                  >
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#d4af37] mb-4"></div>
-                    <p className="text-gray-400">Generating Option {index + 1}...</p>
-                  </div>
-                )
+                return <ItineraryGenerating key={index} index={index} />
               }
-              
-              // Display generated option (option is guaranteed to exist at this point)
-              if (!option) {
-                return null // Safety check
-              }
-              
+              if (!option) return null
               return (
-                <div
+                <ItineraryCard
                   key={index}
-                  className={`bg-gray-50 border rounded-lg p-6 flex flex-col ${
-                    isSelected
-                      ? 'border-[#d4af37] ring-2 ring-[#d4af37]'
-                      : 'border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <h3 className="text-xl font-semibold text-[#d4af37] flex-1">
-                      {option.title}
-                    </h3>
-                    {isSelected && (
-                      <span className="ml-2 px-2 py-1 bg-[#d4af37] text-black text-xs font-semibold rounded">
-                        SELECTED
-                      </span>
-                    )}
-                  </div>
-                  <div className="mb-4 flex-1">
-                    <p className="text-sm text-gray-400 mb-3">{option.summary}</p>
-                    <div className="bg-gray-50 border border-gray-200 rounded-md p-4 max-h-64 overflow-y-auto">
-                      <p className="text-gray-800 text-sm whitespace-pre-wrap font-mono">
-                        {Array.isArray(option.days) 
-                          ? option.days.map((day: any) => 
-                              `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities?.map((act: string) => `  • ${act}`).join('\n') || ''}`
-                            ).join('\n\n')
-                          : (typeof option.days === 'string' ? option.days : '')
-                        }
-                      </p>
-                    </div>
-                    {/* Total Kilometers - Admin Only */}
-                    {typeof option.total_kilometers === 'number' && (
-                      <div className="mt-3 bg-gray-50 border border-gray-200 rounded-md p-3">
-                        <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">
-                          Total Kilometers
-                        </label>
-                        <p className="text-[#d4af37] text-lg font-semibold">
-                          {option.total_kilometers.toLocaleString()} km
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleSelectOption(index)}
-                      disabled={selectingOption !== null}
-                      className={`flex-1 py-2 px-4 rounded-md font-semibold transition-colors duration-200 ${
-                        isSelected
-                          ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                          : 'bg-[#d4af37] hover:bg-[#b8941f] text-black'
-                      } disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
-                    >
-                      {selectingOption === index ? (
-                        <>
-                          <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current"></div>
-                          {isSelected ? 'Deselecting...' : 'Selecting...'}
-                        </>
-                      ) : isSelected ? (
-                        'Deselect Option'
-                      ) : (
-                        'Select This Option'
-                      )}
-                    </button>
-                    <button
-                      onClick={() => handleGenerateSingleOption(index)}
-                      disabled={generatingOption !== null || generatingItinerary || isCancelled}
-                      className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Regenerate this option"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
+                  index={index}
+                  option={option}
+                  isSelected={isSelected}
+                  isRegenerating={generatingOption === index}
+                  isCancelled={isCancelled}
+                  selectingOption={selectingOption}
+                  onSelect={() => handleSelectOption(index)}
+                  onRegenerate={() => handleGenerateSingleOption(index)}
+                />
               )
             })}
           </div>
@@ -2370,6 +2259,213 @@ LankaLux Team`
           })()}
         </div>
 
+        {/* Hotel Options */}
+        <div className="rounded-2xl border border-zinc-800 bg-gradient-to-b from-[#1c1a18] to-[#141210] p-8 md:p-10 shadow-xl shadow-black/30">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+            <h2 className="text-xl md:text-2xl font-semibold text-[#d4af37] flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4af37]/15 text-[#d4af37]">
+                <Building2 className="w-5 h-5" />
+              </span>
+              Hotel options
+            </h2>
+            <Button
+              onClick={() => {
+                setEditingHotel(null)
+                setHotelModalOpen(true)
+              }}
+              disabled={savingHotels || isCancelled}
+              className="shrink-0"
+            >
+              + Add hotel
+            </Button>
+          </div>
+          {hotels.length === 0 ? (
+            <p className="text-zinc-500 text-sm py-8 text-center border border-dashed border-zinc-700 rounded-2xl">
+              No hotels yet. Add properties the client can compare and select.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {hotels.map((h) => (
+                <HotelCard
+                  key={h.id}
+                  hotel={h}
+                  selected={selectedHotelId === h.id}
+                  onSelect={() => {
+                    void persistHotelOptions(hotels, selectedHotelId === h.id ? null : h.id)
+                  }}
+                  onEdit={() => {
+                    setEditingHotel(h)
+                    setHotelModalOpen(true)
+                  }}
+                  onDelete={() => {
+                    if (!confirm(`Remove “${h.name}”?`)) return
+                    const next = hotels.filter((x) => x.id !== h.id)
+                    const nextSel = selectedHotelId === h.id ? null : selectedHotelId
+                    void persistHotelOptions(next, nextSel)
+                  }}
+                  disabled={savingHotels}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Send to client */}
+        <div className="rounded-2xl border-2 border-[#d4af37]/30 bg-gradient-to-b from-[#1f1d1a] to-[#161513] p-8 md:p-10 shadow-2xl shadow-[#d4af37]/5">
+          <h2 className="text-xl font-semibold text-[#d4af37] mb-6 flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4af37]/20 text-[#d4af37]">
+              <Send className="w-5 h-5" />
+            </span>
+            Send to client
+          </h2>
+          {sendSuccess && (
+            <div className="mb-6 rounded-xl border border-emerald-700/50 bg-emerald-950/40 px-4 py-3 text-emerald-300 text-sm font-medium flex items-center gap-2">
+              <span className="text-lg">✓</span> Message sent successfully.
+            </div>
+          )}
+          <div className="space-y-6">
+            <div className="flex flex-col gap-4">
+              <label className="flex items-center gap-3 cursor-pointer group w-fit">
+                <span
+                  className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${includeItinerarySend ? 'border-[#d4af37] bg-[#d4af37]' : 'border-zinc-500 bg-zinc-800'}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={includeItinerarySend}
+                    onChange={(e) => setIncludeItinerarySend(e.target.checked)}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                  />
+                  {includeItinerarySend && (
+                    <svg className="h-3 w-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </span>
+                <span className="text-zinc-200 font-medium">Include itinerary</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer group w-fit">
+                <span
+                  className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${includeHotelSend ? 'border-[#d4af37] bg-[#d4af37]' : 'border-zinc-500 bg-zinc-800'}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={includeHotelSend}
+                    onChange={(e) => setIncludeHotelSend(e.target.checked)}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                  />
+                  {includeHotelSend && (
+                    <svg className="h-3 w-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </span>
+                <span className="text-zinc-200 font-medium">Include hotel</span>
+              </label>
+            </div>
+
+            {includeItinerarySend && (
+              <div className="rounded-xl border border-zinc-700 bg-zinc-900/40 p-5 space-y-4">
+                <p className="text-xs uppercase tracking-wider text-zinc-500">On public itinerary page</p>
+                <div className="flex flex-wrap gap-6">
+                  <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeVehicleInItinerary}
+                      onChange={(e) => setIncludeVehicleInItinerary(e.target.checked)}
+                      className="rounded border-zinc-600 text-[#d4af37]"
+                    />
+                    Include vehicle
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includePriceInItinerary}
+                      onChange={(e) => setIncludePriceInItinerary(e.target.checked)}
+                      className="rounded border-zinc-600 text-[#d4af37]"
+                    />
+                    Include price
+                  </label>
+                </div>
+                {includeVehicleInItinerary && (
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Vehicle</label>
+                    <select
+                      value={sendVehicleId}
+                      onChange={(e) => setSendVehicleId(e.target.value)}
+                      className="w-full max-w-md px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-100 text-sm"
+                    >
+                      <option value="">Select vehicle</option>
+                      {FLEET_VEHICLES.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {includePriceInItinerary && (
+                  <div>
+                    <label className="block text-xs text-zinc-500 mb-1">Price</label>
+                    <input
+                      value={sendPriceValue}
+                      onChange={(e) => setSendPriceValue(e.target.value)}
+                      placeholder="e.g. USD 2,500"
+                      className="w-full max-w-xs px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-100 text-sm"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Button
+                onClick={() => void handleSendItinerary()}
+                disabled={sendingItinerary || !request.email}
+                className="min-w-[180px]"
+              >
+                {sendingItinerary ? (
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                Send to client
+              </Button>
+              {request.whatsapp ? (
+                <Button variant="whatsapp" onClick={handleWhatsAppShare} className="min-w-[180px]">
+                  <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                  </svg>
+                  Send via WhatsApp
+                </Button>
+              ) : null}
+              {request.sent_at && request.last_sent_at && (
+                <span className="text-xs text-zinc-500">
+                  Last email: {formatDateTime(request.last_sent_at)}
+                </span>
+              )}
+            </div>
+            {!request.email && (
+              <p className="text-amber-600/90 text-sm">Add a client email to enable sending.</p>
+            )}
+          </div>
+        </div>
+
+        </div>
+
+        <HotelModal
+          open={hotelModalOpen}
+          onClose={() => {
+            setHotelModalOpen(false)
+            setEditingHotel(null)
+          }}
+          requestId={request.id}
+          initial={editingHotel}
+          onSave={(h) => {
+            const next = editingHotel ? hotels.map((x) => (x.id === h.id ? h : x)) : [...hotels, h]
+            void persistHotelOptions(next, selectedHotelId)
+          }}
+        />
+
         {/* Sent Itinerary Section - Show if any options have been sent */}
         {(() => {
           const hasSentAt = !!request.sent_at
@@ -2454,16 +2550,27 @@ LankaLux Team`
                     {sentOptionsList.map((sentOption: any, index: number) => {
                       // Ensure option_index is a valid number
                       const optionIndex = typeof sentOption.option_index === 'number' ? sentOption.option_index : null
-                      if (optionIndex === null || optionIndex === undefined) {
+                      const hotelSnap = sentOption.hotel_snapshot
+                      if (
+                        (optionIndex === null || optionIndex === undefined) &&
+                        (!hotelSnap || typeof hotelSnap !== 'object')
+                      ) {
                         return null
                       }
 
-                      const option = request.itinerary_options?.options?.[optionIndex]
-                      // Safely get option title - ensure it's a string
-                      let optionTitle = `Option ${optionIndex + 1}`
+                      const option =
+                        optionIndex !== null && optionIndex !== undefined
+                          ? request.itinerary_options?.options?.[optionIndex]
+                          : undefined
+                      let optionTitle =
+                        optionIndex !== null && optionIndex !== undefined
+                          ? `Option ${optionIndex + 1}`
+                          : hotelSnap && typeof (hotelSnap as { name?: string }).name === 'string'
+                            ? `Hotel: ${(hotelSnap as { name: string }).name}`
+                            : 'Email sent'
                       let optionSummary = ''
                       let optionDays: string = ''
-                      
+
                       if (option) {
                         if (typeof option.title === 'string') {
                           optionTitle = option.title
@@ -2488,15 +2595,19 @@ LankaLux Team`
                       let itineraryUrl = ''
                       if (sentOption.itinerary_url && typeof sentOption.itinerary_url === 'string') {
                         itineraryUrl = sentOption.itinerary_url
-                      } else if (request.public_token && typeof request.public_token === 'string') {
-                        // Fallback: generate URL if not stored
-                        const baseUrl = "https://admin.lankalux.com"
-                        itineraryUrl = baseUrl + "/itinerary/" + request.public_token + "/" + optionIndex
+                      } else if (
+                        request.public_token &&
+                        typeof request.public_token === 'string' &&
+                        optionIndex !== null &&
+                        optionIndex !== undefined
+                      ) {
+                        const baseUrl = 'https://admin.lankalux.com'
+                        itineraryUrl = baseUrl + '/itinerary/' + request.public_token + '/' + optionIndex
                       }
 
                       return (
-                        <div 
-                          key={`sent-option-${index}-${optionIndex}`} 
+                        <div
+                          key={`sent-option-${index}-${optionIndex ?? 'h'}-${(hotelSnap as { name?: string })?.name ?? ''}`}
                           className="bg-gray-50 border border-gray-200 rounded-lg p-6 transition-colors hover:border-[#d4af37] hover:border-opacity-50"
                         >
                           <div className="space-y-4">
@@ -2542,6 +2653,20 @@ LankaLux Team`
                                     {option.total_kilometers.toLocaleString()} km
                                   </p>
                                 </div>
+                              </div>
+                            )}
+
+                            {hotelSnap && typeof hotelSnap === 'object' && (hotelSnap as { name?: string }).name && (
+                              <div className="pt-4 border-t border-gray-200">
+                                <label className="block text-xs text-gray-500 uppercase tracking-wide mb-2">
+                                  Hotel in this send
+                                </label>
+                                <p className="text-gray-800 text-sm font-medium">
+                                  {(hotelSnap as { name: string }).name}
+                                  {(hotelSnap as { location?: string }).location
+                                    ? ` — ${(hotelSnap as { location: string }).location}`
+                                    : ''}
+                                </p>
                               </div>
                             )}
 

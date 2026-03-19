@@ -1,12 +1,27 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import {
+  formatItineraryDaysHtml,
+  formatItineraryDaysPlain,
+  buildHotelSectionHtml,
+  buildHotelSectionPlain,
+} from '@/lib/email-itinerary-hotel'
 const nodemailer = require('nodemailer')
 
 export async function POST(request: Request) {
   try {
     // Parse request body
     const body = await request.json()
-    const { id: requestId, send_options: sendOptionsBody } = body
+    const {
+      id: requestId,
+      send_options: sendOptionsBody,
+      include_itinerary: incItinRaw,
+      include_hotel: incHotelRaw,
+      hotel: hotelRaw,
+    } = body
+    const include_itinerary = incItinRaw !== undefined ? !!incItinRaw : true
+    const include_hotel = !!incHotelRaw
+    const hotelFromBody = hotelRaw && typeof hotelRaw === 'object' ? hotelRaw : null
     const sendOptions = sendOptionsBody && typeof sendOptionsBody === 'object'
       ? {
           include_vehicle: !!sendOptionsBody.include_vehicle,
@@ -99,23 +114,13 @@ export async function POST(request: Request) {
 
     const requestData = data as any
 
-    // Validate that an option is selected
-    if (requestData.selected_option === null || requestData.selected_option === undefined) {
+    if (!include_itinerary && !include_hotel) {
       return NextResponse.json(
-        { success: false, error: 'No itinerary option selected' },
+        { success: false, error: 'Choose at least one: Include itinerary or Include hotel' },
         { status: 400 }
       )
     }
 
-    // Validate that public_token exists
-    if (!requestData.public_token) {
-      return NextResponse.json(
-        { success: false, error: 'Public token not found. Please select an option first.' },
-        { status: 400 }
-      )
-    }
-
-    // Validate email exists
     if (!requestData.email) {
       return NextResponse.json(
         { success: false, error: 'Client email not found' },
@@ -123,50 +128,72 @@ export async function POST(request: Request) {
       )
     }
 
-    // Parse itinerary options
-    let itineraryOptions
-    if (requestData.itineraryoptions && typeof requestData.itineraryoptions === 'string') {
-      try {
-        itineraryOptions = JSON.parse(requestData.itineraryoptions)
-      } catch (parseError) {
-        console.error('Error parsing itineraryoptions:', parseError)
+    const baseUrl = 'https://admin.lankalux.com'
+    let itineraryUrl = ''
+    let selectedOption: any = null
+
+    if (include_itinerary) {
+      if (requestData.selected_option === null || requestData.selected_option === undefined) {
         return NextResponse.json(
-          { success: false, error: 'Failed to parse itinerary options' },
-          { status: 500 }
+          { success: false, error: 'No itinerary option selected' },
+          { status: 400 }
         )
       }
-    } else {
-      return NextResponse.json(
-        { success: false, error: 'Itinerary options not found' },
-        { status: 400 }
-      )
-    }
-
-    // Get selected option
-    const selectedOption = itineraryOptions.options?.[requestData.selected_option]
-    if (!selectedOption) {
-      return NextResponse.json(
-        { success: false, error: 'Selected itinerary option not found' },
-        { status: 400 }
-      )
-    }
-
-    // Build itinerary URL with option index for unique links per option
-    // Use admin.lankalux.com for all public itinerary links
-    const baseUrl = "https://admin.lankalux.com"
-    // Include option index in URL so each option has a unique link
-    const itineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}/${requestData.selected_option}`
-    
-    console.log('Itinerary URL generated:', {
-      baseUrl,
-      itineraryUrl,
-      publicToken: requestData.public_token,
-      optionIndex: requestData.selected_option,
-      envVars: {
-        NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-        VERCEL_URL: process.env.VERCEL_URL
+      if (!requestData.public_token) {
+        return NextResponse.json(
+          { success: false, error: 'Public token not found. Please select an option first.' },
+          { status: 400 }
+        )
       }
-    })
+      let itineraryOptions: { options?: unknown[] }
+      if (requestData.itineraryoptions && typeof requestData.itineraryoptions === 'string') {
+        try {
+          itineraryOptions = JSON.parse(requestData.itineraryoptions)
+        } catch (parseError) {
+          console.error('Error parsing itineraryoptions:', parseError)
+          return NextResponse.json(
+            { success: false, error: 'Failed to parse itinerary options' },
+            { status: 500 }
+          )
+        }
+      } else {
+        return NextResponse.json(
+          { success: false, error: 'Itinerary options not found' },
+          { status: 400 }
+        )
+      }
+      selectedOption = itineraryOptions.options?.[requestData.selected_option]
+      if (!selectedOption) {
+        return NextResponse.json(
+          { success: false, error: 'Selected itinerary option not found' },
+          { status: 400 }
+        )
+      }
+      itineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}/${requestData.selected_option}`
+      console.log('Itinerary URL:', { itineraryUrl, optionIndex: requestData.selected_option })
+    }
+
+    let hotelPayload: import('@/lib/email-itinerary-hotel').HotelEmailPayload | null = null
+    if (include_hotel) {
+      const h = hotelFromBody as Record<string, unknown> | null
+      if (!h?.name || typeof h.name !== 'string' || !String(h.name).trim()) {
+        return NextResponse.json(
+          { success: false, error: 'Select a hotel to include in the email' },
+          { status: 400 }
+        )
+      }
+      hotelPayload = {
+        name: String(h.name).trim(),
+        location: typeof h.location === 'string' ? h.location : '',
+        mapsUrl: typeof h.mapsUrl === 'string' ? h.mapsUrl : '',
+        starRating: typeof h.starRating === 'string' ? h.starRating : '',
+        roomType: typeof h.roomType === 'string' ? h.roomType : '',
+        showPrice: !!h.showPrice,
+        pricePerNight: typeof h.pricePerNight === 'string' ? h.pricePerNight : '',
+        description: typeof h.description === 'string' ? h.description : '',
+        images: Array.isArray(h.images) ? h.images.filter((x): x is string => typeof x === 'string') : [],
+      }
+    }
 
     // Create email transporter
     // For Zoho Mail, ensure you're using an App Password, not your regular account password
@@ -216,8 +243,62 @@ export async function POST(request: Request) {
         })
       : 'Not specified'
 
-    // Build email content with option-specific subject
-    const emailSubject = `LankaLux Journey - ${selectedOption.title}`
+    const emailSubject =
+      include_itinerary && include_hotel
+        ? `LankaLux — ${selectedOption.title} & hotel`
+        : include_itinerary
+          ? `LankaLux Journey - ${selectedOption.title}`
+          : `LankaLux — ${hotelPayload!.name}`
+
+    const introMain =
+      include_itinerary && include_hotel
+        ? 'We are delighted to share your personalized Sri Lanka itinerary together with a hand-picked hotel recommendation.'
+        : include_itinerary
+          ? 'We are absolutely delighted to share your personalized Sri Lanka journey with you. Every detail has been carefully crafted to ensure an unforgettable experience.'
+          : 'We are delighted to share this curated hotel recommendation for your stay in Sri Lanka.'
+
+    const infoBoxHtml =
+      include_itinerary && selectedOption
+        ? `<div class="info-box">
+                <div class="info-row">
+                  <span class="info-label">Travel Dates</span>
+                  <span class="info-value">${startDateFormatted} - ${endDateFormatted}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Selected Journey</span>
+                  <div class="journey-title">${selectedOption.title}</div>
+                </div>
+                ${requestData.duration ? `<div class="info-row">
+                  <span class="info-label">Duration</span>
+                  <span class="info-value">${requestData.duration} Days</span>
+                </div>` : ''}
+              </div>`
+        : `<div class="info-box">
+                <div class="info-row">
+                  <span class="info-label">Travel Dates</span>
+                  <span class="info-value">${startDateFormatted} - ${endDateFormatted}</span>
+                </div>
+              </div>`
+
+    const itineraryDaysHtml =
+      include_itinerary && selectedOption
+        ? `<div class="journey-overview">
+              <h3>— Itinerary —</h3>
+              ${formatItineraryDaysHtml(selectedOption)}
+            </div>
+            <div class="cta-section">
+                <a href="${itineraryUrl}" class="journey-link">View Your Complete Journey</a>
+              </div>`
+        : ''
+
+    const hotelHtml = include_hotel && hotelPayload ? buildHotelSectionHtml(hotelPayload) : ''
+
+    const preheader =
+      include_itinerary && include_hotel
+        ? 'Your itinerary and hotel details from LankaLux.'
+        : include_itinerary
+          ? 'Your personalized Sri Lanka journey awaits.'
+          : `Hotel details: ${hotelPayload!.name}.`
     const logoUrl = `${baseUrl}/favicon.png`
     const emailHtml = `
       <!DOCTYPE html>
@@ -514,7 +595,7 @@ export async function POST(request: Request) {
         </head>
         <body>
           <!-- Preheader text - shown in email preview instead of first line -->
-          <div class="preheader">Your personalized Sri Lanka journey awaits. View your complete itinerary details.</div>
+          <div class="preheader">${preheader}</div>
           <div class="email-container">
             <div class="header">
               <a href="https://lankalux.com" style="text-decoration: none; display: block;">
@@ -527,30 +608,17 @@ export async function POST(request: Request) {
               <div class="greeting">Dear ${requestData.client_name || 'Valued Client'},</div>
               
               <p class="intro-text">
-                We are absolutely delighted to share your personalized Sri Lanka journey with you. Every detail has been carefully crafted to ensure an unforgettable experience.
+                ${introMain}
               </p>
               
-              <div class="info-box">
-                <div class="info-row">
-                  <span class="info-label">Travel Dates</span>
-                  <span class="info-value">${startDateFormatted} - ${endDateFormatted}</span>
-                </div>
-                <div class="info-row">
-                  <span class="info-label">Selected Journey</span>
-                  <div class="journey-title">${selectedOption.title}</div>
-                </div>
-                ${requestData.duration ? `<div class="info-row">
-                  <span class="info-label">Duration</span>
-                  <span class="info-value">${requestData.duration} Days</span>
-                </div>` : ''}
-              </div>
+              ${infoBoxHtml}
               
-              <div class="cta-section">
-                <a href="${itineraryUrl}" class="journey-link">View Your Complete Journey</a>
-              </div>
+              ${itineraryDaysHtml}
+              
+              ${hotelHtml}
               
               <p class="closing-text">
-                This link provides access to your complete journey details. We've designed every moment to showcase the beauty, culture, and wonder of Sri Lanka. If you have any questions or would like to discuss any modifications, please don't hesitate to reach out—we're here to make your journey perfect.
+                ${include_itinerary ? `This link provides access to your complete journey details. ` : ''}If you have any questions or would like adjustments, please reach out—we're here to make your journey perfect.
               </p>
               
               <p class="closing-text">
@@ -571,28 +639,32 @@ export async function POST(request: Request) {
       </html>
     `
 
-    const emailText = `
-Dear ${requestData.client_name || 'Valued Client'},
-
-We are absolutely delighted to share your personalized Sri Lanka journey with you. Every detail has been carefully crafted to ensure an unforgettable experience.
-
-TRAVEL DETAILS:
-Travel Dates: ${startDateFormatted} - ${endDateFormatted}
-Selected Journey: ${selectedOption.title}
-${requestData.duration ? `Duration: ${requestData.duration} Days` : ''}
-
-View your complete journey here: ${itineraryUrl}
-
-This link provides access to your complete journey details. We've designed every moment to showcase the beauty, culture, and wonder of Sri Lanka. If you have any questions or would like to discuss any modifications, please don't hesitate to reach out—we're here to make your journey perfect.
-
-We look forward to creating an extraordinary and unforgettable experience for you in the Pearl of the Indian Ocean.
-
-Warm regards,
-The LankaLux Team
-
-© ${new Date().getFullYear()} LankaLux. All rights reserved.
-Your journey to Sri Lanka begins here.
-    `
+    const textBlocks: string[] = [`Dear ${requestData.client_name || 'Valued Client'},`, '', introMain, '']
+    if (include_itinerary && selectedOption) {
+      textBlocks.push(
+        '--- ITINERARY ---',
+        `Travel Dates: ${startDateFormatted} - ${endDateFormatted}`,
+        `Journey: ${selectedOption.title}`,
+        requestData.duration ? `Duration: ${requestData.duration} Days` : '',
+        '',
+        formatItineraryDaysPlain(selectedOption),
+        '',
+        `View full journey: ${itineraryUrl}`,
+        ''
+      )
+    }
+    if (include_hotel && hotelPayload) {
+      textBlocks.push(buildHotelSectionPlain(hotelPayload), '')
+    }
+    textBlocks.push(
+      'If you have any questions, please reach out.',
+      '',
+      'Warm regards,',
+      'The LankaLux Team',
+      '',
+      `© ${new Date().getFullYear()} LankaLux. All rights reserved.`
+    )
+    const emailText = textBlocks.filter(Boolean).join('\n')
 
     // Send email
     try {
@@ -658,18 +730,23 @@ Your journey to Sri Lanka begins here.
       }
     }
 
-    // Store a full snapshot of the itinerary option data so links remain active even after regeneration
-    const itinerarySnapshot = JSON.parse(JSON.stringify(selectedOption)) // Deep copy
-    
-    // Always add a new entry to track all sends (including resends of the same option)
-    // This creates a complete history of all sent options
+    const itinerarySnapshot =
+      include_itinerary && selectedOption ? JSON.parse(JSON.stringify(selectedOption)) : null
+
     sentOptions.push({
-      option_index: requestData.selected_option,
+      ...(include_itinerary
+        ? {
+            option_index: requestData.selected_option,
+            option_title: selectedOption.title,
+            itinerary_url: itineraryUrl,
+            itinerary_data: itinerarySnapshot,
+          }
+        : { option_index: null, option_title: null, itinerary_url: null }),
       sent_at: now,
-      option_title: selectedOption.title,
-      itinerary_url: itineraryUrl,
-      itinerary_data: itinerarySnapshot,
       send_options: sendOptions,
+      include_itinerary,
+      include_hotel,
+      ...(include_hotel && hotelPayload ? { hotel_snapshot: hotelPayload } : {}),
     })
     
     // Sort by sent_at (most recent first) and keep only the most recent 10 entries
@@ -687,9 +764,9 @@ Your journey to Sri Lanka begins here.
 
     const updateData: any = {
       last_sent_at: now,
-      last_sent_option: requestData.selected_option, // Save which option was sent
+      last_sent_option: include_itinerary ? requestData.selected_option : requestData.last_sent_option,
       email_sent_count: currentEmailCount + 1,
-      sent_options: sentOptions, // Store all sent options
+      sent_options: sentOptions,
       status: 'follow_up',
       updated_at: now,
     }

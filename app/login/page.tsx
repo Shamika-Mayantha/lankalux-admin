@@ -9,7 +9,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [sessionExpiredMsg, setSessionExpiredMsg] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('reason') === 'session_expired') {
+      setSessionExpiredMsg(true)
+      window.history.replaceState({}, '', '/login')
+    }
+  }, [])
 
   // Check if user is already logged in
   useEffect(() => {
@@ -97,6 +105,12 @@ export default function LoginPage() {
             LankaLux Admin
           </h1>
           <p className="text-gray-600 text-center mb-8">Sign in to your account</p>
+
+          {sessionExpiredMsg && (
+            <div className="mb-6 rounded-lg border border-amber-400/60 bg-amber-50 px-4 py-3 text-center text-sm text-amber-900">
+              Session expired. Please log in again.
+            </div>
+          )}
 
           <div className="space-y-6">
             <div>

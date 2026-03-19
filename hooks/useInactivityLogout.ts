@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-const INACTIVITY_TIMEOUT = 30 * 60 * 1000 // 30 minutes in milliseconds
+const INACTIVITY_TIMEOUT = 45 * 60 * 1000 // 45 minutes
 
 export function useInactivityLogout() {
   const router = useRouter()
@@ -27,11 +27,10 @@ export function useInactivityLogout() {
       if (!isAuth) return
 
       await supabase.auth.signOut()
-      router.push('/login')
+      router.push('/login?reason=session_expired')
     } catch (error) {
       console.error('Error during auto-logout:', error)
-      // Force redirect even if signOut fails
-      router.push('/login')
+      router.push('/login?reason=session_expired')
     }
   }, [router, checkAuth])
 
