@@ -26,11 +26,12 @@ function getDayDateLabel(startDate: string | null, dayNumber: number): string | 
 
 /** When we already show date + "Day N", show only the activity part of title to avoid doubling "Day 16" */
 function getDayTitleDisplay(fullTitle: string): string {
-  const colonIndex = fullTitle.indexOf(': ')
-  if (colonIndex !== -1) return fullTitle.slice(colonIndex + 2).trim()
-  const dashIndex = fullTitle.indexOf(' – ')
-  if (dashIndex !== -1) return fullTitle.slice(dashIndex + 3).trim()
-  return fullTitle
+  const raw = fullTitle || ''
+  let cleaned = raw.replace(/^day\s*\d+\s*[-–:]\s*/i, '')
+  cleaned = cleaned.replace(/^[A-Za-z]+,\s+[A-Za-z]+\s+\d{1,2},\s+\d{4}\s*:?\s*/i, '')
+  cleaned = cleaned.replace(/^day\s*\d+\s*[-–:]\s*/i, '')
+  cleaned = cleaned.trim()
+  return cleaned || raw
 }
 
 /** Format price string: add commas to numbers (e.g. "USD 2500" -> "USD 2,500") */

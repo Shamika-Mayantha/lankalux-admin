@@ -244,8 +244,16 @@ export async function POST(request: Request) {
       : 'Not specified'
 
     const journeyTitle = include_itinerary && selectedOption?.title ? String(selectedOption.title) : null
-    const emailSubject = journeyTitle ? `Your LankaLux itinerary: ${journeyTitle}` : 'Your LankaLux itinerary link'
-    const preheader = 'Your personalized LankaLux itinerary is ready to view.'
+    const premiumSubjects = [
+      'Your Sri Lanka Journey Is Ready',
+      'A Journey Designed Just For You',
+      'Your LankaLux Experience Awaits',
+      'Discover Your Personalized Sri Lanka Escape',
+      'Your Tailor-Made Sri Lanka Journey Is Ready',
+    ]
+    const subjectSeed = (requestData.id || requestId || '').split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0)
+    const emailSubject = premiumSubjects[subjectSeed % premiumSubjects.length]
+    const preheader = 'Your personalized journey through Sri Lanka is ready.'
     const logoUrl = `${baseUrl}/favicon.png`
     const emailHtml = `
       <!DOCTYPE html>
@@ -254,19 +262,25 @@ export async function POST(request: Request) {
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: Arial, Helvetica, sans-serif; color: #2c2c2c; background: #f5f5f5; margin: 0; padding: 24px; }
-            .card { max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e5e5; border-radius: 14px; overflow: hidden; }
-            .header { background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%); border-bottom: 4px solid #c8a45d; padding: 28px 24px; text-align: center; }
-            .logo { width: 58px; height: 58px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; }
-            .brand { color: #c8a45d; font-size: 28px; font-family: Georgia, 'Times New Roman', serif; letter-spacing: 1px; margin: 0; }
-            .subtitle { color: #ffffff; opacity: 0.85; font-size: 11px; letter-spacing: 0.12em; margin-top: 4px; text-transform: uppercase; }
-            .content { padding: 24px; }
-            .meta { background: #fafafa; border-left: 4px solid #c8a45d; border-radius: 4px; padding: 14px 16px; margin: 14px 0 18px; }
-            .meta p { margin: 0 0 6px 0; font-size: 14px; color: #555; }
-            .meta p:last-child { margin-bottom: 0; }
-            .btn { display: inline-block; margin-top: 6px; background: #c8a45d; color: #fff !important; text-decoration: none; padding: 12px 18px; border-radius: 8px; font-weight: 600; }
-            .link { word-break: break-all; color: #8b6f2a; font-size: 13px; margin-top: 10px; }
-            .footer { padding: 0 24px 24px; font-size: 13px; color: #666; }
+            body { font-family: 'Inter', Arial, Helvetica, sans-serif; color: #2c2c2c; background: #f6f5f3; margin: 0; padding: 28px 18px; }
+            .card { max-width: 660px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.07); }
+            .header { background: linear-gradient(180deg, #1a1a1a 0%, #2a2a2a 100%); padding: 24px 24px 20px; text-align: center; }
+            .logo { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; margin-bottom: 8px; }
+            .brand { color: #c9a14a; font-size: 30px; font-family: Georgia, 'Times New Roman', serif; letter-spacing: 0.5px; margin: 0; font-weight: 500; }
+            .subtitle { color: #ffffff; opacity: 0.78; font-size: 11px; letter-spacing: 0.1em; margin-top: 3px; }
+            .divider { height: 1px; background: #c9a14a; opacity: 0.8; }
+            .content { padding: 36px 36px 30px; line-height: 1.72; }
+            .lead { margin: 0 0 8px; font-size: 17px; color: #2f2f2f; }
+            .warm { margin: 0 0 22px; font-size: 15px; color: #5b5b5b; }
+            .meta { display: grid; grid-template-columns: 110px 1fr; row-gap: 10px; column-gap: 14px; margin: 8px 0 26px; }
+            .meta-label { color: #8d8d8d; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+            .meta-value { color: #2f2f2f; font-size: 15px; font-weight: 600; }
+            .cta-wrap { text-align: center; margin: 8px 0 10px; }
+            .btn { display: inline-block; background: #c9a14a; color: #fff !important; text-decoration: none; padding: 14px 26px; border-radius: 12px; font-weight: 700; font-size: 15px; letter-spacing: 0.01em; }
+            .btn:hover { background: #b6903f; }
+            .link { text-align: center; word-break: break-all; color: #9b8a66; font-size: 12px; margin-top: 10px; }
+            .footer { padding: 0 36px 34px; font-size: 13px; color: #666; }
+            .contact { margin-top: 10px; font-size: 12px; color: #8a8a8a; }
             .preheader { display:none!important; visibility:hidden; opacity:0; color:transparent; height:0; width:0; font-size:1px; line-height:1px; }
           </style>
         </head>
@@ -278,21 +292,22 @@ export async function POST(request: Request) {
               <h1 class="brand">LankaLux</h1>
               <div class="subtitle">Your Journey</div>
             </div>
+            <div class="divider"></div>
             <div class="content">
-              <p>Dear ${requestData.client_name || 'Valued Client'},</p>
-              <p>Your personalized itinerary is ready.</p>
+              <p class="lead">Dear ${requestData.client_name || 'Valued Client'},</p>
+              <p class="warm">Your personalized journey through Sri Lanka is ready.<br/>We’ve carefully designed this experience based on your preferences.</p>
               <div class="meta">
-                ${journeyTitle ? `<p><strong>Journey:</strong> ${journeyTitle}</p>` : ''}
-                <p><strong>Start:</strong> ${startDateFormatted}</p>
-                <p><strong>End:</strong> ${endDateFormatted}</p>
-                ${requestData.duration ? `<p><strong>Duration:</strong> ${requestData.duration} Days</p>` : ''}
+                ${journeyTitle ? `<div class="meta-label">Journey</div><div class="meta-value">${journeyTitle}</div>` : ''}
+                <div class="meta-label">Start</div><div class="meta-value">${startDateFormatted}</div>
+                <div class="meta-label">End</div><div class="meta-value">${endDateFormatted}</div>
+                ${requestData.duration ? `<div class="meta-label">Duration</div><div class="meta-value">${requestData.duration} Days</div>` : ''}
               </div>
-              <p>You can view your personalized itinerary here:</p>
-              <p><a class="btn" href="${itineraryUrl}">Open Itinerary</a></p>
+              <div class="cta-wrap"><a class="btn" href="${itineraryUrl}">View Your Journey</a></div>
               <p class="link">${itineraryUrl}</p>
             </div>
             <div class="footer">
-              Warm regards,<br/>The LankaLux Team
+              Warm regards,<br/>LankaLux Team
+              <div class="contact">Questions? Reply to this email.</div>
             </div>
           </div>
         </body>

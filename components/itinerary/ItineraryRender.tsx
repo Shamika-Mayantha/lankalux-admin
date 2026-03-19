@@ -27,15 +27,21 @@ export type RenderVehicle = {
 
 function parseDayHeading(dayNumber: number, rawTitle: string) {
   const title = rawTitle || ''
-  const match = title.match(/^day\s*(\d+)\s*[-:]\s*(.+)$/i)
-  if (match) {
-    const parsedDay = parseInt(match[1], 10)
-    return {
-      day: Number.isNaN(parsedDay) ? dayNumber : parsedDay,
-      title: (match[2] || '').trim() || title,
-    }
+  const dayMatch = title.match(/^day\s*(\d+)/i)
+  const parsedDay = dayMatch ? parseInt(dayMatch[1], 10) : dayNumber
+
+  // Remove leading "Day X -" / "Day X –" / "Day X:"
+  let cleaned = title.replace(/^day\s*\d+\s*[-–:]\s*/i, '')
+  // Remove leading date chunk like "Tuesday, June 2, 2026:"
+  cleaned = cleaned.replace(/^[A-Za-z]+,\s+[A-Za-z]+\s+\d{1,2},\s+\d{4}\s*:?\s*/i, '')
+  // Remove accidental duplicated "Day X -" again after first cleanup
+  cleaned = cleaned.replace(/^day\s*\d+\s*[-–:]\s*/i, '')
+  cleaned = cleaned.trim()
+
+  return {
+    day: Number.isNaN(parsedDay) ? dayNumber : parsedDay,
+    title: cleaned || title.trim(),
   }
-  return { day: dayNumber, title: title.trim() }
 }
 
 function formatDayDate(startDate?: string | null, dayNumber?: number) {
