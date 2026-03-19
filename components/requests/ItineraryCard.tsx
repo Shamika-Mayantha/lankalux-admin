@@ -4,6 +4,9 @@ import { Map, RefreshCw } from 'lucide-react'
 import type { ItineraryOption } from './itinerary-types'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { ImageManager } from '@/components/ImageManager'
+import { normalizeManagedImages } from '@/lib/managed-image'
+import type { ManagedImageItem } from '@/lib/managed-image'
 
 export function ItineraryCard({
   index,
@@ -14,6 +17,9 @@ export function ItineraryCard({
   selectingOption,
   onSelect,
   onRegenerate,
+  requestId,
+  onImagesChange,
+  savingImages,
 }: {
   index: number
   option: ItineraryOption
@@ -23,6 +29,9 @@ export function ItineraryCard({
   selectingOption: number | null
   onSelect: () => void
   onRegenerate: () => void
+  requestId: string
+  onImagesChange: (items: ManagedImageItem[]) => void
+  savingImages?: boolean
 }) {
   const daysText = Array.isArray(option.days)
     ? option.days
@@ -58,6 +67,15 @@ export function ItineraryCard({
           <p className="text-[#d4af37] text-lg font-semibold">{option.total_kilometers.toLocaleString()} km</p>
         </div>
       )}
+      <div className="mb-4 rounded-xl border border-zinc-700/80 bg-zinc-950/60 p-4">
+        <ImageManager
+          items={normalizeManagedImages(option.images)}
+          onChange={onImagesChange}
+          requestId={requestId}
+          sectionLabel="Images"
+          disabled={!!savingImages || isCancelled}
+        />
+      </div>
       <div className="flex gap-2">
         <Button
           className="flex-1"
