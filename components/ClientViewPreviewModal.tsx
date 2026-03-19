@@ -1,26 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Send, MessageCircle, ImageIcon, RotateCcw } from 'lucide-react'
+import { X, Send, MessageCircle } from 'lucide-react'
 import type { ManagedImageItem } from '@/lib/managed-image'
-import { normalizeManagedImages } from '@/lib/managed-image'
-import type { ItineraryOption } from '@/components/requests/itinerary-types'
-import type { HotelRecord } from '@/lib/hotel-types'
-import { ImageManager } from '@/components/ImageManager'
 
 export function ClientViewPreviewModal({
   open,
   onClose,
-  clientName,
   includeItinerary,
-  includeHotel,
-  itineraryOption,
-  hotel,
-  defaultItineraryImages = [],
   onItineraryImagesChange,
-  requestId,
   itineraryUrl,
-  savingImages = false,
+  previewOptionIndex,
   onSendEmail,
   onSendWhatsApp,
   sending,
@@ -28,29 +18,40 @@ export function ClientViewPreviewModal({
 }: {
   open: boolean
   onClose: () => void
-  clientName: string
   includeItinerary: boolean
-  includeHotel: boolean
-  itineraryOption: ItineraryOption | null
-  hotel: HotelRecord | null
-  defaultItineraryImages?: ManagedImageItem[]
   onItineraryImagesChange?: (items: ManagedImageItem[]) => void
-  requestId?: string
   itineraryUrl?: string
-  savingImages?: boolean
+  previewOptionIndex?: number
   onSendEmail: () => void
   onSendWhatsApp: () => void
   sending: boolean
   hasWhatsApp: boolean
 }) {
-  const [showImageEditor, setShowImageEditor] = useState(false)
+  const [editMode, setEditMode] = useState(false)
   useEffect(() => {
-    if (!open) setShowImageEditor(false)
+    if (!open) setEditMode(false)
   }, [open])
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const payload = event.data as { type?: string; optionIndex?: number; images?: string[] }
+      if (payload?.type !== 'itinerary-images-updated') return
+      if (previewOptionIndex != null && payload.optionIndex != null && payload.optionIndex !== previewOptionIndex) return
+      if (!onItineraryImagesChange || !Array.isArray(payload.images)) return
+      const next = payload.images
+        .filter((src) => typeof src === 'string' && src.trim().length > 0)
+        .map((src) => ({ src, type: src.startsWith('/uploads/') ? 'uploaded' as const : 'default' as const }))
+      onItineraryImagesChange(next)
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [onItineraryImagesChange, previewOptionIndex])
   if (!open) return null
 
-  const opt = itineraryOption
-  const itineraryImages = opt ? normalizeManagedImages((opt as { images?: unknown }).images) : []
+  const iframeSrc = (() => {
+    if (!itineraryUrl) return ''
+    const sep = itineraryUrl.includes('?') ? '&' : '?'
+    return `${itineraryUrl}${sep}edit=${editMode ? '1' : '0'}`
+  })()
 
   return (
     <div
@@ -67,6 +68,15 @@ export function ClientViewPreviewModal({
           </p>
           <p className="text-sm opacity-80">Exactly as structured for your client</p>
         </div>
+        <label className="inline-flex items-center gap-2 text-xs text-secondary">
+          <span>Edit Mode</span>
+          <input
+            type="checkbox"
+            checked={editMode}
+            onChange={(e) => setEditMode(e.target.checked)}
+            className="rounded border-accent text-accent-theme"
+          />
+        </label>
         <button
           type="button"
           onClick={onClose}
@@ -94,56 +104,11 @@ export function ClientViewPreviewModal({
                 </a>
               </div>
               <iframe
-                src={itineraryUrl}
+                src={iframeSrc}
                 title="Client itinerary preview"
                 className="w-full h-[68vh] rounded-xl border border-stone-200 bg-white"
               />
             </div>
-
-            {opt && requestId && onItineraryImagesChange && (
-              <div className="rounded-2xl border border-stone-300 bg-white p-4 shadow-sm">
-                {!showImageEditor ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowImageEditor(true)}
-                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-[#c8a45d] text-[#b8860b] font-semibold hover:bg-[#c8a45d]/10 transition-colors"
-                  >
-                    <ImageIcon className="w-5 h-5" />
-                    Customize Images
-                  </button>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onItineraryImagesChange(defaultItineraryImages)}
-                        disabled={savingImages || defaultItineraryImages.length === 0}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-stone-300 text-stone-600 text-sm font-medium hover:bg-stone-100 disabled:opacity-50"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        Reset to Default Images
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowImageEditor(false)}
-                        className="px-4 py-2 rounded-lg text-stone-500 text-sm hover:bg-stone-100"
-                      >
-                        Done
-                      </button>
-                    </div>
-                    <div className="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
-                      <ImageManager
-                        items={itineraryImages.length > 0 ? itineraryImages : defaultItineraryImages}
-                        onChange={onItineraryImagesChange}
-                        requestId={requestId}
-                        sectionLabel="Itinerary images (order: first = hero, then Day 1, Day 2…)"
-                        disabled={savingImages}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         ) : (
           <div className="max-w-2xl mx-auto rounded-2xl border border-stone-300 bg-white p-6 text-sm text-stone-600">

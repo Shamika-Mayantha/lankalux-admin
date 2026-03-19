@@ -114,7 +114,8 @@ export default function PublicItineraryPage() {
         // If selected_option exists, redirect to new URL format with option
         if (requestData.selected_option !== null && requestData.selected_option !== undefined) {
           if (typeof window !== 'undefined') {
-            window.location.href = `/itinerary/${token}/${requestData.selected_option}`
+            const qs = window.location.search || ''
+            window.location.href = `/itinerary/${token}/${requestData.selected_option}${qs}`
             return
           }
         }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { getFleetVehicleById } from '@/lib/fleet'
 
 interface Day {
@@ -89,6 +89,7 @@ const locationDescriptions: Record<string, string> = {
 
 export default function PublicItineraryPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const [request, setRequest] = useState<Request | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -107,6 +108,14 @@ export default function PublicItineraryPage() {
   const [contactEmail, setContactEmail] = useState('')
   const [contactMessage, setContactMessage] = useState('')
   const recordedOpenRef = useRef(false)
+  const [currentOptionIndex, setCurrentOptionIndex] = useState<number | null>(null)
+  const [editableDayImages, setEditableDayImages] = useState<string[]>([])
+  const [dragFrom, setDragFrom] = useState<number | null>(null)
+  const [pickerOpenFor, setPickerOpenFor] = useState<number | null>(null)
+  const [libraryPaths, setLibraryPaths] = useState<string[]>([])
+  const [pickerMode, setPickerMode] = useState<'replace' | 'add'>('replace')
+  const uploadInputRef = useRef<HTMLInputElement>(null)
+  const editMode = searchParams?.get('edit') === '1'
 
   useEffect(() => {
     const fetchItinerary = async () => {
@@ -185,6 +194,7 @@ export default function PublicItineraryPage() {
         console.log('Successfully loaded itinerary option:', selectedItineraryOption.title)
         setRequest(requestData)
         setSelectedItinerary(selectedItineraryOption)
+        setCurrentOptionIndex(optionIndex)
         setSendOptions(apiData.send_options || null)
         setLoading(false)
 
@@ -205,6 +215,82 @@ export default function PublicItineraryPage() {
 
     fetchItinerary()
   }, [params])
+
+  useEffect(() => {
+    if (!selectedItinerary) return
+    const fromDays = selectedItinerary.days.map((d) => d.image || '').filter(Boolean)
+    setEditableDayImages(fromDays)
+  }, [selectedItinerary?.title])
+
+  useEffect(() => {
+    setSelectedItinerary((prev) => {
+      if (!prev) return prev
+      const nextDays = prev.days.map((d, i) => ({ ...d, image: editableDayImages[i] || undefined }))
+      return { ...prev, days: nextDays }
+    })
+    if (typeof window !== 'undefined' && window.parent && window.parent !== window && currentOptionIndex != null) {
+      const hero =
+        editableDayImages.length > 0
+          ? editableDayImages[0]
+          : '/images/placeholder.jpg'
+      window.parent.postMessage(
+        {
+          type: 'itinerary-images-updated',
+          optionIndex: currentOptionIndex,
+          images: [hero, ...editableDayImages],
+        },
+        '*'
+      )
+    }
+  }, [editableDayImages, currentOptionIndex])
+
+  const loadLibrary = async () => {
+    try {
+      const res = await fetch('/api/image-library')
+      const data = await res.json()
+      setLibraryPaths(Array.isArray(data.paths) ? data.paths : [])
+    } catch {
+      setLibraryPaths([])
+    }
+  }
+
+  const openPicker = async (index: number, mode: 'replace' | 'add') => {
+    setPickerMode(mode)
+    setPickerOpenFor(index)
+    await loadLibrary()
+  }
+
+  const applyPickedImage = (src: string) => {
+    if (pickerOpenFor == null) return
+    setEditableDayImages((prev) => {
+      const next = [...prev]
+      if (pickerMode === 'replace' && next[pickerOpenFor]) {
+        next[pickerOpenFor] = src
+      } else {
+        next.splice(pickerOpenFor, 0, src)
+      }
+      return next
+    })
+    setPickerOpenFor(null)
+  }
+
+  const removeImageAt = (index: number) => {
+    setEditableDayImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const onUploadPicked = async (file?: File) => {
+    if (!file || !request) return
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('requestId', request.id)
+    const res = await fetch('/api/upload-client-image', { method: 'POST', body: fd })
+    const data = await res.json()
+    if (!res.ok || !data?.src) {
+      alert(data?.error || 'Upload failed')
+      return
+    }
+    applyPickedImage(String(data.src))
+  }
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A'
@@ -495,6 +581,105 @@ export default function PublicItineraryPage() {
             <div className="bg-gradient-to-br from-[#faf8f5] to-white border-2 border-[#c8a45d] rounded-xl p-8 shadow-md">
               <h2 className="text-2xl font-serif font-bold text-[#2c2c2c] mb-3">Your Estimated Journey Price</h2>
               <p className="text-3xl font-serif font-bold text-[#c8a45d] tracking-wide">{formatPriceDisplay(sendOptions.price)}</p>
+            </div>
+          </div>
+        )}
+
+        {editMode && (
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+            <div className="bg-white border border-[#c8a45d]/40 rounded-xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm uppercase tracking-wide text-[#8b6f2a] font-semibold">Edit itinerary images</h3>
+                <button
+                  type="button"
+                  onClick={() => openPicker(editableDayImages.length, 'add')}
+                  className="px-3 py-2 rounded-lg border border-[#c8a45d] text-[#8b6f2a] text-sm font-medium hover:bg-[#faf3df]"
+                >
+                  + Add Image
+                </button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {editableDayImages.map((src, idx) => (
+                  <div
+                    key={`${src}-${idx}`}
+                    draggable
+                    onDragStart={() => setDragFrom(idx)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => {
+                      if (dragFrom == null || dragFrom === idx) return
+                      setEditableDayImages((prev) => {
+                        const next = [...prev]
+                        const [moved] = next.splice(dragFrom, 1)
+                        next.splice(idx, 0, moved)
+                        return next
+                      })
+                      setDragFrom(null)
+                    }}
+                    className="group relative rounded-lg overflow-hidden border border-stone-200 bg-stone-100 h-28"
+                  >
+                    <img src={src} alt="" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openPicker(idx, 'replace')}
+                        className="px-2.5 py-1.5 text-xs rounded-md bg-white/95 text-stone-900 font-semibold"
+                      >
+                        Replace
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeImageAt(idx)}
+                        className="px-2.5 py-1.5 text-xs rounded-md bg-red-600 text-white font-semibold"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {pickerOpenFor != null && (
+                <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-3">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => uploadInputRef.current?.click()}
+                      className="px-3 py-2 text-sm rounded-md border border-stone-300 bg-white hover:bg-stone-100"
+                    >
+                      Upload new image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPickerOpenFor(null)}
+                      className="px-3 py-2 text-sm rounded-md text-stone-500 hover:bg-stone-100"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <input
+                    ref={uploadInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      void onUploadPicked(f)
+                      e.currentTarget.value = ''
+                    }}
+                  />
+                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2 max-h-48 overflow-y-auto">
+                    {libraryPaths.map((src) => (
+                      <button
+                        key={src}
+                        type="button"
+                        onClick={() => applyPickedImage(src)}
+                        className="rounded-md overflow-hidden border border-stone-200 hover:ring-2 hover:ring-[#c8a45d]"
+                      >
+                        <img src={src} alt="" className="w-full h-16 object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

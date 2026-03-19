@@ -759,10 +759,10 @@ export default function RequestDetailsPage() {
         return
       }
       const nextOpt: ItineraryOption = { ...opt, images: items }
-      if (Array.isArray(nextOpt.days) && items.length > 0) {
+      if (Array.isArray(nextOpt.days)) {
         nextOpt.days = nextOpt.days.map((d, i) => ({
           ...d,
-          image: items[i + 1]?.src ?? (d as { image?: string }).image,
+          image: items[i + 1]?.src || undefined,
         }))
       }
       raw[optionIndex] = nextOpt
@@ -2685,27 +2685,17 @@ LankaLux Team`
             setClientPreviewOpen(false)
             setPreviewingOptionIndex(null)
           }}
-          clientName={request.client_name || 'Valued Client'}
           includeItinerary={includeItinerarySend}
-          includeHotel={includeHotelSend}
-          itineraryOption={
-            includeItinerarySend
-              ? (request.itinerary_options?.options?.[previewingOptionIndex ?? request.selected_option ?? 0] as import('@/components/requests/itinerary-types').ItineraryOption | null | undefined) ?? null
-              : null
-          }
-          defaultItineraryImages={defaultImagesByOption[previewingOptionIndex ?? request.selected_option ?? 0] ?? []}
           onItineraryImagesChange={(items) => {
             const idx = previewingOptionIndex ?? request.selected_option
             if (idx != null) void handleUpdateItineraryImages(idx, items)
           }}
-          requestId={request.id}
           itineraryUrl={
             includeItinerarySend && request.public_token
               ? `/itinerary/${request.public_token}`
               : undefined
           }
-          savingImages={savingItineraryImages === (previewingOptionIndex ?? request.selected_option ?? 0)}
-          hotel={includeHotelSend && selectedHotel ? selectedHotel : null}
+          previewOptionIndex={previewingOptionIndex ?? request.selected_option ?? 0}
           onSendEmail={() => void handleSendItinerary()}
           onSendWhatsApp={() => {
             handleWhatsAppShare()
