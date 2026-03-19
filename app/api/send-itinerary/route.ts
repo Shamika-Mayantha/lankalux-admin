@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import {
-  buildItineraryHtmlWithImages,
-  formatItineraryDaysPlain,
   buildHotelSectionHtml,
   buildHotelSectionPlain,
 } from '@/lib/email-itinerary-hotel'
@@ -287,13 +285,9 @@ export async function POST(request: Request) {
                 </div>
               </div>`
 
-    const itineraryDaysHtml =
+    const itineraryLinkHtml =
       include_itinerary && selectedOption
-        ? `<div class="journey-overview">
-              <h3>— Itinerary —</h3>
-              ${buildItineraryHtmlWithImages(selectedOption, baseUrl)}
-            </div>
-            <div class="cta-section">
+        ? `<div class="cta-section">
                 <a href="${itineraryUrl}" class="journey-link">View Your Complete Journey</a>
               </div>`
         : ''
@@ -627,7 +621,7 @@ export async function POST(request: Request) {
               
               ${infoBoxHtml}
               
-              ${itineraryDaysHtml}
+              ${itineraryLinkHtml}
               
               ${hotelHtml}
               
@@ -660,8 +654,6 @@ export async function POST(request: Request) {
         `Travel Dates: ${startDateFormatted} - ${endDateFormatted}`,
         `Journey: ${selectedOption.title}`,
         requestData.duration ? `Duration: ${requestData.duration} Days` : '',
-        '',
-        formatItineraryDaysPlain(selectedOption),
         '',
         `View full journey: ${itineraryUrl}`,
         ''
