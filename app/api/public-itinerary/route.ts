@@ -83,6 +83,17 @@ export async function GET(request: Request) {
         
         // If found in sent_options, use the snapshot data (preserves old links even after regeneration)
         if (sentOption && sentOption.itinerary_data) {
+          let itinerary = sentOption.itinerary_data
+          if (Array.isArray(itinerary.days) && Array.isArray(itinerary.images) && itinerary.images.length > 0) {
+            const srcs = itinerary.images.map((x: { src?: string }) => (typeof x === 'string' ? x : x?.src)?.trim()).filter(Boolean)
+            itinerary = {
+              ...itinerary,
+              days: itinerary.days.map((d: { day: number; title?: string; location?: string; activities?: string[]; image?: string }, i: number) => ({
+                ...d,
+                image: d.image || srcs[i + 1] || undefined
+              }))
+            }
+          }
           return NextResponse.json({
             request: {
               id: data.id,
@@ -92,7 +103,7 @@ export async function GET(request: Request) {
               duration: data.duration,
               selected_option: data.selected_option
             },
-            itinerary: sentOption.itinerary_data,
+            itinerary,
             send_options: sentOption.send_options || null
           })
         }
@@ -124,6 +135,17 @@ export async function GET(request: Request) {
                 location: '',
                 activities: daysStr.trim().split(/\n+/).filter(Boolean)
               }]
+            }
+          }
+          // Ensure each day has .image from option.images (images[0]=hero, images[i+1]=day i)
+          if (option && Array.isArray(option.days) && Array.isArray(option.images) && option.images.length > 0) {
+            const srcs = option.images.map((x: { src?: string }) => (typeof x === 'string' ? x : x?.src).trim()).filter(Boolean)
+            option = {
+              ...option,
+              days: option.days.map((d: { day: number; title: string; location: string; activities?: string[]; image?: string }, i: number) => ({
+                ...d,
+                image: d.image || srcs[i + 1] || undefined
+              }))
             }
           }
           return NextResponse.json({

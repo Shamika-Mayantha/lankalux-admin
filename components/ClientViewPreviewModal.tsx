@@ -77,7 +77,9 @@ export function ClientViewPreviewModal({
 
   const opt = itineraryOption
   const itineraryImages = opt ? normalizeManagedImages((opt as { images?: unknown }).images) : []
+  const defaultUrls = imageSrcs(normalizeManagedImages(defaultItineraryImages))
   const urls = imageSrcs(itineraryImages)
+  const displayUrls = urls.length > 0 ? urls : defaultUrls
   const hotelImgs = hotel ? normalizeManagedImages(hotel.images) : []
   const hotelUrls = imageSrcs(hotelImgs)
 
@@ -128,12 +130,12 @@ export function ClientViewPreviewModal({
                 <h2 className="text-[#b8860b] text-xl font-semibold mb-2">{opt.title}</h2>
                 {opt.summary && <p className="text-stone-600 text-sm mb-6 leading-relaxed">{opt.summary}</p>}
 
-                {urls.length > 0 && !daysArr && (
+                {displayUrls.length > 0 && !daysArr && (
                   <div className="grid gap-3 mb-8">
                     <p className="text-stone-500 text-xs uppercase tracking-wider mb-1">
-                      Itinerary photos ({urls.length}) — customize below if needed
+                      Itinerary photos ({displayUrls.length}) — customize below if needed
                     </p>
-                    {urls.map((src, i) => (
+                    {displayUrls.map((src, i) => (
                       <div
                         key={i}
                         className="rounded-2xl overflow-hidden shadow-md ring-1 ring-stone-200/80 hover:shadow-lg transition-shadow duration-300"
@@ -147,14 +149,14 @@ export function ClientViewPreviewModal({
 
                 {daysArr ? (
                   <>
-                    {urls.length > 0 && (
+                    {displayUrls.length > 0 && (
                       <>
                         <p className="text-stone-500 text-xs uppercase tracking-wider mb-2">
-                          Itinerary photos ({urls.length}) — customize below if needed
+                          Itinerary photos ({displayUrls.length}) — customize below if needed
                         </p>
                         <div className="rounded-2xl overflow-hidden shadow-lg mb-8 ring-1 ring-stone-200">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={urls[0]} alt="" className="w-full max-h-52 object-cover" />
+                          <img src={displayUrls[0]} alt="" className="w-full max-h-52 object-cover" />
                         </div>
                       </>
                     )}
@@ -162,11 +164,11 @@ export function ClientViewPreviewModal({
                       Itinerary — day by day
                     </h3>
                     {daysArr.map((day, i) => (
-                      <DayBlock key={day.day} day={day} imageAfter={urls[i + 1]} />
+                      <DayBlock key={day.day} day={day} imageAfter={displayUrls[i + 1]} />
                     ))}
-                    {urls.length > daysArr.length + 1 && (
+                    {displayUrls.length > daysArr.length + 1 && (
                       <div className="grid grid-cols-2 gap-3 mt-6">
-                        {urls.slice(daysArr.length + 1).map((src, i) => (
+                        {displayUrls.slice(daysArr.length + 1).map((src, i) => (
                           <div key={i} className="rounded-xl overflow-hidden shadow-md">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={src} alt="" className="w-full h-32 object-cover" />
@@ -177,12 +179,12 @@ export function ClientViewPreviewModal({
                   </>
                 ) : daysPlain ? (
                   <>
-                    {urls.length > 0 && (
+                    {displayUrls.length > 0 && (
                       <p className="text-stone-500 text-xs uppercase tracking-wider mb-2">
-                        Itinerary photos ({urls.length}) — customize below if needed
+                        Itinerary photos ({displayUrls.length}) — customize below if needed
                       </p>
                     )}
-                    {urls.map((src, i) => (
+                    {displayUrls.map((src, i) => (
                       <div key={i} className="rounded-2xl overflow-hidden mb-4 shadow-md">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={src} alt="" className="w-full max-h-48 object-cover" />
@@ -257,10 +259,10 @@ export function ClientViewPreviewModal({
                     </div>
                     <div className="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
                       <ImageManager
-                        items={itineraryImages}
+                        items={itineraryImages.length > 0 ? itineraryImages : defaultItineraryImages}
                         onChange={onItineraryImagesChange}
                         requestId={requestId}
-                        sectionLabel="Itinerary images"
+                        sectionLabel="Itinerary images (order: first = hero, then Day 1, Day 2…)"
                         disabled={savingImages}
                       />
                     </div>

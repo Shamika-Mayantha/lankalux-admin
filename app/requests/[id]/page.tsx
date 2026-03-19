@@ -758,7 +758,14 @@ export default function RequestDetailsPage() {
         setSavingItineraryImages(null)
         return
       }
-      raw[optionIndex] = { ...opt, images: items }
+      const nextOpt: ItineraryOption = { ...opt, images: items }
+      if (Array.isArray(nextOpt.days) && items.length > 0) {
+        nextOpt.days = nextOpt.days.map((d, i) => ({
+          ...d,
+          image: items[i + 1]?.src ?? (d as { image?: string }).image,
+        }))
+      }
+      raw[optionIndex] = nextOpt
       const { error } = await (supabase.from('Client Requests') as any)
         .update({
           itineraryoptions: JSON.stringify({ options: raw }),
@@ -2264,7 +2271,22 @@ LankaLux Team`
                   selectingOption={selectingOption}
                   onSelect={() => handleSelectOption(index)}
                   onRegenerate={() => handleGenerateSingleOption(index)}
-                  onPreview={() => {
+                  onPreview={async () => {
+                    const opt = request.itinerary_options?.options?.[index] as ItineraryOption | null | undefined
+                    const hasNoImages = !opt?.images || opt.images.length === 0
+                    let toApply = defaultImagesByOption[index]
+                    if (hasNoImages) {
+                      if (!toApply?.length) {
+                        try {
+                          const libRes = await fetch('/api/image-library')
+                          const libData = await libRes.json()
+                          const paths: string[] = Array.isArray(libData.paths) ? libData.paths : []
+                          toApply = paths.map((p: string) => ({ src: p, type: 'default' as const }))
+                          if (toApply.length) setDefaultImagesByOption((prev) => ({ ...prev, [index]: toApply }))
+                        } catch (_) {}
+                      }
+                      if (toApply?.length) await handleUpdateItineraryImages(index, toApply)
+                    }
                     setPreviewingOptionIndex(index)
                     setClientPreviewOpen(true)
                   }}
@@ -2618,8 +2640,23 @@ LankaLux Team`
             </p>
             <div className="flex flex-wrap items-center gap-4 pt-4">
               <Button
-                onClick={() => {
+                onClick={async () => {
                   const idx = request.selected_option !== null && request.selected_option !== undefined ? request.selected_option : 0
+                  const opt = request.itinerary_options?.options?.[idx] as ItineraryOption | null | undefined
+                  const hasNoImages = !opt?.images || opt.images.length === 0
+                  let toApply = defaultImagesByOption[idx]
+                  if (hasNoImages) {
+                    if (!toApply?.length) {
+                      try {
+                        const libRes = await fetch('/api/image-library')
+                        const libData = await libRes.json()
+                        const paths: string[] = Array.isArray(libData.paths) ? libData.paths : []
+                        toApply = paths.map((p: string) => ({ src: p, type: 'default' as const }))
+                        if (toApply.length) setDefaultImagesByOption((prev) => ({ ...prev, [idx]: toApply }))
+                      } catch (_) {}
+                    }
+                    if (toApply?.length) await handleUpdateItineraryImages(idx, toApply)
+                  }
                   setPreviewingOptionIndex(idx)
                   setClientPreviewOpen(true)
                 }}

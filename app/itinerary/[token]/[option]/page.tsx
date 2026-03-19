@@ -512,7 +512,7 @@ export default function PublicItineraryPage() {
                   {day.image && (
                     <div className="mb-6 rounded-lg overflow-hidden">
                       <img 
-                        src={day.image}
+                        src={day.image.startsWith('http') || day.image.startsWith('data:') ? day.image : imageBaseUrl + day.image}
                         alt={day.title || day.location}
                         className="w-full h-64 object-cover"
                         onError={(e) => {
