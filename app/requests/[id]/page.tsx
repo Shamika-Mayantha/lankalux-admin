@@ -2685,7 +2685,26 @@ LankaLux Team`
             setClientPreviewOpen(false)
             setPreviewingOptionIndex(null)
           }}
+          clientName={request.client_name || 'Valued Client'}
           includeItinerary={includeItinerarySend}
+          itineraryOption={
+            includeItinerarySend
+              ? (request.itinerary_options?.options?.[previewingOptionIndex ?? request.selected_option ?? 0] as import('@/components/requests/itinerary-types').ItineraryOption | null | undefined) ?? null
+              : null
+          }
+          includeHotel={includeHotelSend}
+          hotel={includeHotelSend && selectedHotel ? selectedHotel : null}
+          startDate={request.start_date}
+          endDate={request.end_date}
+          duration={request.duration}
+          vehicle={
+            includeItinerarySend && includeVehicleInItinerary && sendVehicleId
+              ? (getFleetVehicleById(sendVehicleId) ?? null)
+              : null
+          }
+          price={includeItinerarySend && includePriceInItinerary ? sendPriceValue : null}
+          defaultItineraryImages={defaultImagesByOption[previewingOptionIndex ?? request.selected_option ?? 0] ?? []}
+          requestId={request.id}
           onItineraryImagesChange={(items) => {
             const idx = previewingOptionIndex ?? request.selected_option
             if (idx != null) void handleUpdateItineraryImages(idx, items)
@@ -2696,6 +2715,7 @@ LankaLux Team`
               : undefined
           }
           previewOptionIndex={previewingOptionIndex ?? request.selected_option ?? 0}
+          savingImages={savingItineraryImages === (previewingOptionIndex ?? request.selected_option ?? 0)}
           onSendEmail={() => void handleSendItinerary()}
           onSendWhatsApp={() => {
             handleWhatsAppShare()

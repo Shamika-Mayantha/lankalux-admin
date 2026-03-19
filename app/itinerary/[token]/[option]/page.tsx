@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { getFleetVehicleById } from '@/lib/fleet'
+import { ItineraryRender } from '@/components/itinerary/ItineraryRender'
 
 interface Day {
   day: number
@@ -393,6 +394,27 @@ export default function PublicItineraryPage() {
           </p>
         </div>
       </div>
+    )
+  }
+
+  if (!editMode) {
+    const vehicle =
+      sendOptions?.include_vehicle && sendOptions?.vehicle_option
+        ? (sendOptions.vehicle_option.id
+            ? getFleetVehicleById(sendOptions.vehicle_option.id) ?? sendOptions.vehicle_option
+            : sendOptions.vehicle_option)
+        : null
+    return (
+      <ItineraryRender
+        mode="link"
+        clientName={request.client_name || 'Valued Client'}
+        startDate={request.start_date}
+        endDate={request.end_date}
+        duration={request.duration}
+        itinerary={selectedItinerary}
+        vehicle={vehicle ? { name: vehicle.name, description: vehicle.description, images: vehicle.images || [] } : null}
+        price={sendOptions?.include_price ? sendOptions?.price ?? null : null}
+      />
     )
   }
 

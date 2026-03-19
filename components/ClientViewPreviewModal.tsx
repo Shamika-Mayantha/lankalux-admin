@@ -3,14 +3,31 @@
 import { useState, useEffect } from 'react'
 import { X, Send, MessageCircle } from 'lucide-react'
 import type { ManagedImageItem } from '@/lib/managed-image'
+import { normalizeManagedImages } from '@/lib/managed-image'
+import { ItineraryRender } from '@/components/itinerary/ItineraryRender'
+import type { ItineraryOption } from '@/components/requests/itinerary-types'
+import type { HotelRecord } from '@/lib/hotel-types'
+import { ImageManager } from '@/components/ImageManager'
 
 export function ClientViewPreviewModal({
   open,
   onClose,
+  clientName,
   includeItinerary,
+  defaultItineraryImages = [],
+  requestId,
+  itineraryOption,
+  includeHotel,
+  hotel,
+  startDate,
+  endDate,
+  duration,
+  vehicle,
+  price,
   onItineraryImagesChange,
   itineraryUrl,
   previewOptionIndex,
+  savingImages = false,
   onSendEmail,
   onSendWhatsApp,
   sending,
@@ -18,10 +35,22 @@ export function ClientViewPreviewModal({
 }: {
   open: boolean
   onClose: () => void
+  clientName: string
   includeItinerary: boolean
+  itineraryOption?: ItineraryOption | null
+  includeHotel?: boolean
+  hotel?: HotelRecord | null
+  startDate?: string | null
+  endDate?: string | null
+  duration?: number | null
+  vehicle?: { name: string; description: string; images: string[] } | null
+  price?: string | null
   onItineraryImagesChange?: (items: ManagedImageItem[]) => void
+  defaultItineraryImages?: ManagedImageItem[]
+  requestId?: string
   itineraryUrl?: string
   previewOptionIndex?: number
+  savingImages?: boolean
   onSendEmail: () => void
   onSendWhatsApp: () => void
   sending: boolean
@@ -46,6 +75,8 @@ export function ClientViewPreviewModal({
     return () => window.removeEventListener('message', onMessage)
   }, [onItineraryImagesChange, previewOptionIndex])
   if (!open) return null
+
+  const itineraryImages = itineraryOption ? normalizeManagedImages((itineraryOption as { images?: unknown }).images) : []
 
   const iframeSrc = (() => {
     if (!itineraryUrl) return ''
@@ -89,8 +120,8 @@ export function ClientViewPreviewModal({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        {includeItinerary && itineraryUrl ? (
-          <div className="max-w-5xl mx-auto space-y-4">
+        <div className="max-w-5xl mx-auto space-y-4">
+          {itineraryUrl ? (
             <div className="rounded-2xl border border-stone-300 bg-white p-3 shadow-sm">
               <div className="flex items-center justify-between gap-3 mb-2">
                 <p className="text-sm font-semibold text-stone-700">Exact client link preview</p>
@@ -109,12 +140,44 @@ export function ClientViewPreviewModal({
                 className="w-full h-[68vh] rounded-xl border border-stone-200 bg-white"
               />
             </div>
-          </div>
-        ) : (
-          <div className="max-w-2xl mx-auto rounded-2xl border border-stone-300 bg-white p-6 text-sm text-stone-600">
-            Enable "Include itinerary" and ensure a public link is available to preview the exact client page.
-          </div>
-        )}
+          ) : null}
+          {includeItinerary && itineraryOption ? (
+            <>
+              <ItineraryRender
+                mode="preview"
+                clientName={clientName}
+                startDate={startDate}
+                endDate={endDate}
+                duration={duration}
+                itinerary={{
+                  title: itineraryOption.title,
+                  summary: itineraryOption.summary,
+                  days: Array.isArray(itineraryOption.days)
+                    ? itineraryOption.days
+                    : [{ day: 1, title: 'Itinerary', location: '', activities: [String(itineraryOption.days || '')] }],
+                }}
+                hotel={includeHotel ? hotel : null}
+                vehicle={vehicle ?? null}
+                price={price ?? null}
+              />
+              {editMode && requestId && onItineraryImagesChange ? (
+                <div className="rounded-2xl border border-stone-300 bg-white p-4 shadow-sm">
+                  <ImageManager
+                    items={itineraryImages.length > 0 ? itineraryImages : defaultItineraryImages}
+                    onChange={onItineraryImagesChange}
+                    requestId={requestId}
+                    sectionLabel="Itinerary images (order: first = hero, then Day 1, Day 2...)"
+                    disabled={savingImages}
+                  />
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="max-w-2xl mx-auto rounded-2xl border border-stone-300 bg-white p-6 text-sm text-stone-600">
+              Generate or select an itinerary to preview.
+            </div>
+          )}
+        </div>
       </div>
 
       <div
