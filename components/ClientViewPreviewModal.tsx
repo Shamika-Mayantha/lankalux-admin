@@ -57,6 +57,7 @@ export function ClientViewPreviewModal({
   const [pickerMode, setPickerMode] = useState<'replace' | 'add'>('replace')
   const [targetIndex, setTargetIndex] = useState<number>(0)
   const [libraryPaths, setLibraryPaths] = useState<string[]>([])
+  const [dragOverUpload, setDragOverUpload] = useState(false)
   useEffect(() => {
     if (!open) {
       setEditMode(false)
@@ -112,6 +113,20 @@ export function ClientViewPreviewModal({
     }
     persist(updated.filter(Boolean))
     setPickerOpen(false)
+  }
+
+  const uploadAndApply = async (file?: File) => {
+    if (!file || !requestId) return
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('requestId', requestId)
+    const res = await fetch('/api/upload-client-image', { method: 'POST', body: fd })
+    const data = await res.json()
+    if (!res.ok || !data?.src) {
+      alert(data?.error || 'Upload failed')
+      return
+    }
+    applyImage(String(data.src))
   }
   if (!open) return null
   return (
@@ -186,51 +201,89 @@ export function ClientViewPreviewModal({
                 }}
               />
               {editMode && pickerOpen ? (
-                <div className="rounded-2xl border border-stone-300 bg-white p-4 shadow-sm">
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <label className="px-3 py-2 text-sm rounded-md border border-stone-300 bg-white hover:bg-stone-100 cursor-pointer">
-                      Upload new image
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0]
-                          e.currentTarget.value = ''
-                          if (!file || !requestId) return
-                          const fd = new FormData()
-                          fd.append('file', file)
-                          fd.append('requestId', requestId)
-                          const res = await fetch('/api/upload-client-image', { method: 'POST', body: fd })
-                          const data = await res.json()
-                          if (!res.ok || !data?.src) {
-                            alert(data?.error || 'Upload failed')
-                            return
-                          }
-                          applyImage(String(data.src))
-                        }}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setPickerOpen(false)}
-                      className="px-3 py-2 text-sm rounded-md text-stone-500 hover:bg-stone-100"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2 max-h-52 overflow-y-auto">
-                    {libraryPaths.map((src) => (
+                <div
+                  className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/40"
+                  onClick={() => setPickerOpen(false)}
+                >
+                  <div
+                    className="w-full max-w-4xl rounded-2xl shadow-2xl border border-stone-300 p-4 md:p-5"
+                    style={{ backgroundColor: 'var(--bg-card)' }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        {pickerMode === 'replace' ? 'Replace Image' : 'Add Image'}
+                      </h3>
                       <button
-                        key={src}
                         type="button"
-                        onClick={() => applyImage(src)}
-                        className="rounded-md overflow-hidden border border-stone-200 hover:ring-2 hover:ring-[#c8a45d]"
+                        onClick={() => setPickerOpen(false)}
+                        className="px-3 py-1.5 text-sm rounded-md border border-stone-300 hover:bg-stone-100"
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={src} alt="" className="w-full h-16 object-cover" />
+                        Cancel
                       </button>
-                    ))}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <label className="px-3 py-2 text-sm rounded-md border border-stone-300 bg-white hover:bg-stone-100 cursor-pointer">
+                        Upload Image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            e.currentTarget.value = ''
+                            await uploadAndApply(file)
+                          }}
+                        />
+                      </label>
+                      {pickerMode === 'replace' ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = images.filter((_, i) => i !== targetIndex)
+                            persist(updated)
+                            setPickerOpen(false)
+                          }}
+                          className="px-3 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700"
+                        >
+                          Remove Image
+                        </button>
+                      ) : null}
+                    </div>
+
+                    <div
+                      className={`mb-4 rounded-xl border-2 border-dashed p-4 text-sm text-center transition-colors ${
+                        dragOverUpload ? 'border-[#c8a45d] bg-[#faf3df]' : 'border-stone-300'
+                      }`}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        setDragOverUpload(true)
+                      }}
+                      onDragLeave={() => setDragOverUpload(false)}
+                      onDrop={async (e) => {
+                        e.preventDefault()
+                        setDragOverUpload(false)
+                        const file = e.dataTransfer.files?.[0]
+                        await uploadAndApply(file)
+                      }}
+                    >
+                      Drag & drop an image here, or use Upload Image
+                    </div>
+
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-[44vh] overflow-y-auto pr-1">
+                      {libraryPaths.map((src) => (
+                        <button
+                          key={src}
+                          type="button"
+                          onClick={() => applyImage(src)}
+                          className="rounded-xl overflow-hidden border border-stone-200 hover:ring-2 hover:ring-[#c8a45d] transition-transform duration-200 hover:scale-[1.02]"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={src} alt="" className="w-full h-20 object-cover" />
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ) : null}

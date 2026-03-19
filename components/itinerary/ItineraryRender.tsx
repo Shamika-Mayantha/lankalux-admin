@@ -25,6 +25,32 @@ export type RenderVehicle = {
   images: string[]
 } | null
 
+function parseDayHeading(dayNumber: number, rawTitle: string) {
+  const title = rawTitle || ''
+  const match = title.match(/^day\s*(\d+)\s*[-:]\s*(.+)$/i)
+  if (match) {
+    const parsedDay = parseInt(match[1], 10)
+    return {
+      day: Number.isNaN(parsedDay) ? dayNumber : parsedDay,
+      title: (match[2] || '').trim() || title,
+    }
+  }
+  return { day: dayNumber, title: title.trim() }
+}
+
+function formatDayDate(startDate?: string | null, dayNumber?: number) {
+  if (!startDate || !dayNumber) return null
+  const date = new Date(startDate)
+  if (Number.isNaN(date.getTime())) return null
+  date.setDate(date.getDate() + (dayNumber - 1))
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
 export function ItineraryRender({
   clientName,
   startDate,
@@ -109,7 +135,14 @@ export function ItineraryRender({
                   }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={dayImageSrc(day, idx)} alt={day.title || day.location} className="w-full h-64 object-cover" />
+                  <img
+                    src={dayImageSrc(day, idx)}
+                    alt={day.title || day.location}
+                    className={`w-full h-64 object-cover ${editable ? 'cursor-pointer' : ''}`}
+                    onClick={() => {
+                      if (editable) onReplace?.(idx)
+                    }}
+                  />
                   {editable ? (
                     <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                       <button
@@ -131,9 +164,20 @@ export function ItineraryRender({
                 </div>
               ) : null}
               <div className="bg-white border-2 border-[#c8a45d] rounded-lg p-6 shadow-sm">
-                <p className="text-[#c8a45d] font-bold text-2xl mb-1">Day {day.day}</p>
-                <p className="text-xl font-serif text-[#2c2c2c] mb-1">{day.title}</p>
-                <p className="text-sm uppercase tracking-wide text-[#c8a45d] mb-4">{day.location}</p>
+                {(() => {
+                  const heading = parseDayHeading(day.day, day.title)
+                  const dayDate = formatDayDate(startDate, heading.day)
+                  return (
+                    <div className="mb-6">
+                      <p className="text-lg font-semibold text-[#6b5a2f] mb-2">Day {heading.day}</p>
+                      <p className="text-2xl font-serif font-bold text-[#2c2c2c] mb-2">{heading.title}</p>
+                      {dayDate ? <p className="text-sm text-gray-500 mb-2">{dayDate}</p> : null}
+                      {day.location ? (
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#c8a45d]">{day.location}</p>
+                      ) : null}
+                    </div>
+                  )
+                })()}
                 {day.what_to_expect ? <p className="text-gray-700 italic mb-4">{day.what_to_expect}</p> : null}
                 {day.activities && day.activities.length > 0 ? (
                   <ul className="space-y-2 text-gray-700">
