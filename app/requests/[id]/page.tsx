@@ -2709,12 +2709,6 @@ LankaLux Team`
             const idx = previewingOptionIndex ?? request.selected_option
             if (idx != null) void handleUpdateItineraryImages(idx, items)
           }}
-          itineraryUrl={
-            includeItinerarySend && request.public_token
-              ? `/itinerary/${request.public_token}`
-              : undefined
-          }
-          previewOptionIndex={previewingOptionIndex ?? request.selected_option ?? 0}
           savingImages={savingItineraryImages === (previewingOptionIndex ?? request.selected_option ?? 0)}
           onSendEmail={() => void handleSendItinerary()}
           onSendWhatsApp={() => {

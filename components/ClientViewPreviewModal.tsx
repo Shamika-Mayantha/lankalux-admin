@@ -7,7 +7,6 @@ import { normalizeManagedImages } from '@/lib/managed-image'
 import { ItineraryRender } from '@/components/itinerary/ItineraryRender'
 import type { ItineraryOption } from '@/components/requests/itinerary-types'
 import type { HotelRecord } from '@/lib/hotel-types'
-import { ImageManager } from '@/components/ImageManager'
 
 export function ClientViewPreviewModal({
   open,
@@ -25,8 +24,6 @@ export function ClientViewPreviewModal({
   vehicle,
   price,
   onItineraryImagesChange,
-  itineraryUrl,
-  previewOptionIndex,
   savingImages = false,
   onSendEmail,
   onSendWhatsApp,
@@ -48,8 +45,6 @@ export function ClientViewPreviewModal({
   onItineraryImagesChange?: (items: ManagedImageItem[]) => void
   defaultItineraryImages?: ManagedImageItem[]
   requestId?: string
-  itineraryUrl?: string
-  previewOptionIndex?: number
   savingImages?: boolean
   onSendEmail: () => void
   onSendWhatsApp: () => void
@@ -57,33 +52,68 @@ export function ClientViewPreviewModal({
   hasWhatsApp: boolean
 }) {
   const [editMode, setEditMode] = useState(false)
+  const [images, setImages] = useState<string[]>([])
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerMode, setPickerMode] = useState<'replace' | 'add'>('replace')
+  const [targetIndex, setTargetIndex] = useState<number>(0)
+  const [libraryPaths, setLibraryPaths] = useState<string[]>([])
   useEffect(() => {
-    if (!open) setEditMode(false)
+    if (!open) {
+      setEditMode(false)
+      setPickerOpen(false)
+    }
   }, [open])
   useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      const payload = event.data as { type?: string; optionIndex?: number; images?: string[] }
-      if (payload?.type !== 'itinerary-images-updated') return
-      if (previewOptionIndex != null && payload.optionIndex != null && payload.optionIndex !== previewOptionIndex) return
-      if (!onItineraryImagesChange || !Array.isArray(payload.images)) return
-      const next = payload.images
-        .filter((src) => typeof src === 'string' && src.trim().length > 0)
-        .map((src) => ({ src, type: src.startsWith('/uploads/') ? 'uploaded' as const : 'default' as const }))
-      onItineraryImagesChange(next)
+    if (!itineraryOption) {
+      setImages([])
+      return
     }
-    window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
-  }, [onItineraryImagesChange, previewOptionIndex])
+    const d = Array.isArray(itineraryOption.days)
+      ? itineraryOption.days.map((x) => (x as { image?: string }).image || '').filter(Boolean)
+      : []
+    if (d.length > 0) {
+      setImages(d)
+      return
+    }
+    const existing = normalizeManagedImages((itineraryOption as { images?: unknown }).images).map((i) => i.src)
+    setImages(existing.slice(1))
+  }, [itineraryOption?.title, open])
+
+  const persist = (next: string[]) => {
+    setImages(next)
+    if (!onItineraryImagesChange) return
+    const hero = normalizeManagedImages(defaultItineraryImages)[0]?.src || next[0] || '/images/placeholder.jpg'
+    const items: ManagedImageItem[] = [hero, ...next].map((src) => ({
+      src,
+      type: src.startsWith('/uploads/') ? 'uploaded' : 'default',
+    }))
+    onItineraryImagesChange(items)
+  }
+
+  const openPicker = async (mode: 'replace' | 'add', index: number) => {
+    setPickerMode(mode)
+    setTargetIndex(index)
+    setPickerOpen(true)
+    try {
+      const res = await fetch('/api/image-library')
+      const data = await res.json()
+      setLibraryPaths(Array.isArray(data.paths) ? data.paths : [])
+    } catch {
+      setLibraryPaths([])
+    }
+  }
+
+  const applyImage = (src: string) => {
+    const updated = [...images]
+    if (pickerMode === 'replace') {
+      updated[targetIndex] = src
+    } else {
+      updated.splice(targetIndex, 0, src)
+    }
+    persist(updated.filter(Boolean))
+    setPickerOpen(false)
+  }
   if (!open) return null
-
-  const itineraryImages = itineraryOption ? normalizeManagedImages((itineraryOption as { images?: unknown }).images) : []
-
-  const iframeSrc = (() => {
-    if (!itineraryUrl) return ''
-    const sep = itineraryUrl.includes('?') ? '&' : '?'
-    return `${itineraryUrl}${sep}edit=${editMode ? '1' : '0'}`
-  })()
-
   return (
     <div
       className="fixed inset-0 z-[100] flex flex-col transition-colors duration-200"
@@ -121,26 +151,6 @@ export function ClientViewPreviewModal({
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="max-w-5xl mx-auto space-y-4">
-          {itineraryUrl ? (
-            <div className="rounded-2xl border border-stone-300 bg-white p-3 shadow-sm">
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <p className="text-sm font-semibold text-stone-700">Exact client link preview</p>
-                <a
-                  href={itineraryUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-[#b8860b] underline underline-offset-2"
-                >
-                  Open full page
-                </a>
-              </div>
-              <iframe
-                src={iframeSrc}
-                title="Client itinerary preview"
-                className="w-full h-[68vh] rounded-xl border border-stone-200 bg-white"
-              />
-            </div>
-          ) : null}
           {includeItinerary && itineraryOption ? (
             <>
               <ItineraryRender
@@ -159,16 +169,69 @@ export function ClientViewPreviewModal({
                 hotel={includeHotel ? hotel : null}
                 vehicle={vehicle ?? null}
                 price={price ?? null}
+                images={images}
+                editable={editMode}
+                onReplace={(index) => void openPicker('replace', index)}
+                onRemove={(index) => {
+                  const updated = images.filter((_, i) => i !== index)
+                  persist(updated)
+                }}
+                onAdd={() => void openPicker('add', images.length)}
+                onReorder={(from, to) => {
+                  if (from === to) return
+                  const updated = [...images]
+                  const [m] = updated.splice(from, 1)
+                  updated.splice(to, 0, m)
+                  persist(updated)
+                }}
               />
-              {editMode && requestId && onItineraryImagesChange ? (
+              {editMode && pickerOpen ? (
                 <div className="rounded-2xl border border-stone-300 bg-white p-4 shadow-sm">
-                  <ImageManager
-                    items={itineraryImages.length > 0 ? itineraryImages : defaultItineraryImages}
-                    onChange={onItineraryImagesChange}
-                    requestId={requestId}
-                    sectionLabel="Itinerary images (order: first = hero, then Day 1, Day 2...)"
-                    disabled={savingImages}
-                  />
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <label className="px-3 py-2 text-sm rounded-md border border-stone-300 bg-white hover:bg-stone-100 cursor-pointer">
+                      Upload new image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          e.currentTarget.value = ''
+                          if (!file || !requestId) return
+                          const fd = new FormData()
+                          fd.append('file', file)
+                          fd.append('requestId', requestId)
+                          const res = await fetch('/api/upload-client-image', { method: 'POST', body: fd })
+                          const data = await res.json()
+                          if (!res.ok || !data?.src) {
+                            alert(data?.error || 'Upload failed')
+                            return
+                          }
+                          applyImage(String(data.src))
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setPickerOpen(false)}
+                      className="px-3 py-2 text-sm rounded-md text-stone-500 hover:bg-stone-100"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2 max-h-52 overflow-y-auto">
+                    {libraryPaths.map((src) => (
+                      <button
+                        key={src}
+                        type="button"
+                        onClick={() => applyImage(src)}
+                        className="rounded-md overflow-hidden border border-stone-200 hover:ring-2 hover:ring-[#c8a45d]"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" className="w-full h-16 object-cover" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : null}
             </>

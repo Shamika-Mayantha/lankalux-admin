@@ -35,6 +35,12 @@ export function ItineraryRender({
   vehicle,
   price,
   mode,
+  images,
+  editable = false,
+  onReplace,
+  onRemove,
+  onAdd,
+  onReorder,
 }: {
   clientName: string
   startDate?: string | null
@@ -45,8 +51,15 @@ export function ItineraryRender({
   vehicle?: RenderVehicle
   price?: string | null
   mode: 'preview' | 'link'
+  images?: string[]
+  editable?: boolean
+  onReplace?: (index: number) => void
+  onRemove?: (index: number) => void
+  onAdd?: () => void
+  onReorder?: (from: number, to: number) => void
 }) {
   const hotelUrls = hotel ? imageSrcs(normalizeManagedImages(hotel.images)) : []
+  const dayImageSrc = (day: RenderDay, idx: number) => images?.[idx] || day.image || ''
   return (
     <div className={mode === 'preview' ? 'max-w-4xl mx-auto bg-white rounded-2xl shadow-lg' : 'min-h-screen bg-white'}>
       <div className="bg-gradient-to-b from-[#fafafa] to-white py-10 border-b-2 border-[#c8a45d]">
@@ -80,10 +93,41 @@ export function ItineraryRender({
         <div className="space-y-10">
           {itinerary.days.map((day, idx) => (
             <div key={`${day.day}-${idx}`}>
-              {day.image ? (
-                <div className="mb-5 rounded-lg overflow-hidden">
+              {dayImageSrc(day, idx) ? (
+                <div
+                  className={`mb-5 rounded-lg overflow-hidden ${editable ? 'group relative' : ''}`}
+                  draggable={editable}
+                  onDragStart={(e) => {
+                    if (!editable) return
+                    e.dataTransfer.setData('text/plain', String(idx))
+                  }}
+                  onDragOver={(e) => editable && e.preventDefault()}
+                  onDrop={(e) => {
+                    if (!editable || !onReorder) return
+                    const from = parseInt(e.dataTransfer.getData('text/plain'), 10)
+                    if (!isNaN(from)) onReorder(from, idx)
+                  }}
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={day.image} alt={day.title || day.location} className="w-full h-64 object-cover" />
+                  <img src={dayImageSrc(day, idx)} alt={day.title || day.location} className="w-full h-64 object-cover" />
+                  {editable ? (
+                    <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onReplace?.(idx)}
+                        className="px-3 py-1.5 rounded-md bg-white/95 text-stone-900 text-xs font-semibold"
+                      >
+                        Replace
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onRemove?.(idx)}
+                        className="px-3 py-1.5 rounded-md bg-red-600 text-white text-xs font-semibold"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
               <div className="bg-white border-2 border-[#c8a45d] rounded-lg p-6 shadow-sm">
@@ -105,6 +149,17 @@ export function ItineraryRender({
             </div>
           ))}
         </div>
+        {editable ? (
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => onAdd?.()}
+              className="px-4 py-2 rounded-lg border border-[#c8a45d] text-[#8b6f2a] text-sm font-medium hover:bg-[#faf3df]"
+            >
+              + Add Image
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {vehicle ? (
