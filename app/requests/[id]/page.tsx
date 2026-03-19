@@ -2701,7 +2701,7 @@ LankaLux Team`
           requestId={request.id}
           itineraryUrl={
             includeItinerarySend && request.public_token
-              ? `/itinerary/${request.public_token}/${previewingOptionIndex ?? request.selected_option ?? 0}`
+              ? `/itinerary/${request.public_token}`
               : undefined
           }
           savingImages={savingItineraryImages === (previewingOptionIndex ?? request.selected_option ?? 0)}

@@ -163,7 +163,7 @@ export async function POST(request: Request) {
           { status: 400 }
         )
       }
-      itineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}/${requestData.selected_option}`
+      itineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}`
       console.log('Itinerary URL:', { itineraryUrl, optionIndex: requestData.selected_option })
     }
 
@@ -243,411 +243,44 @@ export async function POST(request: Request) {
         })
       : 'Not specified'
 
-    const emailSubject =
-      include_itinerary && include_hotel
-        ? `LankaLux — ${selectedOption.title} & hotel`
-        : include_itinerary
-          ? `LankaLux Journey - ${selectedOption.title}`
-          : `LankaLux — ${hotelPayload!.name}`
-
-    const introMain =
-      include_itinerary && include_hotel
-        ? 'We are delighted to share your personalized Sri Lanka itinerary together with a hand-picked hotel recommendation.'
-        : include_itinerary
-          ? 'We are absolutely delighted to share your personalized Sri Lanka journey with you. Every detail has been carefully crafted to ensure an unforgettable experience.'
-          : 'We are delighted to share this curated hotel recommendation for your stay in Sri Lanka.'
-
-    const infoBoxHtml =
-      include_itinerary && selectedOption
-        ? `<div class="info-box">
-                <div class="info-row">
-                  <span class="info-label">Travel Dates</span>
-                  <span class="info-value">${startDateFormatted} - ${endDateFormatted}</span>
-                </div>
-                <div class="info-row">
-                  <span class="info-label">Selected Journey</span>
-                  <div class="journey-title">${selectedOption.title}</div>
-                </div>
-                ${requestData.duration ? `<div class="info-row">
-                  <span class="info-label">Duration</span>
-                  <span class="info-value">${requestData.duration} Days</span>
-                </div>` : ''}
-              </div>`
-        : `<div class="info-box">
-                <div class="info-row">
-                  <span class="info-label">Travel Dates</span>
-                  <span class="info-value">${startDateFormatted} - ${endDateFormatted}</span>
-                </div>
-              </div>`
-
-    const itineraryDaysHtml =
-      include_itinerary && itineraryUrl
-        ? `<div class="cta-section">
-                <a href="${itineraryUrl}" class="journey-link">View Your Journey</a>
-              </div>`
-        : ''
-
-    const hotelHtml = ''
-
-    const preheader =
-      include_itinerary && include_hotel
-        ? 'Your itinerary and hotel details from LankaLux.'
-        : include_itinerary
-          ? 'Your personalized Sri Lanka journey awaits.'
-          : `Hotel details: ${hotelPayload!.name}.`
-    const logoUrl = `${baseUrl}/favicon.png`
+    const emailSubject = 'Your LankaLux itinerary link'
+    const preheader = 'You can view your personalized itinerary using the link below.'
     const emailHtml = `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <!-- Preheader text for email preview -->
-          <style type="text/css">
-            .preheader {
-              display: none !important;
-              visibility: hidden;
-              opacity: 0;
-              color: transparent;
-              height: 0;
-              width: 0;
-              font-size: 1px;
-              line-height: 1px;
-              max-height: 0;
-              max-width: 0;
-            }
-          </style>
           <style>
-            * {
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-            }
-            body {
-              font-family: 'Georgia', 'Times New Roman', serif;
-              line-height: 1.8;
-              color: #2c2c2c;
-              background-color: #f5f5f5;
-              padding: 0;
-              margin: 0;
-            }
-            .email-container {
-              max-width: 600px;
-              margin: 0 auto;
-              background-color: #ffffff;
-              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            }
-            .header {
-              background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
-              padding: 40px 20px;
-              text-align: center;
-              border-bottom: 4px solid #c8a45d;
-            }
-            .logo {
-              width: 80px;
-              height: 80px;
-              margin: 0 auto 20px;
-              display: block;
-              border-radius: 50%;
-              object-fit: cover;
-            }
-            .header h1 {
-              color: #c8a45d;
-              font-size: 32px;
-              font-weight: 300;
-              letter-spacing: 2px;
-              margin: 0;
-              font-family: 'Georgia', serif;
-            }
-            .header .subtitle {
-              color: #ffffff;
-              font-size: 14px;
-              margin-top: 8px;
-              letter-spacing: 1px;
-              text-transform: uppercase;
-            }
-            .content {
-              padding: 40px 30px;
-              background-color: #ffffff;
-            }
-            .greeting {
-              font-size: 18px;
-              color: #2c2c2c;
-              margin-bottom: 20px;
-              font-weight: 400;
-            }
-            .intro-text {
-              font-size: 16px;
-              color: #555;
-              margin-bottom: 30px;
-              line-height: 1.8;
-            }
-            .info-box {
-              background-color: #fafafa;
-              border-left: 4px solid #c8a45d;
-              padding: 20px;
-              margin: 25px 0;
-              border-radius: 4px;
-            }
-            .info-row {
-              margin-bottom: 12px;
-              font-size: 15px;
-            }
-            .info-row:last-child {
-              margin-bottom: 0;
-            }
-            .info-label {
-              color: #666;
-              font-weight: 600;
-              display: inline-block;
-              min-width: 140px;
-              text-transform: uppercase;
-              font-size: 12px;
-              letter-spacing: 0.5px;
-            }
-            .info-value {
-              color: #2c2c2c;
-              font-weight: 400;
-            }
-            .journey-title {
-              color: #c8a45d;
-              font-size: 20px;
-              font-weight: 600;
-              margin-top: 8px;
-            }
-            .journey-overview {
-              background-color: #fafafa;
-              border: 1px solid #e0e0e0;
-              border-radius: 8px;
-              padding: 25px;
-              margin: 30px 0;
-            }
-            .journey-overview h3 {
-              color: #c8a45d;
-              font-size: 18px;
-              font-weight: 600;
-              margin-bottom: 15px;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-              border-bottom: 2px solid #c8a45d;
-              padding-bottom: 10px;
-            }
-            .day-section {
-              margin-bottom: 20px;
-              padding-bottom: 20px;
-              border-bottom: 1px solid #e0e0e0;
-            }
-            .day-section:last-child {
-              border-bottom: none;
-              margin-bottom: 0;
-              padding-bottom: 0;
-            }
-            .day-header {
-              display: flex;
-              align-items: center;
-              margin-bottom: 12px;
-            }
-            .day-number {
-              background-color: #c8a45d;
-              color: #ffffff;
-              width: 35px;
-              height: 35px;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: 600;
-              font-size: 16px;
-              margin-right: 12px;
-            }
-            .day-title {
-              font-size: 16px;
-              font-weight: 600;
-              color: #2c2c2c;
-            }
-            .day-location {
-              font-size: 14px;
-              color: #666;
-              margin-left: 47px;
-              margin-top: -5px;
-              margin-bottom: 10px;
-            }
-            .activities-list {
-              margin-left: 47px;
-              margin-top: 10px;
-            }
-            .activity-item {
-              font-size: 14px;
-              color: #555;
-              margin-bottom: 8px;
-              padding-left: 20px;
-              position: relative;
-            }
-            .activity-item:before {
-              content: "•";
-              color: #c8a45d;
-              font-weight: bold;
-              position: absolute;
-              left: 0;
-            }
-            .what-to-expect {
-              background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
-              border-left: 4px solid #c8a45d;
-              padding: 20px;
-              margin: 30px 0;
-              border-radius: 4px;
-            }
-            .what-to-expect h3 {
-              color: #c8a45d;
-              font-size: 16px;
-              font-weight: 600;
-              margin-bottom: 12px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-            }
-            .expect-item {
-              font-size: 14px;
-              color: #555;
-              margin-bottom: 8px;
-              padding-left: 20px;
-              position: relative;
-            }
-            .expect-item:before {
-              content: "✓";
-              color: #c8a45d;
-              font-weight: bold;
-              position: absolute;
-              left: 0;
-            }
-            .cta-section {
-              text-align: center;
-              margin: 40px 0;
-              padding: 30px 0;
-              border-top: 1px solid #e0e0e0;
-              border-bottom: 1px solid #e0e0e0;
-            }
-            .journey-link {
-              display: inline-block;
-              background: linear-gradient(135deg, #c8a45d 0%, #b8944d 100%);
-              color: #ffffff;
-              padding: 16px 40px;
-              text-decoration: none;
-              border-radius: 6px;
-              font-weight: 600;
-              font-size: 16px;
-              letter-spacing: 0.5px;
-              box-shadow: 0 4px 12px rgba(200, 164, 93, 0.3);
-              transition: all 0.3s ease;
-              text-transform: uppercase;
-            }
-            .journey-link:hover {
-              background: linear-gradient(135deg, #b8944d 0%, #a8843d 100%);
-              box-shadow: 0 6px 16px rgba(200, 164, 93, 0.4);
-              transform: translateY(-2px);
-            }
-            .closing-text {
-              font-size: 15px;
-              color: #555;
-              margin: 30px 0 20px;
-              line-height: 1.8;
-            }
-            .signature {
-              margin-top: 30px;
-              font-size: 15px;
-              color: #2c2c2c;
-            }
-            .signature-name {
-              font-weight: 600;
-              color: #c8a45d;
-              margin-top: 5px;
-            }
-            .footer {
-              background-color: #1a1a1a;
-              padding: 25px 20px;
-              text-align: center;
-              color: #999;
-              font-size: 12px;
-            }
-            .footer p {
-              margin: 5px 0;
-            }
-            .footer a {
-              color: #c8a45d;
-              text-decoration: none;
-            }
-            @media only screen and (max-width: 600px) {
-              .content {
-                padding: 30px 20px;
-              }
-              .header {
-                padding: 30px 15px;
-              }
-              .info-label {
-                display: block;
-                margin-bottom: 5px;
-              }
-            }
+            body { font-family: Arial, Helvetica, sans-serif; color: #2c2c2c; background: #f5f5f5; margin: 0; padding: 24px; }
+            .card { max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 24px; }
+            .btn { display: inline-block; margin-top: 14px; background: #c8a45d; color: #fff !important; text-decoration: none; padding: 12px 18px; border-radius: 8px; font-weight: 600; }
+            .link { word-break: break-all; color: #8b6f2a; }
+            .preheader { display:none!important; visibility:hidden; opacity:0; color:transparent; height:0; width:0; font-size:1px; line-height:1px; }
           </style>
         </head>
         <body>
-          <!-- Preheader text - shown in email preview instead of first line -->
           <div class="preheader">${preheader}</div>
-          <div class="email-container">
-            <div class="header">
-              <a href="https://lankalux.com" style="text-decoration: none; display: block;">
-                <img src="${logoUrl}" alt="LankaLux Logo" class="logo" />
-              </a>
-              <h1>LankaLux</h1>
-              <div class="subtitle">Journey</div>
-            </div>
-            <div class="content">
-              <div class="greeting">Dear ${requestData.client_name || 'Valued Client'},</div>
-              
-              <p class="intro-text">
-                ${introMain}
-              </p>
-              
-              ${infoBoxHtml}
-              
-              ${itineraryDaysHtml}
-              
-              ${hotelHtml}
-              
-              <p class="closing-text">
-                ${include_itinerary ? `This link provides access to your complete journey details. ` : ''}If you have any questions or would like adjustments, please reach out—we're here to make your journey perfect.
-              </p>
-              
-              <p class="closing-text">
-                We look forward to creating an extraordinary and unforgettable experience for you in the Pearl of the Indian Ocean.
-              </p>
-              
-              <div class="signature">
-                <p>Warm regards,</p>
-                <p class="signature-name">The LankaLux Team</p>
-              </div>
-            </div>
-            <div class="footer">
-              <p>© ${new Date().getFullYear()} LankaLux. All rights reserved.</p>
-              <p>Your journey to Sri Lanka begins here.</p>
-            </div>
+          <div class="card">
+            <p>Dear ${requestData.client_name || 'Valued Client'},</p>
+            <p>You can view your personalized itinerary here:</p>
+            <p><a class="btn" href="${itineraryUrl}">Open Itinerary</a></p>
+            <p class="link">${itineraryUrl}</p>
+            <p>Warm regards,<br/>The LankaLux Team</p>
           </div>
         </body>
       </html>
     `
 
-    const textBlocks: string[] = [`Dear ${requestData.client_name || 'Valued Client'},`, '', introMain, '']
-    if (include_itinerary && itineraryUrl) {
-      textBlocks.push(`View your journey: ${itineraryUrl}`, '')
-    }
-    textBlocks.push(
-      'If you have any questions, please reach out.',
+    const emailText = [
+      `Dear ${requestData.client_name || 'Valued Client'},`,
+      '',
+      'You can view your personalized itinerary here:',
+      itineraryUrl,
       '',
       'Warm regards,',
       'The LankaLux Team',
-      '',
-      `© ${new Date().getFullYear()} LankaLux. All rights reserved.`
-    )
-    const emailText = textBlocks.filter(Boolean).join('\n')
+    ].join('\n')
 
     // Send email
     try {
