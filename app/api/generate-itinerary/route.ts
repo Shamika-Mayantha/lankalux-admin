@@ -4,6 +4,19 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
+function cleanGeneratedDayTitle(rawTitle: unknown, dayNumber: number, location?: string) {
+  const title = typeof rawTitle === 'string' ? rawTitle.trim() : ''
+  let cleaned = title
+    .replace(new RegExp(`^day\\s*${dayNumber}\\s*[-–:|]?\\s*`, 'i'), '')
+    .replace(/^[A-Za-z]+,\s+[A-Za-z]+\s+\d{1,2},\s+\d{4}\s*[-–:|]?\s*/i, '')
+    .replace(/^day\s*\d+\s*[-–:|]\s*/i, '')
+    .trim()
+  if (!cleaned || /^day\s*\d+$/i.test(cleaned)) {
+    cleaned = location?.trim() ? `Arrival in ${location.trim()}` : 'Journey Highlights'
+  }
+  return cleaned
+}
+
 // Vercel Hobby plan has 10 second timeout - optimize for speed
 export const maxDuration = 10
 
@@ -491,6 +504,10 @@ Return JSON in this format: { "title": "...", "summary": "...", "total_kilometer
           day.image = locationImageMap[day.location] || "/images/placeholder.jpg"
         }
       }
+      option.days = option.days.map((day: any, idx: number) => ({
+        ...day,
+        title: cleanGeneratedDayTitle(day.title, idx + 1, day.location),
+      }))
       
       return option
     }

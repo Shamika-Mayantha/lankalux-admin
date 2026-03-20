@@ -5,6 +5,7 @@ import { X, Send, MessageCircle } from 'lucide-react'
 import type { ManagedImageItem } from '@/lib/managed-image'
 import { normalizeManagedImages } from '@/lib/managed-image'
 import { ItineraryRender } from '@/components/itinerary/ItineraryRender'
+import type { RenderItinerary } from '@/components/itinerary/ItineraryRender'
 import type { ItineraryOption } from '@/components/requests/itinerary-types'
 import type { HotelRecord } from '@/lib/hotel-types'
 
@@ -24,6 +25,7 @@ export function ClientViewPreviewModal({
   vehicle,
   price,
   onItineraryImagesChange,
+  onItineraryContentChange,
   savingImages = false,
   onSendEmail,
   onSendWhatsApp,
@@ -43,6 +45,7 @@ export function ClientViewPreviewModal({
   vehicle?: { name: string; description: string; images: string[] } | null
   price?: string | null
   onItineraryImagesChange?: (items: ManagedImageItem[]) => void
+  onItineraryContentChange?: (next: ItineraryOption) => Promise<void>
   defaultItineraryImages?: ManagedImageItem[]
   requestId?: string
   savingImages?: boolean
@@ -58,10 +61,15 @@ export function ClientViewPreviewModal({
   const [targetIndex, setTargetIndex] = useState<number>(0)
   const [libraryPaths, setLibraryPaths] = useState<string[]>([])
   const [dragOverUpload, setDragOverUpload] = useState(false)
+  const [itineraryDraft, setItineraryDraft] = useState<RenderItinerary | null>(null)
+  const [savingContent, setSavingContent] = useState(false)
+  const [contentDirty, setContentDirty] = useState(false)
   useEffect(() => {
     if (!open) {
       setEditMode(false)
       setPickerOpen(false)
+      setSavingContent(false)
+      setContentDirty(false)
     }
   }, [open])
   useEffect(() => {
@@ -79,6 +87,33 @@ export function ClientViewPreviewModal({
     const existing = normalizeManagedImages((itineraryOption as { images?: unknown }).images).map((i) => i.src)
     setImages(existing.slice(1))
   }, [itineraryOption?.title, open])
+
+  useEffect(() => {
+    if (!itineraryOption || !open) {
+      setItineraryDraft(null)
+      setContentDirty(false)
+      return
+    }
+    const normalizedDays = Array.isArray(itineraryOption.days)
+      ? itineraryOption.days
+      : [{ day: 1, title: 'Itinerary', location: '', activities: [String(itineraryOption.days || '')] }]
+    setItineraryDraft({
+      title: itineraryOption.title || '',
+      summary: itineraryOption.summary || '',
+      days: normalizedDays.map((d, i) => ({
+        day: d.day ?? i + 1,
+        title: d.title || '',
+        location: d.location || '',
+        activities: Array.isArray(d.activities) ? d.activities : [],
+        optional_activities: Array.isArray((d as { optional_activities?: string[] }).optional_activities)
+          ? (d as { optional_activities?: string[] }).optional_activities
+          : [],
+        what_to_expect: (d as { what_to_expect?: string }).what_to_expect || '',
+        image: (d as { image?: string }).image,
+      })),
+    })
+    setContentDirty(false)
+  }, [itineraryOption, open])
 
   const persist = (next: string[]) => {
     setImages(next)
@@ -128,6 +163,32 @@ export function ClientViewPreviewModal({
     }
     applyImage(String(data.src))
   }
+
+  const saveContentChanges = async () => {
+    if (!onItineraryContentChange || !itineraryOption || !itineraryDraft || !contentDirty) return
+    setSavingContent(true)
+    try {
+      await onItineraryContentChange({
+        ...itineraryOption,
+        title: itineraryDraft.title.trim(),
+        summary: itineraryDraft.summary.trim(),
+        days: itineraryDraft.days.map((d, i) => ({
+          ...d,
+          day: d.day || i + 1,
+          title: (d.title || '').trim() || `Day ${d.day || i + 1}`,
+          location: (d.location || '').trim(),
+          activities: (d.activities || []).map((a) => (a || '').trim()).filter(Boolean),
+          what_to_expect: (d.what_to_expect || '').trim(),
+        })),
+      })
+      setContentDirty(false)
+    } catch (e) {
+      console.error(e)
+      alert('Could not save itinerary text changes.')
+    } finally {
+      setSavingContent(false)
+    }
+  }
   if (!open) return null
   return (
     <div
@@ -144,15 +205,27 @@ export function ClientViewPreviewModal({
           </p>
           <p className="text-sm opacity-80">Exactly as structured for your client</p>
         </div>
-        <label className="inline-flex items-center gap-2 text-xs text-secondary">
-          <span>Edit Mode</span>
-          <input
-            type="checkbox"
-            checked={editMode}
-            onChange={(e) => setEditMode(e.target.checked)}
-            className="rounded border-accent text-accent-theme"
-          />
-        </label>
+        <div className="flex items-center gap-3">
+          {editMode ? (
+            <button
+              type="button"
+              onClick={() => void saveContentChanges()}
+              disabled={!contentDirty || savingContent}
+              className="px-3 py-1.5 text-xs rounded-md bg-[#d4af37] text-black font-semibold disabled:opacity-50"
+            >
+              {savingContent ? 'Saving...' : contentDirty ? 'Save text changes' : 'Saved'}
+            </button>
+          ) : null}
+          <label className="inline-flex items-center gap-2 text-xs text-secondary">
+            <span>Edit Mode</span>
+            <input
+              type="checkbox"
+              checked={editMode}
+              onChange={(e) => setEditMode(e.target.checked)}
+              className="rounded border-accent text-accent-theme"
+            />
+          </label>
+        </div>
         <button
           type="button"
           onClick={onClose}
@@ -174,18 +247,24 @@ export function ClientViewPreviewModal({
                 startDate={startDate}
                 endDate={endDate}
                 duration={duration}
-                itinerary={{
-                  title: itineraryOption.title,
-                  summary: itineraryOption.summary,
-                  days: Array.isArray(itineraryOption.days)
-                    ? itineraryOption.days
-                    : [{ day: 1, title: 'Itinerary', location: '', activities: [String(itineraryOption.days || '')] }],
-                }}
+                itinerary={
+                  itineraryDraft || {
+                    title: itineraryOption.title,
+                    summary: itineraryOption.summary,
+                    days: Array.isArray(itineraryOption.days)
+                      ? itineraryOption.days
+                      : [{ day: 1, title: 'Itinerary', location: '', activities: [String(itineraryOption.days || '')] }],
+                  }
+                }
                 hotel={includeHotel ? hotel : null}
                 vehicle={vehicle ?? null}
                 price={price ?? null}
                 images={images}
                 editable={editMode}
+                onItineraryChange={(next) => {
+                  setItineraryDraft(next)
+                  setContentDirty(true)
+                }}
                 onReplace={(index) => void openPicker('replace', index)}
                 onRemove={(index) => {
                   const updated = images.filter((_, i) => i !== index)

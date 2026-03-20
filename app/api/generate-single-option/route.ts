@@ -4,6 +4,19 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
+function cleanGeneratedDayTitle(rawTitle: unknown, dayNumber: number, location?: string) {
+  const title = typeof rawTitle === 'string' ? rawTitle.trim() : ''
+  let cleaned = title
+    .replace(new RegExp(`^day\\s*${dayNumber}\\s*[-–:|]?\\s*`, 'i'), '')
+    .replace(/^[A-Za-z]+,\s+[A-Za-z]+\s+\d{1,2},\s+\d{4}\s*[-–:|]?\s*/i, '')
+    .replace(/^day\s*\d+\s*[-–:|]\s*/i, '')
+    .trim()
+  if (!cleaned || /^day\s*\d+$/i.test(cleaned)) {
+    cleaned = location?.trim() ? `Arrival in ${location.trim()}` : 'Journey Highlights'
+  }
+  return cleaned
+}
+
 export async function POST(request: Request) {
   try {
     // Parse request body
@@ -108,7 +121,7 @@ export async function POST(request: Request) {
     }
     const hasDayDates = dayDateLabels.length > 0
     const dayDatesBlock = hasDayDates
-      ? `\n**DATES FOR EACH DAY (use these in the day titles):**\n${dayDateLabels.map((l, i) => `${i + 1}. ${l}`).join('\n')}\n\nFor each day object, set "title" to start with the exact label above (e.g. "${dayDateLabels[0]}: Arrival in Colombo") then add a colon and your day description. So the title combines the date label and the activity theme.`
+      ? `\n**DATES FOR EACH DAY (do NOT include date/day number in title):**\n${dayDateLabels.map((l, i) => `${i + 1}. ${l}`).join('\n')}\n\nUse these dates only for planning sequence. Keep each day "title" clean and descriptive (example: "Arrival in Colombo"), without repeating "Day X" or full date in the title.`
       : ''
 
     let passengerInfo = 'Not specified'
@@ -499,12 +512,7 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
         const d = new Date(start)
         d.setDate(d.getDate() + i)
         day.date = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-        if (dayDateLabels[i]) {
-          const alreadyHasDateLabel = /^Day \d+ – .+, .+ \d{4}/.test(day.title || '')
-          if (!alreadyHasDateLabel && day.title) {
-            day.title = `${dayDateLabels[i]}: ${day.title.trim()}`
-          }
-        }
+        day.title = cleanGeneratedDayTitle(day.title, i + 1, day.location)
       }
     }
 

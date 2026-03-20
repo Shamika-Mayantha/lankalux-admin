@@ -781,6 +781,39 @@ export default function RequestDetailsPage() {
     }
   }
 
+  const handleUpdateItineraryContent = async (optionIndex: number, nextOption: ItineraryOption) => {
+    if (!request || request.status?.toLowerCase() === 'cancelled') return
+    setSavingItineraryImages(optionIndex)
+    try {
+      const raw = [...(request.itinerary_options?.options ?? [])]
+      while (raw.length <= optionIndex) raw.push(null)
+      const opt = raw[optionIndex] as ItineraryOption | null
+      if (!opt) {
+        setSavingItineraryImages(null)
+        return
+      }
+      const merged: ItineraryOption = {
+        ...opt,
+        ...nextOption,
+      }
+      raw[optionIndex] = merged
+      const { error } = await (supabase.from('Client Requests') as any)
+        .update({
+          itineraryoptions: JSON.stringify({ options: raw }),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+      if (error) throw error
+      const updated = await fetchRequestData(request.id)
+      if (updated) setRequest(updated)
+    } catch (e) {
+      console.error(e)
+      alert('Could not save itinerary text changes.')
+    } finally {
+      setSavingItineraryImages(null)
+    }
+  }
+
   const handleUpdateManualItineraryImages = async (optionIndex: number, items: ManagedImageItem[]) => {
     if (!request || request.status?.toLowerCase() === 'cancelled' || optionIndex < 3) return
     setSavingManualOption(optionIndex)
@@ -2706,6 +2739,10 @@ LankaLux Team`
           onItineraryImagesChange={(items) => {
             const idx = previewingOptionIndex ?? request.selected_option
             if (idx != null) void handleUpdateItineraryImages(idx, items)
+          }}
+          onItineraryContentChange={async (nextOption) => {
+            const idx = previewingOptionIndex ?? request.selected_option
+            if (idx != null) await handleUpdateItineraryContent(idx, nextOption)
           }}
           savingImages={savingItineraryImages === (previewingOptionIndex ?? request.selected_option ?? 0)}
           onSendEmail={() => void handleSendItinerary()}
