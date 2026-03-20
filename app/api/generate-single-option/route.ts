@@ -17,6 +17,40 @@ function cleanGeneratedDayTitle(rawTitle: unknown, dayNumber: number, location?:
   return cleaned
 }
 
+function norm(text: unknown) {
+  return String(text || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function jaccard(a: Set<string>, b: Set<string>) {
+  if (a.size === 0 || b.size === 0) return 0
+  let inter = 0
+  for (const v of a) if (b.has(v)) inter++
+  const union = a.size + b.size - inter
+  return union > 0 ? inter / union : 0
+}
+
+function optionSignature(option: any) {
+  const titleTokens = new Set<string>(norm(option?.title).split(' ').filter((w) => w.length > 3))
+  const route: string[] = Array.isArray(option?.days) ? option.days.map((d: any) => norm(d?.location)).filter(Boolean) : []
+  const routeSet = new Set<string>(route)
+  const activityTokens = new Set<string>(
+    (Array.isArray(option?.days) ? option.days : [])
+      .flatMap((d: any) => (Array.isArray(d?.activities) ? d.activities : []))
+      .flatMap((a: any) => norm(a).split(' '))
+      .filter((w: string) => w.length > 4)
+  )
+  return { titleTokens, routeSet, activityTokens, routeSequence: route.join(' > ') }
+}
+
+function similarityScore(a: any, b: any) {
+  const sa = optionSignature(a)
+  const sb = optionSignature(b)
+  const title = jaccard(sa.titleTokens, sb.titleTokens)
+  const route = jaccard(sa.routeSet, sb.routeSet)
+  const acts = jaccard(sa.activityTokens, sb.activityTokens)
+  return (title * 0.35) + (route * 0.35) + (acts * 0.3)
+}
+
 export async function POST(request: Request) {
   try {
     // Parse request body
@@ -171,11 +205,11 @@ export async function POST(request: Request) {
           ? JSON.parse(requestData.itineraryoptions) 
           : requestData.itineraryoptions
         if (parsed?.options && Array.isArray(parsed.options)) {
-          // Filter out null values to prevent errors when accessing properties
-          existingOptions = parsed.options.filter((opt: any) => opt !== null && opt !== undefined)
+          existingOptions = Array.isArray(parsed.options) ? parsed.options : []
         }
       } catch {}
     }
+    const comparisonOptions = existingOptions.filter((opt: any, idx: number) => idx !== optionIndex && !!opt)
 
     // Read photo mapping file with full details for unique assignment
     let photoMappingInfo = ''
@@ -203,7 +237,7 @@ export async function POST(request: Request) {
       console.warn('Could not read photo mapping file:', error)
     }
 
-    const existingTitles = existingOptions.filter((opt: any) => opt && opt.title).map((opt: any) => opt.title).join(', ')
+    const existingTitles = comparisonOptions.filter((opt: any) => opt && opt.title).map((opt: any) => opt.title).join(', ')
     
     const prompt = `You are an experienced and passionate luxury travel consultant who creates personalized, memorable journeys through Sri Lanka. Generate ONE distinct, premium itinerary option for the following client:
 
@@ -317,8 +351,9 @@ REMINDER: Count the days from ${startDateFormatted} to ${endDateFormatted} (incl
     const expectedDaysNum = actualDuration || requestData.duration || 6
     let completion
     let generatedContent = ''
-    const maxRetries = 3
+    const maxRetries = 5
     let attempt = 0
+    let uniquenessRetryNote = ''
     
     while (attempt < maxRetries) {
       try {
@@ -327,9 +362,9 @@ REMINDER: Count the days from ${startDateFormatted} to ${endDateFormatted} (incl
         const calculatedMaxTokens = Math.min(Math.max(expectedDaysNum * 800, 3000), 5000)
         
         // Make prompt even more explicit on retry
-        let currentPrompt = prompt
+        let currentPrompt = `${prompt}${uniquenessRetryNote}`
         if (attempt > 1) {
-          currentPrompt = `${prompt}
+          currentPrompt = `${prompt}${uniquenessRetryNote}
 
 CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. You MUST generate EXACTLY ${expectedDaysNum} days. Count each day object in the "days" array. The array must have ${expectedDaysNum} items, numbered from day 1 to day ${expectedDaysNum}. This is non-negotiable.`
         }
@@ -376,7 +411,18 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
             if (testOption.days && Array.isArray(testOption.days)) {
               const actualDaysCount = testOption.days.length
               if (actualDaysCount === expectedDaysNum) {
-                // Correct number of days, break out of retry loop
+                // Reject near-duplicate options and force retry with explicit guidance.
+                if (comparisonOptions.length > 0) {
+                  const scored = comparisonOptions
+                    .map((opt: any, idx: number) => ({ idx, score: similarityScore(testOption, opt), opt }))
+                    .sort((a: any, b: any) => b.score - a.score)
+                  const top = scored[0]
+                  if (top && top.score >= 0.55) {
+                    const sig = optionSignature(top.opt)
+                    uniquenessRetryNote = `\n\nCRITICAL UNIQUENESS RETRY: Your previous output was too similar to an existing option (similarity ${(top.score * 100).toFixed(0)}%). Regenerate a substantially different option.\n- Avoid this route pattern: ${sig.routeSequence || 'N/A'}\n- Avoid this existing title style: ${top.opt?.title || 'N/A'}\n- Use a different primary theme, different city sequence, and mostly different activities.\n`
+                    if (attempt < maxRetries) continue
+                  }
+                }
                 break
               } else {
                 console.warn(`Attempt ${attempt}: Generated ${actualDaysCount} days, expected ${expectedDaysNum}. Retrying...`)
