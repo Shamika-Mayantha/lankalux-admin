@@ -38,9 +38,10 @@ function parseDayHeading(dayNumber: number, rawTitle: string) {
   cleaned = cleaned.replace(/^day\s*\d+\s*[-–:]\s*/i, '')
   cleaned = cleaned.trim()
 
+  const finalTitle = cleaned || title.trim()
   return {
     day: Number.isNaN(parsedDay) ? dayNumber : parsedDay,
-    title: cleaned || title.trim(),
+    title: finalTitle,
   }
 }
 
@@ -55,6 +56,15 @@ function formatDayDate(startDate?: string | null, dayNumber?: number) {
     day: 'numeric',
     year: 'numeric',
   })
+}
+
+function elegantTitle(raw: string) {
+  const text = (raw || '').trim()
+  if (!text) return 'Your Sri Lanka Journey'
+  const noPrefix = text.replace(/^option\s*\d+\s*[:\-–]\s*/i, '').trim()
+  const base = noPrefix.split(':')[0].trim() || noPrefix
+  if (base.length <= 58) return base
+  return `${base.slice(0, 55).trim()}...`
 }
 
 export function ItineraryRender({
@@ -96,9 +106,9 @@ export function ItineraryRender({
     <div className={mode === 'preview' ? 'max-w-4xl mx-auto bg-white rounded-3xl shadow-xl shadow-black/10 overflow-hidden' : 'min-h-screen bg-[#fbfaf7]'}>
       <div className="bg-gradient-to-b from-[#f8f6f2] via-[#fffdf9] to-white py-12 border-b border-[#dcc48e]">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <p className="text-[11px] tracking-[0.14em] uppercase text-[#9c8352] mb-3">Prepared for</p>
-          <p className="text-2xl font-serif text-[#2d2a26] mb-4">{clientName}</p>
-          <h1 className="text-4xl md:text-5xl font-serif font-semibold text-[#1f1c18] mb-4 leading-tight">{itinerary.title}</h1>
+          <p className="text-[12px] font-serif tracking-[0.08em] text-[#9c8352] mb-2">Prepared for</p>
+          <p className="text-[28px] font-serif text-[#2d2a26] mb-4">{clientName}</p>
+          <h1 className="text-3xl md:text-4xl font-serif font-semibold text-[#2b261f] mb-4 leading-tight">{elegantTitle(itinerary.title)}</h1>
           <div className="w-20 h-[1px] bg-[#c9a14a]/70 mx-auto mb-5" />
           <div className="flex flex-wrap justify-center gap-6 mt-4 text-sm text-[#6f6758]">
             {startDate ? <span>Start: {new Date(startDate).toLocaleDateString('en-US')}</span> : null}
@@ -175,10 +185,14 @@ export function ItineraryRender({
                 {(() => {
                   const heading = parseDayHeading(day.day, day.title)
                   const dayDate = formatDayDate(startDate, heading.day)
+                  const headingTitle =
+                    heading.title && !/^day\s*\d+$/i.test(heading.title.trim())
+                      ? heading.title
+                      : (day.location ? `Arrival in ${day.location}` : 'Journey Highlights')
                   return (
                     <div className="mb-7">
                       <p className="text-lg font-semibold text-[#6e5f3b] mb-2">Day {heading.day}</p>
-                      <p className="text-[30px] leading-tight font-serif font-semibold text-[#22201c] mb-2">{heading.title}</p>
+                      <p className="text-[30px] leading-tight font-serif font-semibold text-[#22201c] mb-2">{headingTitle}</p>
                       {dayDate ? <p className="text-sm text-[#8b8579] mb-2">{dayDate}</p> : null}
                       {day.location ? (
                         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#c49a44]">{day.location}</p>

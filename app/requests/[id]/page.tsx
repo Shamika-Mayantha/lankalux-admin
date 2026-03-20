@@ -577,8 +577,6 @@ export default function RequestDetailsPage() {
           console.error('Failed to load default images:', e)
         }
       }
-      setPreviewingOptionIndex(optionIndex)
-      setClientPreviewOpen(true)
       setGeneratingOption(null)
     } catch (err) {
       console.error('Unexpected error generating option:', err)
