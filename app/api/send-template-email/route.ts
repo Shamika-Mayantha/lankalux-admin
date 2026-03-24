@@ -30,6 +30,17 @@ export async function POST(request: Request) {
       )
     }
 
+    if (templateId === 'custom_email') {
+      const sub = typeof customSubject === 'string' ? customSubject.trim() : ''
+      const bod = customBody != null ? String(customBody).trim() : ''
+      if (!sub || !bod) {
+        return NextResponse.json(
+          { success: false, error: 'Custom email requires both a subject and a message.' },
+          { status: 400 }
+        )
+      }
+    }
+
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
       return NextResponse.json(
         { success: false, error: 'Server configuration error' },

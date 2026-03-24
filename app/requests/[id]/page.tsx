@@ -1340,13 +1340,25 @@ LankaLux Team`
       request.public_token != null && request.selected_option != null
         ? "https://admin.lankalux.com/itinerary/" + request.public_token + "/" + request.selected_option
         : null
-    setPreviewSubject(template.subject)
-    setPreviewBody(template.getText({ clientName, itineraryUrl }))
+    if (selectedTemplateId === 'custom_email') {
+      const firstName = clientName?.trim() ? clientName.split(' ')[0] : 'there'
+      setPreviewSubject(template.subject || 'A note from LankaLux')
+      setPreviewBody(`Dear ${firstName},\n\n`)
+    } else {
+      setPreviewSubject(template.subject)
+      setPreviewBody(template.getText({ clientName, itineraryUrl }))
+    }
     setTemplateEmailModalOpen(true)
   }
 
   const handleSendTemplateEmail = async () => {
     if (!request?.email) return
+    if (selectedTemplateId === 'custom_email') {
+      if (!previewSubject.trim() || !previewBody.trim()) {
+        alert('Please enter both a subject and a message before sending.')
+        return
+      }
+    }
     try {
       setSendingTemplateEmail(true)
       setTemplateEmailSuccess(false)
@@ -2088,7 +2100,7 @@ LankaLux Team`
               Follow-up email
             </h2>
             <p className="text-secondary mb-8 max-w-2xl leading-relaxed text-sm text-left">
-              Friendly templates with preview. Itinerary link is included when available.
+              Choose a template or <strong className="text-primary font-medium">Custom email</strong> to write your own. Preview, edit subject and body, then send. An itinerary button and link are added when available.
             </p>
             <div className="flex flex-wrap items-end gap-6">
               <div className="min-w-[280px] flex-1 max-w-md">
@@ -3028,7 +3040,11 @@ LankaLux Team`
           >
             <div className="p-6 md:p-8 border-b border-accent text-left">
               <h2 className="text-xl font-semibold text-accent-theme">Preview email</h2>
-              <p className="text-sm text-secondary mt-2">Edit the subject and message below, then send.</p>
+              <p className="text-sm text-secondary mt-2">
+                {selectedTemplateId === 'custom_email'
+                  ? 'Write your own subject and message for the client, then send.'
+                  : 'Edit the subject and message below, then send.'}
+              </p>
             </div>
             <div className="p-6 md:p-8 overflow-y-auto flex-1 space-y-6 text-left">
               <div>
@@ -3047,7 +3063,11 @@ LankaLux Team`
               </div>
               <div>
                 <label className={lbl}>Message</label>
-                <p className="text-xs text-secondary mb-2">A “View your itinerary” button and our signature will be added automatically.</p>
+                <p className="text-xs text-secondary mb-2">
+                  {selectedTemplateId === 'custom_email'
+                    ? 'Your text is sent as the main body. If this request has a public itinerary link, a “View your itinerary” button and link line are added below your message, plus our signature.'
+                    : 'A “View your itinerary” button and our signature will be added automatically.'}
+                </p>
                 <textarea
                   value={previewBody}
                   onChange={(e) => setPreviewBody(e.target.value)}

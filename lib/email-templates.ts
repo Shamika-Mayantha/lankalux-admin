@@ -33,6 +33,8 @@ export type TemplateId =
   | 'your_trip_your_way'
   | 'spots_youll_love'
   | 'one_step_closer'
+  | 'post_trip_feedback'
+  | 'custom_email'
 
 export interface TemplateConfig {
   id: TemplateId
@@ -43,6 +45,17 @@ export interface TemplateConfig {
 }
 
 const logoUrl = `${BASE_URL}/favicon.png`
+
+/** Pre-filled feedback mailto — client can also simply reply to the message they received. Update the address if your team uses a different inbox. */
+const FEEDBACK_MAILTO_PLAIN =
+  'mailto:info@lankalux.com?subject=' +
+  encodeURIComponent('Feedback — My Sri Lanka journey with LankaLux') +
+  '&body=' +
+  encodeURIComponent(
+    'Hello LankaLux team,\n\nI would love to share some feedback about my recent trip and my experience with the vehicle and driver.\n\n'
+  )
+/** Same URL with & escaped for use inside HTML href attributes */
+const FEEDBACK_MAILTO_HTML = FEEDBACK_MAILTO_PLAIN.replace(/&/g, '&amp;')
 
 function escapeHtml(text: string): string {
   return text
@@ -329,6 +342,51 @@ export const FOLLOW_UP_TEMPLATES: TemplateConfig[] = [
     getText: ({ clientName }) => {
       const firstName = clientName?.trim() ? clientName.split(' ')[0] : 'there'
       return `Dear ${firstName},\n\nEverything is in place for your trip, and we are ready to proceed whenever you are.\n\nOnce you are happy with the plan, we can move forward with securing the accommodations and arrangements for your dates.\n\nJust let us know, and we will guide you through the next step.\n\nWarm regards,\nLankaLux Team`
+    },
+  },
+  {
+    id: 'post_trip_feedback',
+    name: 'Post-trip — How was everything?',
+    subject: 'How was Sri Lanka? We would truly value your thoughts',
+    getHtml: ({ clientName }) => {
+      const firstName = clientName?.trim() ? clientName.split(' ')[0] : 'there'
+      return emailShell({
+        firstName,
+        buttonUrl: FEEDBACK_MAILTO_HTML,
+        buttonText: 'Share your feedback',
+        bodyParagraphs: [
+          'We hope you returned home with wonderful memories of Sri Lanka — the landscapes, the warmth of the people, and the little moments in between.',
+          'Your experience matters deeply to us. If you have a moment, we would be so grateful to hear how everything felt for you — especially your time on the road with your driver and vehicle. Punctuality, comfort, courtesy, and safety are standards we care about, and your honest impressions help us celebrate what went well and refine what we can do even better.',
+          'There is no format required — a few lines is plenty. You can use the button below, or simply reply to this email; either way, it reaches our team directly.',
+          'Thank you again for choosing LankaLux. It was a privilege to be part of your journey.',
+        ],
+      })
+    },
+    getText: ({ clientName }) => {
+      const firstName = clientName?.trim() ? clientName.split(' ')[0] : 'there'
+      return `Dear ${firstName},\n\nWe hope you returned home with wonderful memories of Sri Lanka — the landscapes, the warmth of the people, and the little moments in between.\n\nYour experience matters deeply to us. If you have a moment, we would be so grateful to hear how everything felt for you — especially your time on the road with your driver and vehicle. Punctuality, comfort, courtesy, and safety are standards we care about, and your honest impressions help us celebrate what went well and refine what we can do even better.\n\nThere is no format required — a few lines is plenty. You can reply to this email directly; your message reaches our team.\n\nThank you again for choosing LankaLux. It was a privilege to be part of your journey.\n\nWarm regards,\nLankaLux Team`
+    },
+  },
+  {
+    id: 'custom_email',
+    name: 'Custom email (type your own)',
+    subject: 'A note from LankaLux',
+    getHtml: ({ clientName, itineraryUrl }) => {
+      const firstName = clientName?.trim() ? clientName.split(' ')[0] : 'there'
+      const buttonUrl = itineraryUrl || BASE_URL
+      const buttonText = itineraryUrl ? 'View your itinerary' : 'Get in touch'
+      return emailShell({
+        firstName,
+        buttonUrl,
+        buttonText,
+        bodyParagraphs: [
+          'Compose your message in the admin preview and send — your text will replace this placeholder.',
+        ],
+      })
+    },
+    getText: ({ clientName }) => {
+      const firstName = clientName?.trim() ? clientName.split(' ')[0] : 'there'
+      return `Dear ${firstName},\n\n`
     },
   },
 ]
