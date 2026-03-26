@@ -46,13 +46,13 @@ export interface TemplateConfig {
 
 const logoUrl = `${BASE_URL}/favicon.png`
 
-/** Pre-filled feedback mailto — client can also simply reply to the message they received. Update the address if your team uses a different inbox. */
+/** Pre-filled feedback mailto; client can also reply to the message they received. Update the address if your team uses a different inbox. */
 const FEEDBACK_MAILTO_PLAIN =
   'mailto:info@lankalux.com?subject=' +
-  encodeURIComponent('Feedback — My Sri Lanka journey with LankaLux') +
+  encodeURIComponent('Feedback on my Sri Lanka trip with LankaLux') +
   '&body=' +
   encodeURIComponent(
-    'Hello LankaLux team,\n\nI would love to share some feedback about my recent trip and my experience with the vehicle and driver.\n\n'
+    'Hello LankaLux team,\n\nI wanted to share a bit of feedback about my recent trip and how things went with the vehicle and driver.\n\n'
   )
 /** Same URL with & escaped for use inside HTML href attributes */
 const FEEDBACK_MAILTO_HTML = FEEDBACK_MAILTO_PLAIN.replace(/&/g, '&amp;')
@@ -346,25 +346,25 @@ export const FOLLOW_UP_TEMPLATES: TemplateConfig[] = [
   },
   {
     id: 'post_trip_feedback',
-    name: 'Post-trip — How was everything?',
-    subject: 'How was Sri Lanka? We would truly value your thoughts',
+    name: 'How was your trip?',
+    subject: 'We would love to hear how Sri Lanka was for you',
     getHtml: ({ clientName }) => {
       const firstName = clientName?.trim() ? clientName.split(' ')[0] : 'there'
       return emailShell({
         firstName,
         buttonUrl: FEEDBACK_MAILTO_HTML,
-        buttonText: 'Share your feedback',
+        buttonText: 'Send us a quick note',
         bodyParagraphs: [
-          'We hope you returned home with wonderful memories of Sri Lanka — the landscapes, the warmth of the people, and the little moments in between.',
-          'Your experience matters deeply to us. If you have a moment, we would be so grateful to hear how everything felt for you — especially your time on the road with your driver and vehicle. Punctuality, comfort, courtesy, and safety are standards we care about, and your honest impressions help us celebrate what went well and refine what we can do even better.',
-          'There is no format required — a few lines is plenty. You can use the button below, or simply reply to this email; either way, it reaches our team directly.',
-          'Thank you again for choosing LankaLux. It was a privilege to be part of your journey.',
+          'We hope you are settling back in after your time with us. We are thinking of you and hoping Sri Lanka left you with good memories, beautiful views you will not forget, and maybe a few new favourite moments.',
+          'If you have a spare minute, we would really appreciate hearing how it all felt in real life. How was your driver? Was the car comfortable and did you feel looked after on the road? Your honest take helps us thank people who did a great job and fix anything that was not quite right.',
+          'You do not need to write a lot. A few sentences is more than enough. Just reply to this email, or tap the button below if that is easier. Either way it comes straight to us.',
+          'Thank you for choosing LankaLux. Having you travel with us meant a great deal, and we hope we get to welcome you back one day.',
         ],
       })
     },
     getText: ({ clientName }) => {
       const firstName = clientName?.trim() ? clientName.split(' ')[0] : 'there'
-      return `Dear ${firstName},\n\nWe hope you returned home with wonderful memories of Sri Lanka — the landscapes, the warmth of the people, and the little moments in between.\n\nYour experience matters deeply to us. If you have a moment, we would be so grateful to hear how everything felt for you — especially your time on the road with your driver and vehicle. Punctuality, comfort, courtesy, and safety are standards we care about, and your honest impressions help us celebrate what went well and refine what we can do even better.\n\nThere is no format required — a few lines is plenty. You can reply to this email directly; your message reaches our team.\n\nThank you again for choosing LankaLux. It was a privilege to be part of your journey.\n\nWarm regards,\nLankaLux Team`
+      return `Dear ${firstName},\n\nWe hope you are settling back in after your time with us. We are thinking of you and hoping Sri Lanka left you with good memories, beautiful views you will not forget, and maybe a few new favourite moments.\n\nIf you have a spare minute, we would really appreciate hearing how it all felt in real life. How was your driver? Was the car comfortable and did you feel looked after on the road? Your honest take helps us thank people who did a great job and fix anything that was not quite right.\n\nYou do not need to write a lot. A few sentences is more than enough. Just reply to this email, or use the link in the email if you prefer. Either way it comes straight to us.\n\nThank you for choosing LankaLux. Having you travel with us meant a great deal, and we hope we get to welcome you back one day.\n\nWarm regards,\nLankaLux Team`
     },
   },
   {
