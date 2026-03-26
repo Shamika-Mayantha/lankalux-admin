@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { randomUUID } from 'crypto'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -107,6 +106,35 @@ function coerceNeedAirlineTickets(v: unknown) {
   return s === 'yes' || s === 'true' || s === '1' || s === 'y'
 }
 
+async function generateNextRequestId(supabase: ReturnType<typeof createClient>) {
+  try {
+    // Fetch existing IDs and compute the highest numeric suffix.
+    // Matches your admin UI format: req-id-001, req-id-002, ...
+    const { data, error } = await supabase
+      .from('Client Requests')
+      .select('id')
+      .order('created_at', { ascending: false })
+      .limit(2000)
+
+    if (error) throw error
+
+    const idPattern = /^req-id-(\d+)$/
+    const nums: number[] = []
+    ;(data || []).forEach((row: { id: string }) => {
+      const match = row.id && typeof row.id === 'string' ? row.id.match(idPattern) : null
+      if (match) nums.push(parseInt(match[1], 10))
+    })
+
+    const maxNumber = nums.length ? Math.max(...nums) : 0
+    const nextNumber = maxNumber + 1
+    const paddedNumber = nextNumber.toString().padStart(3, '0')
+    return `req-id-${paddedNumber}`
+  } catch {
+    // Safe fallback so the endpoint never hard-fails due to ID generation.
+    return 'req-id-001'
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json().catch(() => ({}))) as any
@@ -189,7 +217,7 @@ export async function POST(request: Request) {
 
     const additionalPreferences = [baseMessage, metaBlock, airlineBlock].filter(Boolean).join('\n\n') || null
 
-    const requestId = `req-${randomUUID().slice(0, 8)}`
+    const requestId = await generateNextRequestId(supabase)
 
     const { error } = await supabase.from('Client Requests').insert([
       {
