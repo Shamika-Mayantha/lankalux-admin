@@ -72,8 +72,7 @@ export default function ChatsPage() {
   const markAsRead = async (sessionId: string) => {
     try {
       setBusySession(sessionId)
-      const { error } = await supabase
-        .from('website_chat_sessions')
+      const { error } = await (supabase.from('website_chat_sessions') as any)
         .update({ is_read: true })
         .eq('session_id', sessionId)
       if (error) {
@@ -90,8 +89,7 @@ export default function ChatsPage() {
     if (!window.confirm('Delete this chat session permanently?')) return
     try {
       setBusySession(sessionId)
-      const { error } = await supabase
-        .from('website_chat_sessions')
+      const { error } = await (supabase.from('website_chat_sessions') as any)
         .delete()
         .eq('session_id', sessionId)
       if (error) {
@@ -109,8 +107,7 @@ export default function ChatsPage() {
       setRefreshing(true)
       const ids = rows.filter((r) => !r.is_read).map((r) => r.session_id)
       if (!ids.length) return
-      const { error } = await supabase
-        .from('website_chat_sessions')
+      const { error } = await (supabase.from('website_chat_sessions') as any)
         .update({ is_read: true })
         .in('session_id', ids)
       if (error) {
