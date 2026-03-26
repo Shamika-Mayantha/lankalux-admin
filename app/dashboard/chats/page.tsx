@@ -17,6 +17,8 @@ interface ChatSession {
   messages_json: Array<{ role: 'user' | 'assistant'; content: string; kind?: string }> | null
   handoff_requested: boolean | null
   is_read: boolean | null
+  chat_rating: number | null
+  chat_rated_at: string | null
   last_event: string | null
   updated_at: string
   created_at: string
@@ -184,6 +186,7 @@ export default function ChatsPage() {
                       <p className="text-sm text-secondary mt-1">
                         {row.email || 'No email'} {row.request_id ? `• ${row.request_id}` : ''}{' '}
                         {row.handoff_requested ? '• WhatsApp handoff requested' : ''}
+                        {row.chat_rating != null ? ` • Rating: ${row.chat_rating}/5` : ''}
                       </p>
                       <p className="text-sm text-secondary mt-1 line-clamp-2">
                         {row.last_user_message || row.last_assistant_message || 'No message preview'}
@@ -212,6 +215,15 @@ export default function ChatsPage() {
                       Delete Chat
                     </button>
                   </div>
+                  {row.chat_rating != null && (
+                    <p className="text-sm">
+                      <span className="text-secondary">Guest rating: </span>
+                      <span className="text-[var(--accent-gold)] font-medium">{row.chat_rating} / 5</span>
+                      {row.chat_rated_at && (
+                        <span className="text-secondary text-xs ml-2">{formatDate(row.chat_rated_at)}</span>
+                      )}
+                    </p>
+                  )}
                   {row.selected_vehicle && (
                     <p className="text-sm">
                       <span className="text-secondary">Selected vehicle: </span>

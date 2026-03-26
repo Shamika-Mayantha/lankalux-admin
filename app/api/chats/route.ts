@@ -46,7 +46,16 @@ export async function POST(request: Request) {
     const lastUserMessage = reversed.find((m) => m.role === 'user')?.content || null
     const lastAssistantMessage = reversed.find((m) => m.role === 'assistant')?.content || null
 
-    const row = {
+    const eventType = safeText(body?.eventType) || 'message'
+    const ratingRaw =
+      typeof body?.chatRating === 'number'
+        ? body.chatRating
+        : typeof body?.chatRating === 'string'
+          ? parseInt(body.chatRating, 10)
+          : NaN
+    const chatRating = Number.isFinite(ratingRaw) && ratingRaw >= 1 && ratingRaw <= 5 ? Math.round(ratingRaw) : null
+
+    const row: Record<string, unknown> = {
       session_id: sessionId,
       client_name: safeText(draft?.name) || null,
       email: safeText(draft?.email) || null,
@@ -58,12 +67,17 @@ export async function POST(request: Request) {
       message_count: messages.length,
       messages_json: messages,
       draft_json: draft,
-      last_event: safeText(body?.eventType) || 'message',
+      last_event: eventType,
       handoff_requested: !!body?.handoffRequested,
       is_read: false,
       page_url: safeText(body?.pageUrl) || null,
       user_agent: safeText(body?.userAgent) || null,
       updated_at: new Date().toISOString(),
+    }
+
+    if (chatRating !== null) {
+      row.chat_rating = chatRating
+      row.chat_rated_at = new Date().toISOString()
     }
 
     const { error } = await supabase

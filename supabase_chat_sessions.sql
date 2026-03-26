@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS website_chat_sessions (
   last_event TEXT,
   handoff_requested BOOLEAN DEFAULT FALSE,
   is_read BOOLEAN DEFAULT FALSE,
+  chat_rating INTEGER,
+  chat_rated_at TIMESTAMPTZ,
   page_url TEXT,
   user_agent TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -31,4 +33,8 @@ CREATE POLICY "Allow authenticated read write website_chat_sessions"
   TO authenticated
   USING (true)
   WITH CHECK (true);
+
+-- If the table already exists, run:
+-- ALTER TABLE website_chat_sessions ADD COLUMN IF NOT EXISTS chat_rating INTEGER;
+-- ALTER TABLE website_chat_sessions ADD COLUMN IF NOT EXISTS chat_rated_at TIMESTAMPTZ;
 

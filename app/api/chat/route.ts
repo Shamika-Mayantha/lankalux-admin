@@ -61,6 +61,54 @@ function normalizeForCompare(text: string) {
     .trim()
 }
 
+function countUserMessages(msgs: ChatMessage[]) {
+  return msgs.filter((m) => m.role === 'user').length
+}
+
+function recentAssistantContents(msgs: ChatMessage[], n: number) {
+  return msgs
+    .filter((m) => m.role === 'assistant')
+    .slice(-n)
+    .map((m) => m.content)
+}
+
+function isDuplicateAssistantReply(reply: string, msgs: ChatMessage[]) {
+  const r = normalizeForCompare(reply)
+  if (!r) return false
+  return recentAssistantContents(msgs, 4).some((prev) => normalizeForCompare(prev) === r)
+}
+
+function wantsToEndChatWithoutContact(text: string) {
+  const t = (text || '').toLowerCase().trim()
+  if (!t) return false
+  if (/\bend\s*chat\b/.test(t)) return true
+  return /\b(end|stop|quit|leave|bye|goodbye|no thanks|not now|skip|cancel|never mind|nevermind)\b/.test(t)
+}
+
+function contactGateReply(userTurns: number): string {
+  // userTurns = number of user messages in this session (stages the wording so we never paste the same line repeatedly).
+  if (userTurns <= 1) {
+    return 'Before we continue, may I have your email address or WhatsApp number so our travel specialist can follow up personally?'
+  }
+  if (userTurns === 2) {
+    return 'To tailor things properly, could you share either an email address or a WhatsApp number? Either one is perfect.'
+  }
+  if (userTurns === 3) {
+    return 'I still need one contact detail — email or WhatsApp — so the team can reach you. Which would you prefer to share?'
+  }
+  return 'If you would rather not share contact details here, that is completely fine — tap **End chat** below to close whenever you like. If you change your mind, just send an email or WhatsApp number and we will take it from there.'
+}
+
+function itineraryGuardReply(userTurns: number): string {
+  if (userTurns <= 1) {
+    return "I can help with general guidance on our journeys, vehicles, and services. For full personalized itineraries, our team prepares those directly for you.\n\nPlease tap 'Send request' and we will design your itinerary personally."
+  }
+  if (userTurns === 2) {
+    return "For a detailed day-by-day itinerary, our specialists prepare that after you submit a request — tap **Send request** when you are ready.\n\nIf something is unclear, tell me in one sentence what you are hoping to see or do in Sri Lanka."
+  }
+  return "I am not able to draft a full itinerary in this chat, but our team can — use **Send request** with your details.\n\nYou can also tap **End chat** below if you would like to stop for now."
+}
+
 function extractEmail(text: string) {
   const m = (text || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)
   return m ? m[0].trim() : null
@@ -128,16 +176,40 @@ export async function POST(req: Request) {
     if (!draft.email && inferredEmail) draft = { ...draft, email: inferredEmail }
     if (!draft.whatsapp && inferredWhatsApp) draft = { ...draft, whatsapp: inferredWhatsApp }
 
+    const userTurns = countUserMessages(messages)
+    const lastAssistantNorm = normalizeForCompare(lastAssistantMessage)
+
+    // Guest wants to stop without sharing contact — do not loop the same contact prompt.
+    if (!draft.email && !draft.whatsapp && wantsToEndChatWithoutContact(lastUserMessage)) {
+      const missing = mustAskFields
+        .filter((k) => (draft as any)[k] == null || String((draft as any)[k]).trim() === '')
+        .concat(['email_or_whatsapp'] as any)
+      return jsonResponse(
+        {
+          success: true,
+          reply:
+            'Understood. Whenever you are ready, tap **End chat** below to close — no obligation. If you would like help later, you can open chat again anytime.',
+          draft,
+          missingFields: missing,
+          suggestSendRequest: false,
+        },
+        200
+      )
+    }
+
     // Hard guard: do not provide full itinerary generation in chat.
     if (isItineraryIntent(lastUserMessage)) {
       const missing = mustAskFields
         .filter((k) => (draft as any)[k] == null || String((draft as any)[k]).trim() === '')
         .concat(!draft.email && !draft.whatsapp ? (['email_or_whatsapp'] as any) : [])
+      let reply = itineraryGuardReply(userTurns)
+      if (normalizeForCompare(reply) === lastAssistantNorm) {
+        reply = itineraryGuardReply(userTurns + 1)
+      }
       return jsonResponse(
         {
           success: true,
-          reply:
-            "I can help with general guidance on our journeys, vehicles, and services. For full personalized itineraries, our team prepares those directly for you.\n\nPlease tap 'Send request' and we will design your itinerary personally.",
+          reply,
           draft,
           missingFields: missing,
           suggestSendRequest: true,
@@ -152,11 +224,14 @@ export async function POST(req: Request) {
       const missing = mustAskFields
         .filter((k) => (draft as any)[k] == null || String((draft as any)[k]).trim() === '')
         .concat(!draft.email && !draft.whatsapp ? (['email_or_whatsapp'] as any) : [])
+      let reply = contactGateReply(userTurns)
+      if (normalizeForCompare(reply) === lastAssistantNorm) {
+        reply = contactGateReply(userTurns + 1)
+      }
       return jsonResponse(
         {
           success: true,
-          reply:
-            "Before we continue, may I have your email address or WhatsApp number so our travel specialist can follow up personally?",
+          reply,
           draft,
           missingFields: missing,
           suggestSendRequest: false,
@@ -247,7 +322,7 @@ Output STRICT JSON only with this shape:
 
     // Anti-repeat guard: if the response matches the previous assistant message, pivot to a
     // new, specific follow-up so the chat does not feel stuck.
-    if (normalizeForCompare(reply) && normalizeForCompare(reply) === normalizeForCompare(lastAssistantMessage)) {
+    if (normalizeForCompare(reply) && isDuplicateAssistantReply(reply, messages)) {
       if (!nextDraft.name) {
         reply = "May I have your name first, so I can address you properly?"
       } else if (!nextDraft.startDate || !nextDraft.endDate) {
