@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { CHAT_KNOWLEDGE_SUMMARY } from '@/lib/chat-knowledge'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,6 +23,24 @@ type DraftLead = {
   needAirlineTickets?: boolean | null
   airlineFrom?: string | null
   airlineDates?: string | null
+}
+
+function isItineraryIntent(text: string) {
+  const t = (text || '').toLowerCase()
+  if (!t) return false
+  const patterns = [
+    'itinerary',
+    'itineraries',
+    'day by day',
+    'day-by-day',
+    'plan my trip',
+    'create a plan',
+    'full plan',
+    'detailed plan',
+    'travel plan',
+    'route for',
+  ]
+  return patterns.some((p) => t.includes(p))
 }
 
 function jsonResponse(body: unknown, status = 200) {
@@ -80,20 +99,45 @@ export async function POST(req: Request) {
     const draft = coerceDraft(body?.draft || {})
 
     const mustAskFields: (keyof DraftLead)[] = ['name', 'email', 'startDate', 'endDate', 'numberOfAdults']
+    const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')?.content || ''
 
-    const system = `You are LankaLux Concierge — warm, luxury, human, and concise.
+    // Hard guard: do not provide full itinerary generation in chat.
+    if (isItineraryIntent(lastUserMessage)) {
+      const missing = mustAskFields.filter((k) => (draft as any)[k] == null || String((draft as any)[k]).trim() === '')
+      return jsonResponse(
+        {
+          success: true,
+          reply:
+            "I can help with general guidance on our journeys, vehicles, and services. For full personalized itineraries, our team prepares those directly for you.\n\nPlease tap 'Send request' and we will design your itinerary personally.",
+          draft,
+          missingFields: missing,
+          suggestSendRequest: true,
+        },
+        200
+      )
+    }
+
+    const system = `You are LankaLux Live Chat — warm, luxury, human, and concise.
 You help guests plan bespoke Sri Lanka journeys and collect details for a request.
 
 Rules:
 - Never mention “AI”, “models”, or internal tools.
 - Ask at most ONE question at a time.
+- Ask for the guest's name first (if missing), so you can address them properly in follow-ups.
 - Be natural, premium, and friendly. No pushy sales.
 - If the guest is vague, offer 2–3 tasteful options.
 - We will only create a CRM request when the guest clicks “Send request”, so do not say you already created it.
+- IMPORTANT: Do NOT generate full or day-by-day itineraries in chat.
+- If asked for an itinerary, politely explain that full personalized itineraries are prepared directly by the LankaLux team after request submission.
+- Scope in chat: general questions only (vehicles, journey styles, services, process, what is included, response timelines).
+- If unsure about a detail, say you will have the team confirm instead of guessing.
 
 Data collection targets (minimum before “Send request” is enabled):
 - name, email, start date, end date, number of adults
 Optional: WhatsApp, children count + ages, preferences, airline ticket assistance.
+
+Knowledge base:
+${CHAT_KNOWLEDGE_SUMMARY}
 
 Output STRICT JSON only with this shape:
 {
