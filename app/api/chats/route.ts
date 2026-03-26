@@ -60,6 +60,7 @@ export async function POST(request: Request) {
       draft_json: draft,
       last_event: safeText(body?.eventType) || 'message',
       handoff_requested: !!body?.handoffRequested,
+      is_read: false,
       page_url: safeText(body?.pageUrl) || null,
       user_agent: safeText(body?.userAgent) || null,
       updated_at: new Date().toISOString(),

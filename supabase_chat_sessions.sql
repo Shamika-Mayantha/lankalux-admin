@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS website_chat_sessions (
   draft_json JSONB,
   last_event TEXT,
   handoff_requested BOOLEAN DEFAULT FALSE,
+  is_read BOOLEAN DEFAULT FALSE,
   page_url TEXT,
   user_agent TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),

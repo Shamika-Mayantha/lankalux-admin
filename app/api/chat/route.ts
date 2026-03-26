@@ -61,6 +61,18 @@ function normalizeForCompare(text: string) {
     .trim()
 }
 
+function extractEmail(text: string) {
+  const m = (text || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)
+  return m ? m[0].trim() : null
+}
+
+function extractWhatsApp(text: string) {
+  const m = (text || '').match(/(?:\+?\d[\d\s\-()]{7,}\d)/)
+  if (!m) return null
+  const cleaned = m[0].replace(/[^\d+]/g, '')
+  return cleaned.length >= 8 ? cleaned : null
+}
+
 function coerceDraft(d: any): DraftLead {
   const asNum = (v: any) => (typeof v === 'number' ? v : v == null ? null : Number(String(v)))
   const asBool = (v: any) => (typeof v === 'boolean' ? v : v == null ? null : String(v).toLowerCase() === 'true')
@@ -104,15 +116,23 @@ export async function POST(req: Request) {
           .slice(-20)
       : []
 
-    const draft = coerceDraft(body?.draft || {})
+    let draft = coerceDraft(body?.draft || {})
 
-    const mustAskFields: (keyof DraftLead)[] = ['name', 'email', 'startDate', 'endDate', 'numberOfAdults']
+    const mustAskFields: (keyof DraftLead)[] = ['name', 'startDate', 'endDate', 'numberOfAdults']
     const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')?.content || ''
     const lastAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant')?.content || ''
 
+    // Auto-capture contact details if user typed them naturally in chat.
+    const inferredEmail = extractEmail(lastUserMessage)
+    const inferredWhatsApp = extractWhatsApp(lastUserMessage)
+    if (!draft.email && inferredEmail) draft = { ...draft, email: inferredEmail }
+    if (!draft.whatsapp && inferredWhatsApp) draft = { ...draft, whatsapp: inferredWhatsApp }
+
     // Hard guard: do not provide full itinerary generation in chat.
     if (isItineraryIntent(lastUserMessage)) {
-      const missing = mustAskFields.filter((k) => (draft as any)[k] == null || String((draft as any)[k]).trim() === '')
+      const missing = mustAskFields
+        .filter((k) => (draft as any)[k] == null || String((draft as any)[k]).trim() === '')
+        .concat(!draft.email && !draft.whatsapp ? (['email_or_whatsapp'] as any) : [])
       return jsonResponse(
         {
           success: true,
@@ -121,6 +141,25 @@ export async function POST(req: Request) {
           draft,
           missingFields: missing,
           suggestSendRequest: true,
+        },
+        200
+      )
+    }
+
+    // Contact gate: do not proceed with normal conversation before collecting at least
+    // one reliable contact method (email or WhatsApp).
+    if (!draft.email && !draft.whatsapp) {
+      const missing = mustAskFields
+        .filter((k) => (draft as any)[k] == null || String((draft as any)[k]).trim() === '')
+        .concat(!draft.email && !draft.whatsapp ? (['email_or_whatsapp'] as any) : [])
+      return jsonResponse(
+        {
+          success: true,
+          reply:
+            "Before we continue, may I have your email address or WhatsApp number so our travel specialist can follow up personally?",
+          draft,
+          missingFields: missing,
+          suggestSendRequest: false,
         },
         200
       )
@@ -140,10 +179,11 @@ Rules:
 - If asked for an itinerary, politely explain that full personalized itineraries are prepared directly by the LankaLux team after request submission.
 - Scope in chat: general questions only (vehicles, journey styles, services, process, what is included, response timelines).
 - If unsure about a detail, say you will have the team confirm instead of guessing.
+- Keep asking until at least one contact is captured (email OR WhatsApp) before proceeding into longer guidance.
 
 Data collection targets (minimum before “Send request” is enabled):
-- name, email, start date, end date, number of adults
-Optional: WhatsApp, children count + ages, preferences, airline ticket assistance.
+- name, start date, end date, number of adults, and at least one contact method (email or WhatsApp)
+Optional: remaining contact method, children count + ages, preferences, airline ticket assistance.
 
 Knowledge base:
 ${CHAT_KNOWLEDGE_SUMMARY}
@@ -185,7 +225,9 @@ Output STRICT JSON only with this shape:
           reply:
             "Thanks — I’m here. To get started, what dates are you considering for Sri Lanka, and how many adults will be travelling?",
           draft,
-          missingFields: mustAskFields.filter((k) => (draft as any)[k] == null || String((draft as any)[k]).trim() === ''),
+          missingFields: mustAskFields
+            .filter((k) => (draft as any)[k] == null || String((draft as any)[k]).trim() === '')
+            .concat(!draft.email && !draft.whatsapp ? (['email_or_whatsapp'] as any) : []),
           suggestSendRequest: false,
         },
         200
@@ -193,7 +235,9 @@ Output STRICT JSON only with this shape:
     }
 
     const nextDraft = { ...draft, ...coerceDraft(parsed?.draft || {}) }
-    const missing = mustAskFields.filter((k) => (nextDraft as any)[k] == null || String((nextDraft as any)[k]).trim() === '')
+    const missing = mustAskFields
+      .filter((k) => (nextDraft as any)[k] == null || String((nextDraft as any)[k]).trim() === '')
+      .concat(!nextDraft.email && !nextDraft.whatsapp ? (['email_or_whatsapp'] as any) : [])
     const suggestSendRequest = missing.length === 0
 
     let reply =

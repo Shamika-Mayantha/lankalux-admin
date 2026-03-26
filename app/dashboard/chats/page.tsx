@@ -16,6 +16,7 @@ interface ChatSession {
   message_count: number | null
   messages_json: Array<{ role: 'user' | 'assistant'; content: string; kind?: string }> | null
   handoff_requested: boolean | null
+  is_read: boolean | null
   last_event: string | null
   updated_at: string
   created_at: string
@@ -26,6 +27,7 @@ export default function ChatsPage() {
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<ChatSession[]>([])
   const [refreshing, setRefreshing] = useState(false)
+  const [busySession, setBusySession] = useState<string | null>(null)
 
   const checkSession = useCallback(async () => {
     const {
@@ -67,6 +69,60 @@ export default function ChatsPage() {
     })()
   }, [checkSession, loadChats])
 
+  const markAsRead = async (sessionId: string) => {
+    try {
+      setBusySession(sessionId)
+      const { error } = await supabase
+        .from('website_chat_sessions')
+        .update({ is_read: true })
+        .eq('session_id', sessionId)
+      if (error) {
+        console.error('Error marking chat as read:', error)
+        return
+      }
+      setRows((prev) => prev.map((r) => (r.session_id === sessionId ? { ...r, is_read: true } : r)))
+    } finally {
+      setBusySession(null)
+    }
+  }
+
+  const deleteChat = async (sessionId: string) => {
+    if (!window.confirm('Delete this chat session permanently?')) return
+    try {
+      setBusySession(sessionId)
+      const { error } = await supabase
+        .from('website_chat_sessions')
+        .delete()
+        .eq('session_id', sessionId)
+      if (error) {
+        console.error('Error deleting chat session:', error)
+        return
+      }
+      setRows((prev) => prev.filter((r) => r.session_id !== sessionId))
+    } finally {
+      setBusySession(null)
+    }
+  }
+
+  const markAllAsRead = async () => {
+    try {
+      setRefreshing(true)
+      const ids = rows.filter((r) => !r.is_read).map((r) => r.session_id)
+      if (!ids.length) return
+      const { error } = await supabase
+        .from('website_chat_sessions')
+        .update({ is_read: true })
+        .in('session_id', ids)
+      if (error) {
+        console.error('Error marking all chats as read:', error)
+        return
+      }
+      setRows((prev) => prev.map((r) => ({ ...r, is_read: true })))
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   const formatDate = (iso: string) => {
     try {
       return new Date(iso).toLocaleString()
@@ -99,6 +155,13 @@ export default function ChatsPage() {
               Back to Dashboard
             </button>
             <button
+              onClick={markAllAsRead}
+              disabled={refreshing || rows.every((r) => !!r.is_read)}
+              className="px-4 py-2.5 bg-[var(--bg-btn-secondary)] hover:bg-[var(--bg-btn-secondary-hover)] border border-theme rounded-xl text-sm disabled:opacity-50"
+            >
+              Mark All Read
+            </button>
+            <button
               onClick={loadChats}
               disabled={refreshing}
               className="px-4 py-2.5 bg-[var(--accent-gold)] hover:bg-[var(--accent-gold-hover)] border border-[var(--accent-gold)] text-black font-semibold rounded-xl text-sm disabled:opacity-50"
@@ -113,11 +176,14 @@ export default function ChatsPage() {
         ) : (
           <div className="space-y-4">
             {rows.map((row) => (
-              <details key={row.session_id} className="bg-card border border-theme rounded-2xl p-5 shadow-card">
+              <details key={row.session_id} className={`bg-card border rounded-2xl p-5 shadow-card ${row.is_read ? 'border-theme' : 'border-amber-400/60'}`}>
                 <summary className="cursor-pointer list-none">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <h3 className="font-semibold text-lg">{row.client_name || 'Unknown visitor'}</h3>
+                      <h3 className="font-semibold text-lg flex items-center gap-2">
+                        {row.client_name || 'Unknown visitor'}
+                        {!row.is_read && <span className="inline-flex w-2.5 h-2.5 rounded-full bg-rose-500" aria-label="Unread chat" />}
+                      </h3>
                       <p className="text-sm text-secondary mt-1">
                         {row.email || 'No email'} {row.request_id ? `• ${row.request_id}` : ''}{' '}
                         {row.handoff_requested ? '• WhatsApp handoff requested' : ''}
@@ -133,6 +199,22 @@ export default function ChatsPage() {
                   </div>
                 </summary>
                 <div className="mt-4 border-t border-theme pt-4 space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => markAsRead(row.session_id)}
+                      disabled={!!row.is_read || busySession === row.session_id}
+                      className="px-3 py-1.5 rounded-lg text-xs border border-theme bg-[var(--bg-btn-secondary)] hover:bg-[var(--bg-btn-secondary-hover)] disabled:opacity-50"
+                    >
+                      {row.is_read ? 'Read' : 'Mark as Read'}
+                    </button>
+                    <button
+                      onClick={() => deleteChat(row.session_id)}
+                      disabled={busySession === row.session_id}
+                      className="px-3 py-1.5 rounded-lg text-xs border border-rose-400/40 bg-rose-950/20 hover:bg-rose-900/30 text-rose-200 disabled:opacity-50"
+                    >
+                      Delete Chat
+                    </button>
+                  </div>
                   {row.selected_vehicle && (
                     <p className="text-sm">
                       <span className="text-secondary">Selected vehicle: </span>

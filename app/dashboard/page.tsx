@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState<Request[]>([])
   const [requestsLoading, setRequestsLoading] = useState(true)
+  const [unreadChats, setUnreadChats] = useState(0)
   const [cancelledExpanded, setCancelledExpanded] = useState(false)
   const router = useRouter()
 
@@ -74,21 +75,44 @@ export default function DashboardPage() {
     }
   }, [loading])
 
+  const fetchUnreadChats = useCallback(async () => {
+    if (loading) return
+    try {
+      const { count, error } = await supabase
+        .from('website_chat_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_read', false)
+      if (error) {
+        console.error('Error fetching unread chats count:', error)
+        return
+      }
+      setUnreadChats(count || 0)
+    } catch (err) {
+      console.error('Unexpected error fetching unread chats count:', err)
+    }
+  }, [loading])
+
   useEffect(() => {
     fetchRequests()
   }, [fetchRequests])
+
+  useEffect(() => {
+    fetchUnreadChats()
+  }, [fetchUnreadChats])
 
   // Refresh requests when page becomes visible (user navigates back)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && !loading) {
         fetchRequests()
+        fetchUnreadChats()
       }
     }
 
     const handleFocus = () => {
       if (!loading) {
         fetchRequests()
+        fetchUnreadChats()
       }
     }
 
@@ -99,7 +123,7 @@ export default function DashboardPage() {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('focus', handleFocus)
     }
-  }, [loading, fetchRequests])
+  }, [loading, fetchRequests, fetchUnreadChats])
 
   const handleLogout = async () => {
     try {
@@ -226,13 +250,18 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => router.push('/dashboard/chats')}
-              className="px-4 py-2.5 bg-[var(--bg-btn-secondary)] hover:bg-[var(--bg-btn-secondary-hover)] border border-theme text-primary font-medium rounded-xl transition-all text-sm flex items-center gap-2"
+              className="relative px-4 py-2.5 bg-[var(--bg-btn-secondary)] hover:bg-[var(--bg-btn-secondary-hover)] border border-theme text-primary font-medium rounded-xl transition-all text-sm flex items-center gap-2"
               title="View website chat sessions"
             >
               <svg className="w-4 h-4 shrink-0 text-[var(--accent-gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h8m-8 4h5m-7 7l-4 2 1-4a9 9 0 119 2H7z" />
               </svg>
               <span className="hidden sm:inline">Chats</span>
+              {unreadChats > 0 && (
+                <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold leading-5 text-center">
+                  {unreadChats > 99 ? '99+' : unreadChats}
+                </span>
+              )}
             </button>
             <button
               onClick={() => router.push('/requests/new')}
