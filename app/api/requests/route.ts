@@ -243,7 +243,7 @@ export async function POST(request: Request) {
       return res
     }
 
-    const res = NextResponse.json({ success: true, requestId }, { status: 200 })
+    const res = NextResponse.json({ success: true, requestId, idMode: 'sequential' }, { status: 200 })
     Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v))
     return res
   } catch (err) {
