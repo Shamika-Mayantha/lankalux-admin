@@ -225,6 +225,16 @@ export default function DashboardPage() {
               <span className="hidden sm:inline">Vehicle Availability</span>
             </button>
             <button
+              onClick={() => router.push('/dashboard/chats')}
+              className="px-4 py-2.5 bg-[var(--bg-btn-secondary)] hover:bg-[var(--bg-btn-secondary-hover)] border border-theme text-primary font-medium rounded-xl transition-all text-sm flex items-center gap-2"
+              title="View website chat sessions"
+            >
+              <svg className="w-4 h-4 shrink-0 text-[var(--accent-gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h8m-8 4h5m-7 7l-4 2 1-4a9 9 0 119 2H7z" />
+              </svg>
+              <span className="hidden sm:inline">Chats</span>
+            </button>
+            <button
               onClick={() => router.push('/requests/new')}
               className="px-5 py-2.5 bg-[var(--accent-gold)] hover:bg-[var(--accent-gold-hover)] border border-[var(--accent-gold)] text-black font-semibold rounded-xl transition-all text-sm shadow-sm"
             >

@@ -53,6 +53,14 @@ function safeText(x: unknown) {
   return typeof x === 'string' ? x.trim() : ''
 }
 
+function normalizeForCompare(text: string) {
+  return (text || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\s]/g, '')
+    .trim()
+}
+
 function coerceDraft(d: any): DraftLead {
   const asNum = (v: any) => (typeof v === 'number' ? v : v == null ? null : Number(String(v)))
   const asBool = (v: any) => (typeof v === 'boolean' ? v : v == null ? null : String(v).toLowerCase() === 'true')
@@ -100,6 +108,7 @@ export async function POST(req: Request) {
 
     const mustAskFields: (keyof DraftLead)[] = ['name', 'email', 'startDate', 'endDate', 'numberOfAdults']
     const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')?.content || ''
+    const lastAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant')?.content || ''
 
     // Hard guard: do not provide full itinerary generation in chat.
     if (isItineraryIntent(lastUserMessage)) {
@@ -187,10 +196,30 @@ Output STRICT JSON only with this shape:
     const missing = mustAskFields.filter((k) => (nextDraft as any)[k] == null || String((nextDraft as any)[k]).trim() === '')
     const suggestSendRequest = missing.length === 0
 
+    let reply =
+      typeof parsed?.reply === 'string'
+        ? parsed.reply
+        : "Lovely. Tell me a little about your ideal pace — relaxed, balanced, or immersive?"
+
+    // Anti-repeat guard: if the response matches the previous assistant message, pivot to a
+    // new, specific follow-up so the chat does not feel stuck.
+    if (normalizeForCompare(reply) && normalizeForCompare(reply) === normalizeForCompare(lastAssistantMessage)) {
+      if (!nextDraft.name) {
+        reply = "May I have your name first, so I can address you properly?"
+      } else if (!nextDraft.startDate || !nextDraft.endDate) {
+        reply = `Lovely${nextDraft.name ? ', ' + nextDraft.name : ''}. What travel dates are you considering?`
+      } else if (nextDraft.numberOfAdults == null) {
+        reply = `Great${nextDraft.name ? ', ' + nextDraft.name : ''}. How many adults will be travelling?`
+      } else {
+        reply =
+          "Thank you. I can also share a quick overview of our vehicle options and services, or you can tap 'Send request' and our team will take it from here."
+      }
+    }
+
     return jsonResponse(
       {
         success: true,
-        reply: typeof parsed?.reply === 'string' ? parsed.reply : "Lovely. Tell me a little about your ideal pace — relaxed, balanced, or immersive?",
+        reply,
         draft: nextDraft,
         missingFields: Array.isArray(parsed?.missingFields) ? parsed.missingFields : missing,
         suggestSendRequest,
