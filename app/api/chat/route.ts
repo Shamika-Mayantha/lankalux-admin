@@ -68,12 +68,12 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => ({}))) as any
     const messagesRaw: unknown = body?.messages
     const messages: ChatMessage[] = Array.isArray(messagesRaw)
-      ? messagesRaw
-          .map((m: any) => ({
+      ? (messagesRaw as any[])
+          .map((m): ChatMessage => ({
             role: m?.role === 'assistant' ? 'assistant' : 'user',
             content: safeText(m?.content),
           }))
-          .filter((m: ChatMessage) => m.content.length > 0)
+          .filter((m) => m.content.length > 0)
           .slice(-20)
       : []
 
