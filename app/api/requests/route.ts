@@ -18,6 +18,83 @@ function computeInclusiveDurationDays(startDate: string | null, endDate: string 
   return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1
 }
 
+function isoDateFromUtcDate(d: Date) {
+  if (isNaN(d.getTime())) return null
+  // Use UTC to avoid local timezone shifts changing the date.
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+    .toISOString()
+    .slice(0, 10)
+}
+
+function parseTravelDatesRange(display: string | null | undefined): { startDate: string | null; endDate: string | null } {
+  if (!display || typeof display !== 'string') return { startDate: null, endDate: null }
+  // Expected format from the frontend: "2 Jun 2026 – 10 Jun 2026"
+  const monthMap: Record<string, number> = {
+    Jan: 0,
+    Feb: 1,
+    Mar: 2,
+    Apr: 3,
+    May: 4,
+    Jun: 5,
+    Jul: 6,
+    Aug: 7,
+    Sep: 8,
+    Oct: 9,
+    Nov: 10,
+    Dec: 11,
+  }
+
+  const re = /(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/g
+  const matches = Array.from(display.matchAll(re))
+  if (matches.length < 2) return { startDate: null, endDate: null }
+
+  const m1 = matches[0]
+  const m2 = matches[1]
+
+  const day1 = parseInt(m1[1], 10)
+  const mon1 = monthMap[m1[2]]
+  const year1 = parseInt(m1[3], 10)
+
+  const day2 = parseInt(m2[1], 10)
+  const mon2 = monthMap[m2[2]]
+  const year2 = parseInt(m2[3], 10)
+
+  if (mon1 === undefined || mon2 === undefined) return { startDate: null, endDate: null }
+
+  const d1 = new Date(Date.UTC(year1, mon1, day1))
+  const d2 = new Date(Date.UTC(year2, mon2, day2))
+
+  return { startDate: isoDateFromUtcDate(d1), endDate: isoDateFromUtcDate(d2) }
+}
+
+function parsePassengersSummary(display: string | null | undefined): { numberOfAdults: number | null; numberOfChildren: number | null } {
+  if (!display || typeof display !== 'string') return { numberOfAdults: null, numberOfChildren: null }
+  const adultsMatch = display.match(/(\d+)\s*adult/i)
+  const childrenMatch = display.match(/(\d+)\s*child/i)
+
+  const numberOfAdults = adultsMatch ? parseInt(adultsMatch[1], 10) : null
+  const numberOfChildren = childrenMatch ? parseInt(childrenMatch[1], 10) : null
+
+  return { numberOfAdults: Number.isFinite(numberOfAdults as any) ? numberOfAdults : null, numberOfChildren }
+}
+
+function parseKidsAgesDisplay(display: string | null | undefined): number[] | null {
+  if (!display || typeof display !== 'string') return null
+  const s = display.trim()
+  if (!s || s.toLowerCase() === 'none') return null
+
+  // Frontend labels are like: "Under 2", "2–5 years", "6–11 years"
+  const values: number[] = []
+  const parts = s.split(',').map((p) => p.trim()).filter(Boolean)
+  parts.forEach((p) => {
+    if (/under\s*2/i.test(p)) values.push(1)
+    else if (/2\s*[–-]\s*5\s*years/i.test(p) || /2\s*[–-]\s*5/i.test(p)) values.push(3)
+    else if (/6\s*[–-]\s*11\s*years/i.test(p) || /6\s*[–-]\s*11/i.test(p)) values.push(8)
+  })
+
+  return values.length > 0 ? values : null
+}
+
 function parseMaybeInt(v: unknown) {
   if (v === null || v === undefined) return null
   const n = parseInt(String(v), 10)
@@ -52,21 +129,43 @@ export async function POST(request: Request) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const startDate = typeof body.startDate === 'string' ? body.startDate : null
-    const endDate = typeof body.endDate === 'string' ? body.endDate : null
-    const duration = computeInclusiveDurationDays(startDate, endDate)
+    // Prefer raw fields (sent by newer frontend). If missing, fall back to parsing formatted strings.
+    let startDate = typeof body.startDate === 'string' ? body.startDate : null
+    let endDate = typeof body.endDate === 'string' ? body.endDate : null
 
-    const numberOfAdults = parseMaybeInt(body.numberOfAdults)
-    const numberOfChildren = parseMaybeInt(body.numberOfChildren)
+    let numberOfAdults = parseMaybeInt(body.numberOfAdults)
+    let numberOfChildren = parseMaybeInt(body.numberOfChildren)
 
-    const childrenAgesValues = Array.isArray(body.childrenAgesValues) ? body.childrenAgesValues : null
-    const childrenAgesNumeric =
+    let childrenAgesValues = Array.isArray(body.childrenAgesValues) ? body.childrenAgesValues : null
+    let childrenAgesNumeric =
       childrenAgesValues
         ? childrenAgesValues
             .map((x: unknown) => parseMaybeInt(x))
             .filter((n: number | null): n is number => n !== null)
         : []
 
+    const travelDatesDisplay = typeof body.travelDates === 'string' ? body.travelDates.trim() : ''
+    const passengersDisplay = typeof body.passengers === 'string' ? body.passengers.trim() : ''
+    const kidsAgesDisplay = typeof body.kidsAges === 'string' ? body.kidsAges.trim() : ''
+
+    if (!startDate || !endDate) {
+      const parsed = parseTravelDatesRange(travelDatesDisplay)
+      if (!startDate) startDate = parsed.startDate
+      if (!endDate) endDate = parsed.endDate
+    }
+
+    if (numberOfAdults == null || numberOfChildren == null) {
+      const parsed = parsePassengersSummary(passengersDisplay)
+      if (numberOfAdults == null) numberOfAdults = parsed.numberOfAdults
+      if (numberOfChildren == null) numberOfChildren = parsed.numberOfChildren
+    }
+
+    if (!childrenAgesNumeric.length) {
+      const parsedKids = parseKidsAgesDisplay(kidsAgesDisplay)
+      childrenAgesNumeric = parsedKids ? parsedKids : []
+    }
+
+    const duration = computeInclusiveDurationDays(startDate, endDate)
     const childrenAgesJson = childrenAgesNumeric.length > 0 ? JSON.stringify(childrenAgesNumeric) : null
 
     const whatsappRaw = typeof body.whatsapp === 'string' ? body.whatsapp.trim() : ''
@@ -75,10 +174,6 @@ export async function POST(request: Request) {
     const needAirlineTickets = coerceNeedAirlineTickets(body.needAirlineTickets)
     const airlineFrom = typeof body.airlineFrom === 'string' ? body.airlineFrom.trim() : ''
     const airlineDates = typeof body.airlineDates === 'string' ? body.airlineDates.trim() : ''
-
-    const travelDatesDisplay = typeof body.travelDates === 'string' ? body.travelDates.trim() : ''
-    const passengersDisplay = typeof body.passengers === 'string' ? body.passengers.trim() : ''
-    const kidsAgesDisplay = typeof body.kidsAges === 'string' ? body.kidsAges.trim() : ''
 
     const baseMessage = typeof body.message === 'string' ? body.message.trim() : ''
     const metaLines = [
