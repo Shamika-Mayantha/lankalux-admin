@@ -106,7 +106,7 @@ function coerceNeedAirlineTickets(v: unknown) {
   return s === 'yes' || s === 'true' || s === '1' || s === 'y'
 }
 
-async function generateNextRequestId(supabase: ReturnType<typeof createClient>) {
+async function generateNextRequestId(supabase: any): Promise<string> {
   try {
     // Fetch existing IDs and compute the highest numeric suffix.
     // Matches your admin UI format: req-id-001, req-id-002, ...
