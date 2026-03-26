@@ -258,9 +258,7 @@ export default function DashboardPage() {
               </svg>
               <span className="hidden sm:inline">Chats</span>
               {unreadChats > 0 && (
-                <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold leading-5 text-center">
-                  {unreadChats > 99 ? '99+' : unreadChats}
-                </span>
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500" aria-label="Unread chats" />
               )}
             </button>
             <button
