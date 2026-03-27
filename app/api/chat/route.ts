@@ -85,16 +85,25 @@ function wantsToEndChatWithoutContact(text: string) {
   return /\b(end|stop|quit|leave|bye|goodbye|no thanks|not now|skip|cancel|never mind|nevermind)\b/.test(t)
 }
 
+function nameFirstReply(turnSeed: number): string {
+  const lines = [
+    "Welcome — I'm really glad you're here.\n\nWhen you have a moment, what may I call you? It keeps things feeling personal. If you'd rather not say, no problem — just tell me what you're curious about for Sri Lanka and we'll take it from there.",
+    "Lovely to hear from you.\n\nMay I ask your first name? Only if you're comfortable — otherwise, feel free to share what you're imagining for your journey and we'll ease into the details together.",
+    "Thank you for reaching out.\n\nI'd love to address you properly — what should I call you? And if you'd rather jump straight into dates or ideas, I'm listening.",
+  ]
+  return lines[Math.abs(turnSeed) % lines.length]
+}
+
 function contactGateReply(userTurns: number): string {
   // userTurns = number of user messages in this session (stages the wording so we never paste the same line repeatedly).
-  if (userTurns <= 1) {
-    return 'Before we continue, may I have your email address or WhatsApp number so our travel specialist can follow up personally?'
-  }
-  if (userTurns === 2) {
-    return 'To tailor things properly, could you share either an email address or a WhatsApp number? Either one is perfect.'
+  if (userTurns <= 2) {
+    return 'When you have a quiet moment, could you share either an email or a WhatsApp number? Either works — it simply lets our team follow up thoughtfully.'
   }
   if (userTurns === 3) {
-    return 'I still need one contact detail — email or WhatsApp — so the team can reach you. Which would you prefer to share?'
+    return 'To go a little deeper, I would need one way to reach you — email or WhatsApp, whichever you prefer.'
+  }
+  if (userTurns === 4) {
+    return 'I still need one contact detail — email or WhatsApp — so the team can reach you. Which feels easier?'
   }
   return 'If you would rather not share contact details here, that is completely fine — tap **End chat** below to close whenever you like. If you change your mind, just send an email or WhatsApp number and we will take it from there.'
 }
@@ -107,6 +116,39 @@ function itineraryGuardReply(userTurns: number): string {
     return "For a detailed day-by-day itinerary, our specialists prepare that after you submit a request — tap **Send request** when you are ready.\n\nIf something is unclear, tell me in one sentence what you are hoping to see or do in Sri Lanka."
   }
   return "I am not able to draft a full itinerary in this chat, but our team can — use **Send request** with your details.\n\nYou can also tap **End chat** below if you would like to stop for now."
+}
+
+const NAME_GREETING_WORDS = new Set([
+  'hello',
+  'hi',
+  'hey',
+  'thanks',
+  'thank',
+  'yes',
+  'no',
+  'ok',
+  'okay',
+  'sure',
+  'please',
+  'help',
+])
+
+function extractNameFromMessage(text: string): string | null {
+  const raw = (text || '').trim()
+  if (!raw || raw.length > 90) return null
+  const lower = raw.toLowerCase()
+  if (/\b(skip|prefer not|no name|anonymous|rather not|pass)\b/.test(lower)) return null
+  const m1 = raw.match(
+    /^(?:i'?m|i am|my name is|this is|call me|it's|its)\s+([A-Za-z][A-Za-z'.-]*(?:\s+[A-Za-z][A-Za-z'.-]*){0,3})\s*\.?$/i
+  )
+  if (m1) return m1[1].trim().split(/\s+/).slice(0, 4).join(' ')
+  const words = raw.split(/\s+/).filter(Boolean)
+  if (words.length >= 1 && words.length <= 3 && raw.length <= 42) {
+    const w0 = words[0].toLowerCase()
+    if (words.length === 1 && NAME_GREETING_WORDS.has(w0)) return null
+    if (words.every((w) => /^[A-Za-z][A-Za-z'.-]*$/.test(w))) return raw
+  }
+  return null
 }
 
 function extractEmail(text: string) {
@@ -166,7 +208,8 @@ export async function POST(req: Request) {
 
     let draft = coerceDraft(body?.draft || {})
 
-    const mustAskFields: (keyof DraftLead)[] = ['name', 'startDate', 'endDate', 'numberOfAdults']
+    // Name is preferred for tone but does not block "Send request" — only dates, adults, and contact do.
+    const mustAskFields: (keyof DraftLead)[] = ['startDate', 'endDate', 'numberOfAdults']
     const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')?.content || ''
     const lastAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant')?.content || ''
 
@@ -175,9 +218,34 @@ export async function POST(req: Request) {
     const inferredWhatsApp = extractWhatsApp(lastUserMessage)
     if (!draft.email && inferredEmail) draft = { ...draft, email: inferredEmail }
     if (!draft.whatsapp && inferredWhatsApp) draft = { ...draft, whatsapp: inferredWhatsApp }
+    if (!draft.name) {
+      const inferredName = extractNameFromMessage(lastUserMessage)
+      if (inferredName) draft = { ...draft, name: inferredName }
+    }
 
     const userTurns = countUserMessages(messages)
     const lastAssistantNorm = normalizeForCompare(lastAssistantMessage)
+
+    // First turn: gently ask for a name before contact or deeper topics (if not inferred).
+    if (!draft.email && !draft.whatsapp && userTurns === 1 && !draft.name) {
+      const missing = mustAskFields
+        .filter((k) => (draft as any)[k] == null || String((draft as any)[k]).trim() === '')
+        .concat(['email_or_whatsapp'] as any)
+      let reply = nameFirstReply(userTurns + lastUserMessage.length)
+      if (normalizeForCompare(reply) === lastAssistantNorm) {
+        reply = nameFirstReply(userTurns + 3)
+      }
+      return jsonResponse(
+        {
+          success: true,
+          reply,
+          draft,
+          missingFields: missing,
+          suggestSendRequest: false,
+        },
+        200
+      )
+    }
 
     // Guest wants to stop without sharing contact — do not loop the same contact prompt.
     if (!draft.email && !draft.whatsapp && wantsToEndChatWithoutContact(lastUserMessage)) {
@@ -240,25 +308,24 @@ export async function POST(req: Request) {
       )
     }
 
-    const system = `You are LankaLux Live Chat — warm, luxury, human, and concise.
-You help guests plan bespoke Sri Lanka journeys and collect details for a request.
+    const system = `You are LankaLux Live Chat — warm, unhurried, and human. You help guests plan bespoke Sri Lanka journeys.
 
-Rules:
+Voice:
+- Sound like a thoughtful travel host, not a form. A short soft line before a question is welcome (e.g. acknowledge their mood or question).
 - Never mention “AI”, “models”, or internal tools.
-- Ask at most ONE question at a time.
-- Ask for the guest's name first (if missing), so you can address them properly in follow-ups.
-- Be natural, premium, and friendly. No pushy sales.
-- If the guest is vague, offer 2–3 tasteful options.
-- We will only create a CRM request when the guest clicks “Send request”, so do not say you already created it.
-- IMPORTANT: Do NOT generate full or day-by-day itineraries in chat.
-- If asked for an itinerary, politely explain that full personalized itineraries are prepared directly by the LankaLux team after request submission.
-- Scope in chat: general questions only (vehicles, journey styles, services, process, what is included, response timelines).
-- If unsure about a detail, say you will have the team confirm instead of guessing.
-- Keep asking until at least one contact is captured (email OR WhatsApp) before proceeding into longer guidance.
+- Ask at most ONE clear question at a time.
+- If you know their name from the draft, use it sparingly and naturally — never every sentence.
+- If they never shared a name, do not nag. Address them in a neutral, warm way (“you”) and move on.
+- Avoid sounding like a checklist. Vary sentence shape; do not open every reply the same way.
+- If they are vague, offer 2–3 gentle options or a simple either/or.
+- We only create a CRM request when they tap “Send request” — never say it is already created.
+- Do NOT generate full or day-by-day itineraries in chat; explain that tailored itineraries are prepared by the team after request submission.
+- Scope: journeys, vehicles, services, process, timelines — not rigid scripts.
+- If unsure, say the team will confirm rather than guessing.
+- At least one contact method (email OR WhatsApp) is required before long bespoke planning; name is optional but lovely when offered.
 
-Data collection targets (minimum before “Send request” is enabled):
-- name, start date, end date, number of adults, and at least one contact method (email or WhatsApp)
-Optional: remaining contact method, children count + ages, preferences, airline ticket assistance.
+Data for “Send request” (name optional): start date, end date, number of adults, plus email OR WhatsApp.
+Optional: name, children, preferences, airline help.
 
 Knowledge base:
 ${CHAT_KNOWLEDGE_SUMMARY}
@@ -274,7 +341,7 @@ Output STRICT JSON only with this shape:
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
     const completion = await openai.chat.completions.create({
       model: process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini',
-      temperature: 0.6,
+      temperature: 0.72,
       messages: [
         { role: 'system', content: system },
         {
@@ -298,7 +365,7 @@ Output STRICT JSON only with this shape:
         {
           success: true,
           reply:
-            "Thanks — I’m here. To get started, what dates are you considering for Sri Lanka, and how many adults will be travelling?",
+            "I'm here with you. When you picture this trip, are you leaning toward something slow and restorative, or a bit more full of discovery? And roughly what dates feel right?",
           draft,
           missingFields: mustAskFields
             .filter((k) => (draft as any)[k] == null || String((draft as any)[k]).trim() === '')
@@ -318,20 +385,22 @@ Output STRICT JSON only with this shape:
     let reply =
       typeof parsed?.reply === 'string'
         ? parsed.reply
-        : "Lovely. Tell me a little about your ideal pace — relaxed, balanced, or immersive?"
+        : "I'd love to understand the rhythm you're after — more unhurried days, or a fuller sense of discovery?"
 
     // Anti-repeat guard: if the response matches the previous assistant message, pivot to a
     // new, specific follow-up so the chat does not feel stuck.
     if (normalizeForCompare(reply) && isDuplicateAssistantReply(reply, messages)) {
-      if (!nextDraft.name) {
-        reply = "May I have your name first, so I can address you properly?"
-      } else if (!nextDraft.startDate || !nextDraft.endDate) {
-        reply = `Lovely${nextDraft.name ? ', ' + nextDraft.name : ''}. What travel dates are you considering?`
+      if (!nextDraft.startDate || !nextDraft.endDate) {
+        reply = nextDraft.name
+          ? `Whenever it suits you${', ' + nextDraft.name}, what stretch of dates are you imagining?`
+          : 'What stretch of dates are you imagining for Sri Lanka — even a rough month helps.'
       } else if (nextDraft.numberOfAdults == null) {
-        reply = `Great${nextDraft.name ? ', ' + nextDraft.name : ''}. How many adults will be travelling?`
+        reply = nextDraft.name
+          ? `Lovely — how many adults should I have in mind, ${nextDraft.name}?`
+          : 'How many adults should I have in mind for this?'
       } else {
         reply =
-          "Thank you. I can also share a quick overview of our vehicle options and services, or you can tap 'Send request' and our team will take it from here."
+          "Whenever you're ready, I can sketch vehicles and how we usually work — or you can tap **Send request** and the team will shape it with you."
       }
     }
 

@@ -4,6 +4,22 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+function RatingScale({ score }: { score: number }) {
+  const n = Math.min(5, Math.max(1, Math.round(score)))
+  return (
+    <span className="inline-flex items-center gap-0.5 text-[var(--accent-gold)]" title={`${n} out of 5`}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <span key={i} className={i < n ? 'opacity-100' : 'opacity-25'} aria-hidden>
+          ★
+        </span>
+      ))}
+      <span className="sr-only">
+        {n} out of 5 stars
+      </span>
+    </span>
+  )
+}
+
 interface ChatSession {
   session_id: string
   client_name: string | null
@@ -179,14 +195,20 @@ export default function ChatsPage() {
                 <summary className="cursor-pointer list-none">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <h3 className="font-semibold text-lg flex items-center gap-2">
+                      <h3 className="font-semibold text-lg flex items-center gap-2 flex-wrap">
                         {row.client_name || 'Unknown visitor'}
                         {!row.is_read && <span className="inline-flex w-2.5 h-2.5 rounded-full bg-rose-500" aria-label="Unread chat" />}
+                        {row.chat_rating != null && (
+                          <span className="inline-flex items-center gap-2 pl-2 ml-1 border-l border-theme">
+                            <span className="text-xs font-normal text-secondary uppercase tracking-wide">Rated</span>
+                            <RatingScale score={row.chat_rating} />
+                            <span className="text-sm font-semibold text-[var(--accent-gold)]">{row.chat_rating}/5</span>
+                          </span>
+                        )}
                       </h3>
                       <p className="text-sm text-secondary mt-1">
                         {row.email || 'No email'} {row.request_id ? `• ${row.request_id}` : ''}{' '}
                         {row.handoff_requested ? '• WhatsApp handoff requested' : ''}
-                        {row.chat_rating != null ? ` • Rating: ${row.chat_rating}/5` : ''}
                       </p>
                       <p className="text-sm text-secondary mt-1 line-clamp-2">
                         {row.last_user_message || row.last_assistant_message || 'No message preview'}
@@ -216,13 +238,14 @@ export default function ChatsPage() {
                     </button>
                   </div>
                   {row.chat_rating != null && (
-                    <p className="text-sm">
-                      <span className="text-secondary">Guest rating: </span>
-                      <span className="text-[var(--accent-gold)] font-medium">{row.chat_rating} / 5</span>
+                    <div className="flex flex-wrap items-center gap-3 text-sm bg-amber-950/15 border border-amber-700/25 rounded-xl px-3 py-2">
+                      <span className="text-secondary">Guest rating</span>
+                      <RatingScale score={row.chat_rating} />
+                      <span className="text-[var(--accent-gold)] font-semibold">{row.chat_rating} / 5</span>
                       {row.chat_rated_at && (
-                        <span className="text-secondary text-xs ml-2">{formatDate(row.chat_rated_at)}</span>
+                        <span className="text-secondary text-xs">Rated at {formatDate(row.chat_rated_at)}</span>
                       )}
-                    </p>
+                    </div>
                   )}
                   {row.selected_vehicle && (
                     <p className="text-sm">

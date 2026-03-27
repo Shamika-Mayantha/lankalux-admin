@@ -55,6 +55,12 @@ export async function POST(request: Request) {
           : NaN
     const chatRating = Number.isFinite(ratingRaw) && ratingRaw >= 1 && ratingRaw <= 5 ? Math.round(ratingRaw) : null
 
+    const { data: existing } = await supabase
+      .from('website_chat_sessions')
+      .select('chat_rating, chat_rated_at')
+      .eq('session_id', sessionId)
+      .maybeSingle()
+
     const row: Record<string, unknown> = {
       session_id: sessionId,
       client_name: safeText(draft?.name) || null,
@@ -69,7 +75,6 @@ export async function POST(request: Request) {
       draft_json: draft,
       last_event: eventType,
       handoff_requested: !!body?.handoffRequested,
-      is_read: false,
       page_url: safeText(body?.pageUrl) || null,
       user_agent: safeText(body?.userAgent) || null,
       updated_at: new Date().toISOString(),
@@ -78,6 +83,10 @@ export async function POST(request: Request) {
     if (chatRating !== null) {
       row.chat_rating = chatRating
       row.chat_rated_at = new Date().toISOString()
+    } else if (existing && existing.chat_rating != null && typeof existing.chat_rating === 'number') {
+      // Upsert must not wipe a prior guest rating when a later message event arrives.
+      row.chat_rating = existing.chat_rating
+      row.chat_rated_at = existing.chat_rated_at ?? null
     }
 
     const { error } = await supabase
