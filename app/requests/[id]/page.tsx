@@ -1336,10 +1336,8 @@ LankaLux Team`
     const template = getTemplate(selectedTemplateId)
     if (!template) return
     const clientName = request.client_name || 'Valued Client'
-    const itineraryUrl =
-      request.public_token != null && request.selected_option != null
-        ? "https://admin.lankalux.com/itinerary/" + request.public_token + "/" + request.selected_option
-        : null
+    // Follow-up emails should not include itinerary buttons/links.
+    const itineraryUrl: string | null = null
     if (selectedTemplateId === 'custom_email') {
       const firstName = clientName?.trim() ? clientName.split(' ')[0] : 'there'
       setPreviewSubject(template.subject || 'A note from LankaLux')
@@ -2100,7 +2098,10 @@ LankaLux Team`
               Follow-up email
             </h2>
             <p className="text-secondary mb-8 max-w-2xl leading-relaxed text-sm text-left">
-              Choose a template or <strong className="text-primary font-medium">Custom email</strong> to write your own. Preview, edit subject and body, then send. An itinerary button and link are added when available.
+              Choose a template or <strong className="text-primary font-medium">Custom email</strong> to write your own. Preview, edit subject and body, then send.
+              <span className="block mt-1 text-secondary/90">
+                Follow-up emails do not include an itinerary button or itinerary link.
+              </span>
             </p>
             <div className="flex flex-wrap items-end gap-6">
               <div className="min-w-[280px] flex-1 max-w-md">
@@ -3065,8 +3066,8 @@ LankaLux Team`
                 <label className={lbl}>Message</label>
                 <p className="text-xs text-secondary mb-2">
                   {selectedTemplateId === 'custom_email'
-                    ? 'Your text is sent as the main body. If this request has a public itinerary link, a “View your itinerary” button and link line are added below your message, plus our signature.'
-                    : 'A “View your itinerary” button and our signature will be added automatically.'}
+                    ? 'Your text is sent as the main body. Our signature will be added automatically.'
+                    : 'Our signature will be added automatically.'}
                 </p>
                 <textarea
                   value={previewBody}

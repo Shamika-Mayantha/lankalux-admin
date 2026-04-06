@@ -3,7 +3,30 @@ import { createClient } from '@supabase/supabase-js'
 const nodemailer = require('nodemailer')
 import { getTemplate, bodyTextToHtml, buildHtmlFromBody, type TemplateId } from '@/lib/email-templates'
 
-const BASE_URL = 'https://admin.lankalux.com'
+const BASE_URL = 'https://lankalux.com'
+
+function normalizeEditableBody(input: string): string {
+  const raw = input.replace(/\r\n/g, '\n').trim()
+  if (!raw) return ''
+
+  let lines = raw.split('\n')
+
+  // Remove leading "Dear <name>," line because HTML shell already renders greeting.
+  if (lines.length > 0 && /^dear\s+.+,\s*$/i.test(lines[0].trim())) {
+    lines = lines.slice(1)
+    while (lines.length > 0 && lines[0].trim() === '') lines = lines.slice(1)
+  }
+
+  // Remove trailing signature if user pasted template text.
+  const lower = lines.map((l) => l.trim().toLowerCase())
+  const warmIdx = lower.findIndex((l) => l === 'warm regards,' || l === 'warm regards')
+  if (warmIdx >= 0) {
+    lines = lines.slice(0, warmIdx)
+  }
+
+  const cleaned = lines.join('\n').trim()
+  return cleaned
+}
 
 export async function POST(request: Request) {
   try {
@@ -95,25 +118,21 @@ export async function POST(request: Request) {
     }
 
     const clientName = requestData.client_name || 'Valued Client'
-    let itineraryUrl: string | null = null
-    if (
-      requestData.public_token != null &&
-      requestData.selected_option != null
-    ) {
-      itineraryUrl = `${BASE_URL}/itinerary/${requestData.public_token}/${requestData.selected_option}`
-    }
+    // Follow-up emails should never include an itinerary link/button.
+    const itineraryUrl: string | null = null
 
     const subject = (customSubject && customSubject.trim()) ? customSubject.trim() : template.subject
     let emailHtml: string
     let emailText: string
     if (customBody != null && String(customBody).trim() !== '') {
-      const bodyHtml = bodyTextToHtml(String(customBody).trim())
+      const normalizedBody = normalizeEditableBody(String(customBody))
+      const bodyHtml = bodyTextToHtml(normalizedBody)
       emailHtml = buildHtmlFromBody({ clientName, bodyHtml, itineraryUrl })
-      emailText = String(customBody).trim() + (itineraryUrl ? `\n\nView your itinerary: ${itineraryUrl}\n\n` : '\n\n') + 'Warm regards,\nThe LankaLux Team'
+      emailText = normalizedBody + '\n\nWarm regards,\nThe LankaLux Team'
     } else {
       emailHtml = template.getHtml({ clientName, itineraryUrl })
-      const bodyOnly = template.getText({ clientName, itineraryUrl })
-      emailText = bodyOnly + (itineraryUrl ? `\n\nView your itinerary: ${itineraryUrl}\n\n` : '\n\n') + 'Warm regards,\nThe LankaLux Team'
+      const bodyOnly = normalizeEditableBody(template.getText({ clientName, itineraryUrl }))
+      emailText = bodyOnly + '\n\nWarm regards,\nThe LankaLux Team'
     }
 
     const transporter = nodemailer.createTransport({

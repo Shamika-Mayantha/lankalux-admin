@@ -3,7 +3,7 @@
  * Elegant, humanised tone. Each includes a CTA button.
  */
 
-const BASE_URL = 'https://admin.lankalux.com'
+const BASE_URL = 'https://lankalux.com'
 
 const sharedStyles = `
   * { margin: 0; padding: 0; box-sizing: border-box; }

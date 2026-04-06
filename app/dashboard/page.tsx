@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [requestsLoading, setRequestsLoading] = useState(true)
   const [unreadChats, setUnreadChats] = useState(0)
   const [cancelledExpanded, setCancelledExpanded] = useState(false)
+  const [soldExpanded, setSoldExpanded] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -412,60 +413,80 @@ export default function DashboardPage() {
         {/* Sold Section */}
         {soldRequests.length > 0 && (
           <section className="mb-12 animate-slide-in">
-            <h2 className="text-xl font-semibold text-primary mb-6 flex items-center gap-3">
-              <span className="w-1 h-6 bg-emerald-500 rounded-full" />
-              Sold
-              <span className="text-sm text-secondary font-normal">({soldRequests.length})</span>
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {soldRequests.map((request, index) => (
-                <div
-                  key={request.id}
-                  onClick={() => router.push(`/requests/${request.id}`)}
-                  className="bg-card border border-theme rounded-2xl p-6 hover:border-emerald-400 hover:shadow-card transition-all duration-300 cursor-pointer animate-fade-in"
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-primary mb-1.5 truncate">
-                      {request.client_name || 'Unnamed Client'}
-                    </h3>
-                    <p className="text-sm text-secondary">
-                      {formatDate(request.created_at)}
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {(request.start_date || request.end_date) && (
+            <button
+              onClick={() => setSoldExpanded(!soldExpanded)}
+              className="flex items-center justify-between w-full mb-6 px-6 py-4 bg-card border border-theme rounded-2xl hover:border-emerald-300 transition-all shadow-card"
+            >
+              <h2 className="text-xl font-semibold text-primary flex items-center gap-3">
+                <span className="w-1 h-6 bg-emerald-500 rounded-full" />
+                Sold ({soldRequests.length})
+              </h2>
+              <svg
+                className={`w-5 h-5 text-secondary transition-transform duration-200 ${soldExpanded ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {soldExpanded && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {soldRequests.map((request, index) => (
+                  <div
+                    key={request.id}
+                    onClick={() => router.push(`/requests/${request.id}`)}
+                    className="bg-card border border-theme rounded-2xl p-6 hover:border-emerald-400 hover:shadow-card transition-all duration-300 cursor-pointer animate-fade-in"
+                    style={{ animationDelay: `${index * 0.05}s` }}
+                  >
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-primary mb-1.5 truncate">
+                        {request.client_name || 'Unnamed Client'}
+                      </h3>
+                      <p className="text-sm text-secondary">
+                        {formatDate(request.created_at)}
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      {(request.start_date || request.end_date) && (
+                        <div>
+                          <p className="text-xs text-secondary uppercase tracking-wide mb-1.5">
+                            Travel Dates
+                          </p>
+                          <p className="text-primary">
+                            {request.start_date && request.end_date
+                              ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
+                              : request.start_date
+                                ? `From ${formatDate(request.start_date)}`
+                                : request.end_date
+                                  ? `Until ${formatDate(request.end_date)}`
+                                  : 'Not specified'}
+                          </p>
+                        </div>
+                      )}
+
                       <div>
                         <p className="text-xs text-secondary uppercase tracking-wide mb-1.5">
-                          Travel Dates
+                          Status
                         </p>
-                        <p className="text-primary">
-                          {request.start_date && request.end_date
-                            ? `${formatDate(request.start_date)} - ${formatDate(request.end_date)}`
-                            : request.start_date
-                            ? `From ${formatDate(request.start_date)}`
-                            : request.end_date
-                            ? `Until ${formatDate(request.end_date)}`
-                            : 'Not specified'}
-                        </p>
+                        <span
+                          className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
+                        >
+                          {(request.status || 'sold').toUpperCase()}
+                        </span>
                       </div>
-                    )}
-                    
-                    <div>
-                      <p className="text-xs text-secondary uppercase tracking-wide mb-1.5">
-                        Status
-                      </p>
-                      <span
-                        className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${getStatusColor(request.status)} ${getStatusBgColor(request.status)}`}
-                      >
-                        {(request.status || 'sold').toUpperCase()}
-                      </span>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
