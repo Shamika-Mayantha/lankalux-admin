@@ -35,6 +35,8 @@ export function HotelModal({
   const [pricePerNight, setPricePerNight] = useState('')
   const [description, setDescription] = useState('')
   const [images, setImages] = useState<ManagedImageItem[]>([])
+  const [bookingUrl, setBookingUrl] = useState('')
+  const [extractingBooking, setExtractingBooking] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -48,6 +50,7 @@ export function HotelModal({
       setPricePerNight(initial.pricePerNight)
       setDescription(initial.description)
       setImages(normalizeManagedImages(initial.images))
+      setBookingUrl('')
     } else {
       const e = emptyHotel()
       setName(e.name)
@@ -59,6 +62,7 @@ export function HotelModal({
       setPricePerNight(e.pricePerNight)
       setDescription(e.description)
       setImages([] as ManagedImageItem[])
+      setBookingUrl('')
     }
   }, [open, initial])
 
@@ -83,6 +87,57 @@ export function HotelModal({
     }
     onSave(hotel)
     onClose()
+  }
+
+  const autofillFromBooking = async () => {
+    const url = bookingUrl.trim()
+    if (!url) {
+      alert('Please paste a Booking.com URL first.')
+      return
+    }
+    setExtractingBooking(true)
+    try {
+      const res = await fetch('/api/extract-booking-hotel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.hotel) {
+        alert(data?.error || 'Could not extract hotel details from this link.')
+        return
+      }
+
+      const extracted = data.hotel as {
+        name?: string
+        address?: string
+        price?: string
+        images?: string[]
+        sourceUrl?: string
+      }
+
+      if (extracted.name) setName(extracted.name)
+      if (extracted.address) {
+        setLocation((prev) => prev || extracted.address || '')
+      }
+      if (extracted.sourceUrl) {
+        setMapsUrl((prev) => prev || extracted.sourceUrl || '')
+      }
+      if (extracted.price) {
+        setShowPrice(true)
+        setPricePerNight((prev) => prev || extracted.price || '')
+      }
+      if (Array.isArray(extracted.images) && extracted.images.length > 0) {
+        const current = normalizeManagedImages(images)
+        const incoming: ManagedImageItem[] = extracted.images.slice(0, 4).map((src) => ({ src, type: 'default' }))
+        setImages(current.length > 0 ? current : incoming)
+      }
+    } catch (e) {
+      console.error(e)
+      alert('Could not extract details. Please try again.')
+    } finally {
+      setExtractingBooking(false)
+    }
   }
 
   return (
@@ -127,6 +182,28 @@ export function HotelModal({
               className="mt-1 w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 focus:ring-2 focus:ring-[#d4af37]/50 text-sm"
               placeholder="https://maps.google.com/..."
             />
+          </div>
+          <div className="rounded-xl border border-zinc-700 bg-zinc-900/50 p-4 space-y-3">
+            <label className="text-xs text-zinc-500 uppercase tracking-wide">Booking.com URL (auto-fill)</label>
+            <div className="flex gap-2">
+              <input
+                value={bookingUrl}
+                onChange={(e) => setBookingUrl(e.target.value)}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 focus:ring-2 focus:ring-[#d4af37]/50 text-sm"
+                placeholder="https://www.booking.com/hotel/..."
+              />
+              <Button
+                type="button"
+                onClick={() => void autofillFromBooking()}
+                disabled={extractingBooking}
+                className="shrink-0"
+              >
+                {extractingBooking ? 'Fetching...' : 'Auto-fill'}
+              </Button>
+            </div>
+            <p className="text-[11px] text-zinc-500">
+              We will try to fetch hotel name, address, visible price, and 3-4 photos from the link.
+            </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

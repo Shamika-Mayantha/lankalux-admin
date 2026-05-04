@@ -121,7 +121,7 @@ export function ClientViewPreviewModal({
     const hero = normalizeManagedImages(defaultItineraryImages)[0]?.src || next[0] || '/images/placeholder.jpg'
     const items: ManagedImageItem[] = [hero, ...next].map((src) => ({
       src,
-      type: src.startsWith('/uploads/') ? 'uploaded' : 'default',
+      type: src.startsWith('/uploads/') || src.includes('/storage/v1/object/public/') ? 'uploaded' : 'default',
     }))
     onItineraryImagesChange(items)
   }

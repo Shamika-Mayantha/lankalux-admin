@@ -2,6 +2,10 @@ export type ManagedImageItem = { src: string; type: 'uploaded' | 'default' }
 
 const IMG_EXT = /\.(jpe?g|png|webp|gif|svg)$/i
 
+function isUploadedSrc(src: string): boolean {
+  return src.startsWith('/uploads/') || src.includes('/storage/v1/object/public/')
+}
+
 export function normalizeManagedImages(input: unknown): ManagedImageItem[] {
   if (!Array.isArray(input)) return []
   const out: ManagedImageItem[] = []
@@ -9,7 +13,7 @@ export function normalizeManagedImages(input: unknown): ManagedImageItem[] {
     if (typeof item === 'string' && item.trim()) {
       out.push({
         src: item.trim(),
-        type: item.startsWith('/uploads/') ? 'uploaded' : 'default',
+        type: isUploadedSrc(item) ? 'uploaded' : 'default',
       })
     } else if (item && typeof item === 'object' && 'src' in item && typeof (item as { src: unknown }).src === 'string') {
       const src = (item as { src: string }).src.trim()
@@ -17,7 +21,7 @@ export function normalizeManagedImages(input: unknown): ManagedImageItem[] {
       const t = (item as { type?: string }).type
       out.push({
         src,
-        type: t === 'default' || t === 'uploaded' ? t : src.startsWith('/uploads/') ? 'uploaded' : 'default',
+        type: t === 'default' || t === 'uploaded' ? t : isUploadedSrc(src) ? 'uploaded' : 'default',
       })
     }
   }

@@ -3,8 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 const nodemailer = require('nodemailer')
 import { getTemplate, bodyTextToHtml, buildHtmlFromBody, type TemplateId } from '@/lib/email-templates'
 
-const BASE_URL = 'https://lankalux.com'
-
 function normalizeEditableBody(input: string): string {
   const raw = input.replace(/\r\n/g, '\n').trim()
   if (!raw) return ''

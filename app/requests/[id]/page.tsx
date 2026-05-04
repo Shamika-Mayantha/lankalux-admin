@@ -5,13 +5,12 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { FOLLOW_UP_TEMPLATES, getTemplate, type TemplateId } from '@/lib/email-templates'
 import { FLEET_VEHICLES, getFleetVehicleById, getAllFleetImages } from '@/lib/fleet'
-import { Map, Building2, Send, Mail } from 'lucide-react'
+import { Map as MapIcon, Building2, Send, Mail } from 'lucide-react'
 import { HotelModal } from '@/components/requests/HotelModal'
 import { HotelCard } from '@/components/requests/HotelCard'
 import { ItineraryCard, ItineraryPlaceholder, ItineraryGenerating } from '@/components/requests/ItineraryCard'
 import type { HotelRecord } from '@/lib/hotel-types'
 import { parseHotelOptions } from '@/lib/hotel-types'
-import { formatItineraryDaysPlain, buildHotelSectionPlain } from '@/lib/email-itinerary-hotel'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -110,6 +109,7 @@ export default function RequestDetailsPage() {
   const [templateEmailModalOpen, setTemplateEmailModalOpen] = useState(false)
   const [previewSubject, setPreviewSubject] = useState('')
   const [previewBody, setPreviewBody] = useState('')
+  const [applyingHotelsToItineraries, setApplyingHotelsToItineraries] = useState(false)
   const [sentItineraryExpanded, setSentItineraryExpanded] = useState(false)
   const [followUpEmailsSentExpanded, setFollowUpEmailsSentExpanded] = useState(false)
   const [linkOpensExpanded, setLinkOpensExpanded] = useState(false)
@@ -1093,36 +1093,21 @@ LankaLux Team`
       return
     }
 
-    const baseUrl = 'https://admin.lankalux.com'
+    const baseUrl = 'https://lankalux.com'
     const itineraryUrl =
       includeItinerarySend && request.public_token != null && request.selected_option != null
         ? `${baseUrl}/itinerary/${request.public_token}/${request.selected_option}`
         : ''
-    const opt =
-      includeItinerarySend && request.itinerary_options?.options?.[request.selected_option!]
-        ? request.itinerary_options.options[request.selected_option!]
-        : null
 
-    const parts: string[] = ['*LankaLux*']
-    if (includeItinerarySend && opt) {
-      parts.push(
-        '',
-        '--- ITINERARY ---',
-        formatItineraryDaysPlain(opt as ItineraryOption),
-        '',
-        itineraryUrl
-      )
-      const itinUrls = imageSrcs(normalizeManagedImages((opt as ItineraryOption).images)).map((s) =>
-        absoluteImageSrc(s, baseUrl)
-      )
-      if (itinUrls.length) {
-        parts.push('', 'Itinerary images:', ...itinUrls)
-      }
+    // WhatsApp itinerary share should be link-only (no long itinerary body).
+    const lines: string[] = ['*LankaLux*']
+    if (includeItinerarySend && itineraryUrl) {
+      lines.push('Your itinerary is ready:', itineraryUrl)
+    } else if (includeHotelSend && selectedHotel) {
+      // Keep hotel-only path concise too.
+      lines.push('Your LankaLux update is ready.')
     }
-    if (includeHotelSend && selectedHotel) {
-      parts.push('', buildHotelSectionPlain(hotelToApiPayload(selectedHotel)))
-    }
-    const message = encodeURIComponent(parts.join('\n'))
+    const message = encodeURIComponent(lines.join('\n\n'))
 
     const whatsappNumber = request.whatsapp?.replace(new RegExp('[^0-9]', 'g'), '') || ''
     if (whatsappNumber) {
@@ -1209,6 +1194,99 @@ LankaLux Team`
   }
 
   const selectedHotel = hotels.find((h) => h.id === selectedHotelId) ?? null
+
+  const normalizeLocationKey = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+
+  const handleApplyHotelsToItineraries = async () => {
+    if (!request) return
+    if (!hotels.length) {
+      alert('Add hotels first.')
+      return
+    }
+
+    const options = request.itinerary_options?.options ?? []
+    if (!options.length) {
+      alert('Generate itineraries first.')
+      return
+    }
+
+    const hotelsByLocation = new Map<string, HotelRecord[]>()
+    for (const h of hotels) {
+      const key = normalizeLocationKey(h.location || '')
+      if (!key) continue
+      const existing = hotelsByLocation.get(key) || []
+      existing.push(h)
+      hotelsByLocation.set(key, existing)
+    }
+    if (hotelsByLocation.size === 0) {
+      alert('Please set a location for each hotel before applying.')
+      return
+    }
+
+    setApplyingHotelsToItineraries(true)
+    try {
+      let matchCount = 0
+      const nextOptions = options.map((opt) => {
+        if (!opt || !Array.isArray((opt as ItineraryOption).days)) return opt
+        const typed = opt as ItineraryOption & { days: any[] }
+        const days = typed.days.map((day: any) => {
+          const dayLoc = normalizeLocationKey(String(day?.location || ''))
+          if (!dayLoc) return day
+
+          const direct = hotelsByLocation.get(dayLoc)
+          const fuzzyMatch = hotels.find((h) => {
+            const hk = normalizeLocationKey(h.location || '')
+            return hk && (dayLoc.includes(hk) || hk.includes(dayLoc))
+          })
+          const fuzzy = direct ? direct : (fuzzyMatch ? [fuzzyMatch] : [])
+
+          if (!fuzzy || fuzzy.length === 0) return day
+          const hotel = fuzzy[0]
+          matchCount += 1
+
+          const price = hotel.showPrice && hotel.pricePerNight ? ` (${hotel.pricePerNight}/night)` : ''
+          const stayLine = `Suggested stay: ${hotel.name}${price}.`
+          const currentExpect = typeof day.what_to_expect === 'string' ? day.what_to_expect.trim() : ''
+          const mergedExpect = currentExpect.includes(hotel.name)
+            ? currentExpect
+            : (currentExpect ? `${currentExpect}\n\n${stayLine}` : stayLine)
+
+          return {
+            ...day,
+            what_to_expect: mergedExpect,
+            hotel_name: hotel.name,
+            hotel_location: hotel.location,
+            hotel_maps_url: hotel.mapsUrl || '',
+            hotel_price_per_night: hotel.showPrice ? hotel.pricePerNight : '',
+            hotel_images: imageSrcs(normalizeManagedImages(hotel.images)).slice(0, 4),
+          }
+        })
+        return { ...typed, days }
+      })
+
+      const { error } = await (supabase.from('Client Requests') as any)
+        .update({
+          itineraryoptions: JSON.stringify({ options: nextOptions }),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+      if (error) throw error
+
+      const updated = await fetchRequestData(request.id)
+      if (updated) setRequest(updated)
+      alert(matchCount > 0 ? `Applied hotel details to ${matchCount} itinerary day(s).` : 'No location matches found.')
+    } catch (e) {
+      console.error(e)
+      alert('Could not apply hotels to itineraries.')
+    } finally {
+      setApplyingHotelsToItineraries(false)
+    }
+  }
 
   const hotelToApiPayload = (h: HotelRecord) => ({
     name: h.name,
@@ -2235,7 +2313,7 @@ LankaLux Team`
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-10 text-left">
             <h2 className="text-2xl font-semibold text-accent-theme flex items-center gap-4">
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[color:var(--accent-gold)]/15 text-accent-theme shrink-0">
-                <Map className="w-5 h-5" />
+                <MapIcon className="w-5 h-5" />
               </span>
               Itinerary options
             </h2>
@@ -2476,16 +2554,27 @@ LankaLux Team`
               </span>
               Hotel options
             </h2>
-            <Button
-              onClick={() => {
-                setEditingHotel(null)
-                setHotelModalOpen(true)
-              }}
-              disabled={savingHotels || isCancelled}
-              className="shrink-0"
-            >
-              + Add hotel
-            </Button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void handleApplyHotelsToItineraries()}
+                disabled={savingHotels || isCancelled || applyingHotelsToItineraries || hotels.length === 0}
+                className="shrink-0"
+              >
+                {applyingHotelsToItineraries ? 'Applying...' : 'Apply hotels to itineraries'}
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditingHotel(null)
+                  setHotelModalOpen(true)
+                }}
+                disabled={savingHotels || isCancelled}
+                className="shrink-0"
+              >
+                + Add hotel
+              </Button>
+            </div>
           </div>
           {hotels.length === 0 ? (
             <p className="text-secondary text-sm py-10 px-6 text-center border border-dashed border-accent rounded-2xl bg-inner-theme/50">
