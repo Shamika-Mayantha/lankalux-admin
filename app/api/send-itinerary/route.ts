@@ -122,8 +122,9 @@ export async function POST(request: Request) {
       )
     }
 
-    // Client-facing base URL for public itinerary links.
-    const baseUrl = 'https://lankalux.com'
+    // Use the deployed app domain that serves the itinerary pages.
+    // (The apex domain may be configured elsewhere; using the app domain avoids GitHub Pages 404s.)
+    const baseUrl = 'https://admin.lankalux.com'
     let itineraryUrl = ''
     let selectedOption: any = null
 
