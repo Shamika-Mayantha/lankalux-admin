@@ -122,7 +122,8 @@ export async function POST(request: Request) {
       )
     }
 
-    const baseUrl = 'https://admin.lankalux.com'
+    // Client-facing base URL for public itinerary links.
+    const baseUrl = 'https://lankalux.com'
     let itineraryUrl = ''
     let selectedOption: any = null
 
@@ -163,8 +164,19 @@ export async function POST(request: Request) {
           { status: 400 }
         )
       }
-      itineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}`
-      console.log('Itinerary URL:', { itineraryUrl, optionIndex: requestData.selected_option })
+      const optionIndex = Number(requestData.selected_option)
+      if (!Number.isFinite(optionIndex) || optionIndex < 0) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid itinerary option index' },
+          { status: 400 }
+        )
+      }
+
+      // IMPORTANT: always include option index in the public link.
+      // If we send only /itinerary/[token], the page redirects to the *current* selected_option
+      // which causes older emails to "overlap" and always show the latest selected option.
+      itineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}/${optionIndex}`
+      console.log('Itinerary URL:', { itineraryUrl, optionIndex })
     }
 
     let hotelPayload: import('@/lib/email-itinerary-hotel').HotelEmailPayload | null = null

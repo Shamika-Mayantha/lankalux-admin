@@ -1054,7 +1054,7 @@ export default function RequestDetailsPage() {
       return
     }
 
-    const baseUrl = "https://admin.lankalux.com"
+    const baseUrl = 'https://lankalux.com'
     const itineraryUrl = baseUrl + '/itinerary/' + request.public_token + '/' + request.selected_option
 
     const subject = encodeURIComponent('Your LankaLux Sri Lanka Itinerary')
