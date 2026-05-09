@@ -309,25 +309,30 @@ export async function POST(request: Request) {
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: Arial, Helvetica, sans-serif; color: #2c2c2c; background: #ffffff; margin: 0; padding: 0; }
-            .wrap { width: 100%; background: #ffffff; padding: 0; }
-            .card { max-width: 640px; margin: 0 auto; background: #ffffff; }
-            .top { background: #1f1f1f; padding: 26px 18px 18px; text-align: center; }
-            .logo { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; display: inline-block; margin: 0 auto 10px; }
-            .brand { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; letter-spacing: 0.5px; color: #c9a14a; font-weight: 500; }
-            .tag { margin-top: 6px; font-size: 11px; letter-spacing: 0.14em; color: #ffffff; opacity: 0.85; }
+            body { font-family: Arial, Helvetica, sans-serif; color: #2f2f2f; background: #efefef; margin: 0; padding: 0; }
+            .wrap { width: 100%; background: #efefef; padding: 18px 0; }
+            .card { max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e2e2; }
+            .top { background: linear-gradient(90deg, #1b1c1f 0%, #2b2c2f 100%); padding: 28px 16px 22px; text-align: center; }
+            .logo { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; display: inline-block; margin: 0 auto 10px; }
+            .brand { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 36px; letter-spacing: 0.4px; color: #c9a14a; font-weight: 500; line-height: 1; }
+            .tag { margin-top: 6px; font-size: 11px; letter-spacing: 0.14em; color: #f2f2f2; font-weight: 600; }
             .goldline { height: 2px; background: #c9a14a; }
-            .content { padding: 24px 22px 26px; line-height: 1.7; }
-            .dear { margin: 0 0 14px; font-size: 14px; color: #2c2c2c; }
-            .p { margin: 0 0 14px; font-size: 13px; color: #4a4a4a; }
-            .meta { background: #f6f6f6; border-left: 3px solid #c9a14a; padding: 14px 14px; margin: 14px 0 16px; }
+            .content { padding: 20px 28px 0; line-height: 1.75; }
+            .dear { margin: 0 0 14px; font-size: 14px; color: #2f2f2f; }
+            .p { margin: 0 0 16px; font-size: 13px; color: #5d5d5d; }
+            .meta { background: #f4f4f4; border-left: 3px solid #c9a14a; padding: 12px 14px; margin: 16px 0 22px; }
             .meta-row { display: table; width: 100%; margin: 8px 0; }
-            .meta-k { display: table-cell; width: 140px; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: #6a6a6a; vertical-align: top; }
-            .meta-v { display: table-cell; font-size: 12px; color: #2c2c2c; font-weight: 600; vertical-align: top; }
-            .meta-v-gold { color: #c9a14a; font-weight: 700; }
-            .cta { text-align: center; margin: 18px 0 10px; }
-            .btn { display: inline-block; background: #c9a14a; color: #1b1b1b !important; text-decoration: none; padding: 12px 22px; border-radius: 6px; font-weight: 800; font-size: 12px; letter-spacing: 0.04em; }
-            .small { margin: 0; font-size: 12px; color: #6a6a6a; line-height: 1.65; }
+            .meta-k { display: table-cell; width: 145px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #6f6f6f; font-weight: 700; vertical-align: top; }
+            .meta-v { display: table-cell; font-size: 12px; color: #323232; font-weight: 500; vertical-align: top; }
+            .meta-v-gold { color: #c9a14a; font-weight: 700; font-size: 28px; font-family: Georgia, 'Times New Roman', serif; line-height: 1.2; }
+            .rule { height: 1px; background: #d9d9d9; border: 0; margin: 20px 0; }
+            .cta { text-align: center; margin: 0 0 0; }
+            .btn { display: inline-block; background: #c9a14a; color: #1147b8 !important; text-decoration: none; padding: 12px 26px; border-radius: 4px; font-weight: 800; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+            .small { margin: 0 0 16px; font-size: 12px; color: #676767; line-height: 1.8; }
+            .signoff { margin: 0 0 6px; font-size: 12px; color: #666666; }
+            .team { margin: 0 0 22px; font-size: 12px; color: #c9a14a; font-weight: 700; }
+            .foot { background: #1f2023; color: #bdbdbd; text-align: center; padding: 14px 18px; font-size: 10px; line-height: 1.6; }
+            .foot a { color: #c9a14a; text-decoration: underline; }
             .preheader { display:none!important; visibility:hidden; opacity:0; color:transparent; height:0; width:0; font-size:1px; line-height:1px; }
           </style>
         </head>
@@ -349,9 +354,15 @@ export async function POST(request: Request) {
                   ${journeyTitle ? `<div class="meta-row"><div class="meta-k">SELECTED JOURNEY</div><div class="meta-v meta-v-gold">${journeyTitle}</div></div>` : ''}
                   ${requestData.duration ? `<div class="meta-row"><div class="meta-k">DURATION</div><div class="meta-v">${requestData.duration} Days</div></div>` : ''}
                 </div>
+                <hr class="rule" />
                 <div class="cta"><a class="btn" href="${itineraryUrl}">${ctaText}</a></div>
+                <hr class="rule" />
                 <p class="small">This link provides access to your complete journey details. We’ve designed every moment to showcase the beauty, culture, and wonder of Sri Lanka. If you have any questions or would like to discuss any modifications, please don’t hesitate to reach out. We’re here to make your journey perfect.</p>
+                <p class="small">We look forward to creating an extraordinary and unforgettable experience for you in the Pearl of the Indian Ocean.</p>
+                <p class="signoff">Warm regards,</p>
+                <p class="team">The LankaLux Team</p>
               </div>
+              <div class="foot">© ${new Date().getFullYear()} <a href="${baseUrl}">LankaLux</a>. All rights reserved.<br/>Your journey to Sri Lanka begins here.</div>
             </div>
           </div>
         </body>
