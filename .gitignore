@@ -43,3 +43,9 @@ next-env.d.ts
 # client uploads (keep .gitkeep)
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# Local subfolder artifacts (do not commit)
+/CMR/.next/
+/CMR/node_modules/
+/Vercel/
+/lankalux-admin-push/
