@@ -59,6 +59,20 @@ function topSimilarity(candidate: any, existing: any[]) {
   return ranked[0] || { score: 0, option: null as any }
 }
 
+function isTooSimilar(candidate: any, existing: any[], threshold: number) {
+  const top = topSimilarity(candidate, existing)
+  if (!top.option) return { blocked: false, top }
+  if (top.score >= threshold) return { blocked: true, top }
+
+  const candSig = optionSignature(candidate)
+  const topSig = optionSignature(top.option)
+  const sameRoute = candSig.routeSequence && candSig.routeSequence === topSig.routeSequence
+  const titleOverlap = jaccard(candSig.titleTokens, topSig.titleTokens)
+  if (sameRoute && titleOverlap >= 0.2) return { blocked: true, top }
+
+  return { blocked: false, top }
+}
+
 export async function POST(request: Request) {
   try {
     // Parse request body
@@ -248,6 +262,7 @@ export async function POST(request: Request) {
     }
 
     const existingTitles = comparisonOptions.filter((opt: any) => opt && opt.title).map((opt: any) => opt.title).join(', ')
+    const currentOption = existingOptions[optionIndex] || null
     
     const prompt = `You are an experienced and passionate luxury travel consultant who creates personalized, memorable journeys through Sri Lanka. Generate ONE distinct, premium itinerary option for the following client:
 
@@ -268,6 +283,7 @@ You MUST create a COMPLETELY DIFFERENT itinerary that:
 - Offers different types of experiences and activities
 - Has a unique title that clearly distinguishes it from: ${existingTitles}
 - Do NOT repeat similar activities, locations, or themes from the existing options**` : ''}
+${currentOption ? `\n**CRITICAL: You are REGENERATING this exact option and MUST NOT reuse it:**\n- Previous title: ${currentOption?.title || 'N/A'}\n- Previous route: ${Array.isArray(currentOption?.days) ? currentOption.days.map((d: any) => d?.location).filter(Boolean).join(' > ') : 'N/A'}\n- Create a clearly different route and experience mix.\n` : ''}
 
 CRITICAL REQUIREMENTS:
 - Generate ONE premium, bespoke, professionally curated itinerary option
@@ -364,7 +380,7 @@ REMINDER: Count the days from ${startDateFormatted} to ${endDateFormatted} (incl
     const maxRetries = 8
     let attempt = 0
     let uniquenessRetryNote = ''
-    const uniquenessThreshold = 0.4
+    const uniquenessThreshold = 0.32
     
     while (attempt < maxRetries) {
       try {
@@ -424,10 +440,10 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
               if (actualDaysCount === expectedDaysNum) {
                 // Reject near-duplicate options and force retry with explicit guidance.
                 if (comparisonOptions.length > 0) {
-                  const top = topSimilarity(testOption, comparisonOptions)
-                  if (top && top.score >= uniquenessThreshold) {
-                    const sig = optionSignature(top.option)
-                    uniquenessRetryNote = `\n\nCRITICAL UNIQUENESS RETRY: Your previous output was too similar to an existing option (similarity ${(top.score * 100).toFixed(0)}%). Regenerate a substantially different option.\n- Avoid this route pattern: ${sig.routeSequence || 'N/A'}\n- Avoid this existing title style: ${top.option?.title || 'N/A'}\n- Use a different primary theme, different city sequence, and mostly different activities.\n`
+                  const check = isTooSimilar(testOption, comparisonOptions, uniquenessThreshold)
+                  if (check.blocked) {
+                    const sig = optionSignature(check.top.option)
+                    uniquenessRetryNote = `\n\nCRITICAL UNIQUENESS RETRY: Your previous output was too similar to an existing option (similarity ${(check.top.score * 100).toFixed(0)}%). Regenerate a substantially different option.\n- Avoid this route pattern: ${sig.routeSequence || 'N/A'}\n- Avoid this existing title style: ${check.top.option?.title || 'N/A'}\n- Use a different primary theme, different city sequence, and mostly different activities.\n`
                     if (attempt < maxRetries) continue
                   }
                 }
@@ -513,8 +529,8 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
 
     // Final hard guard: never save near-duplicate option on regenerate.
     if (comparisonOptions.length > 0) {
-      const top = topSimilarity(newOption, comparisonOptions)
-      if (top && top.score >= uniquenessThreshold) {
+      const check = isTooSimilar(newOption, comparisonOptions, uniquenessThreshold)
+      if (check.blocked) {
         return NextResponse.json(
           {
             success: false,

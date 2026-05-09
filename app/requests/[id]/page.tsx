@@ -515,40 +515,50 @@ export default function RequestDetailsPage() {
 
     try {
       setGeneratingOption(optionIndex)
+      let response: Response | null = null
+      let result: any = null
+      const maxClientRetries = 3
+      let attempt = 0
+      while (attempt < maxClientRetries) {
+        attempt += 1
+        response = await fetch("/api/generate-single-option", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id: request.id, optionIndex }),
+        })
 
-      const response = await fetch("/api/generate-single-option", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: request.id, optionIndex }),
-      })
+        try {
+          const contentType = response.headers.get('content-type')
+          if (contentType && contentType.includes('application/json')) {
+            result = await response.json()
+          } else {
+            const text = await response.text()
+            throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`)
+          }
+        } catch (parseError) {
+          console.error('Error parsing response:', parseError)
+          if (!response.ok) {
+            const errorMessage = response.status === 504 
+              ? 'Request timed out. Please try again.'
+              : `Server error (${response.status}). Please try again.`
+            alert(`Failed to generate option ${optionIndex + 1}: ${errorMessage}`)
+            setGeneratingOption(null)
+            return
+          }
+          throw parseError
+        }
 
-      // Check if response is ok before trying to parse JSON
-      let result
-      try {
-        const contentType = response.headers.get('content-type')
-        if (contentType && contentType.includes('application/json')) {
-          result = await response.json()
-        } else {
-          const text = await response.text()
-          throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`)
+        // 409 means the server blocked a near-duplicate; retry automatically.
+        if (response.status === 409 && attempt < maxClientRetries) {
+          continue
         }
-      } catch (parseError) {
-        console.error('Error parsing response:', parseError)
-        if (!response.ok) {
-          const errorMessage = response.status === 504 
-            ? 'Request timed out. Please try again.'
-            : `Server error (${response.status}). Please try again.`
-          alert(`Failed to generate option ${optionIndex + 1}: ${errorMessage}`)
-          setGeneratingOption(null)
-          return
-        }
-        throw parseError
+        break
       }
 
-      if (!response.ok || !result.success) {
-        const errorMessage = result.error || 'Failed to generate option'
+      if (!response || !response.ok || !result?.success) {
+        const errorMessage = result?.error || 'Failed to generate option'
         alert(`Failed to generate option ${optionIndex + 1}: ${errorMessage}`)
         setGeneratingOption(null)
         return
