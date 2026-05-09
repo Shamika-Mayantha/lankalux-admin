@@ -324,7 +324,7 @@ export async function POST(request: Request) {
             .meta-row { display: table; width: 100%; margin: 8px 0; }
             .meta-k { display: table-cell; width: 145px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #6f6f6f; font-weight: 700; vertical-align: top; }
             .meta-v { display: table-cell; font-size: 12px; color: #323232; font-weight: 500; vertical-align: top; }
-            .meta-v-gold { color: #c9a14a; font-weight: 600; font-size: 20px; font-family: Georgia, 'Times New Roman', serif; line-height: 1.35; }
+            .meta-v-gold { color: #c9a14a; font-weight: 600; font-size: 17px; font-family: Georgia, 'Times New Roman', serif; line-height: 1.4; }
             .rule { height: 1px; background: #d9d9d9; border: 0; margin: 20px 0; }
             .cta { text-align: center; margin: 0 0 0; }
             .btn { display: inline-block; background: #c9a14a; color: #1147b8 !important; text-decoration: none; padding: 12px 26px; border-radius: 4px; font-weight: 700; font-size: 12px; letter-spacing: 0.03em; text-transform: uppercase; }

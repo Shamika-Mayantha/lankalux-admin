@@ -51,6 +51,14 @@ function similarityScore(a: any, b: any) {
   return (title * 0.35) + (route * 0.35) + (acts * 0.3)
 }
 
+function topSimilarity(candidate: any, existing: any[]) {
+  if (!existing.length) return { score: 0, option: null as any }
+  const ranked = existing
+    .map((opt: any) => ({ score: similarityScore(candidate, opt), option: opt }))
+    .sort((a: any, b: any) => b.score - a.score)
+  return ranked[0] || { score: 0, option: null as any }
+}
+
 export async function POST(request: Request) {
   try {
     // Parse request body
@@ -353,9 +361,10 @@ REMINDER: Count the days from ${startDateFormatted} to ${endDateFormatted} (incl
     const expectedDaysNum = actualDuration || requestData.duration || 6
     let completion
     let generatedContent = ''
-    const maxRetries = 5
+    const maxRetries = 8
     let attempt = 0
     let uniquenessRetryNote = ''
+    const uniquenessThreshold = 0.4
     
     while (attempt < maxRetries) {
       try {
@@ -388,7 +397,7 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
               content: currentPrompt,
             },
           ],
-          temperature: attempt === 1 ? 0.9 : 0.7, // Lower temperature on retry for more consistency
+          temperature: attempt <= 2 ? 1.0 : 1.12,
           max_tokens: calculatedMaxTokens,
           response_format: { type: 'json_object' },
         })
@@ -415,13 +424,10 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
               if (actualDaysCount === expectedDaysNum) {
                 // Reject near-duplicate options and force retry with explicit guidance.
                 if (comparisonOptions.length > 0) {
-                  const scored = comparisonOptions
-                    .map((opt: any, idx: number) => ({ idx, score: similarityScore(testOption, opt), opt }))
-                    .sort((a: any, b: any) => b.score - a.score)
-                  const top = scored[0]
-                  if (top && top.score >= 0.45) {
-                    const sig = optionSignature(top.opt)
-                    uniquenessRetryNote = `\n\nCRITICAL UNIQUENESS RETRY: Your previous output was too similar to an existing option (similarity ${(top.score * 100).toFixed(0)}%). Regenerate a substantially different option.\n- Avoid this route pattern: ${sig.routeSequence || 'N/A'}\n- Avoid this existing title style: ${top.opt?.title || 'N/A'}\n- Use a different primary theme, different city sequence, and mostly different activities.\n`
+                  const top = topSimilarity(testOption, comparisonOptions)
+                  if (top && top.score >= uniquenessThreshold) {
+                    const sig = optionSignature(top.option)
+                    uniquenessRetryNote = `\n\nCRITICAL UNIQUENESS RETRY: Your previous output was too similar to an existing option (similarity ${(top.score * 100).toFixed(0)}%). Regenerate a substantially different option.\n- Avoid this route pattern: ${sig.routeSequence || 'N/A'}\n- Avoid this existing title style: ${top.option?.title || 'N/A'}\n- Use a different primary theme, different city sequence, and mostly different activities.\n`
                     if (attempt < maxRetries) continue
                   }
                 }
@@ -503,6 +509,21 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
         { success: false, error: 'Invalid option format: missing required fields' },
         { status: 500 }
       )
+    }
+
+    // Final hard guard: never save near-duplicate option on regenerate.
+    if (comparisonOptions.length > 0) {
+      const top = topSimilarity(newOption, comparisonOptions)
+      if (top && top.score >= uniquenessThreshold) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              'Could not generate a sufficiently different itinerary this time. Please click Regenerate again for a fresh route.',
+          },
+          { status: 409 }
+        )
+      }
     }
     
     // Validate day count - recalculate from dates to ensure accuracy
