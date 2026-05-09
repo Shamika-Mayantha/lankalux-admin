@@ -248,6 +248,31 @@ export async function POST(request: Request) {
       )
     }
 
+    const itinerarySnapshot =
+      include_itinerary && selectedOption ? JSON.parse(JSON.stringify(selectedOption)) : null
+
+    // Resolve the final URL BEFORE building/sending email content.
+    // If share insert fails, we fallback now so the email button always points to a valid URL.
+    if (include_itinerary && itinerarySnapshot && shareToken) {
+      const { error: shareInsertError } = await supabase
+        .from('itinerary_shares')
+        .insert({
+          share_token: shareToken,
+          request_id: requestData.id,
+          option_index: requestData.selected_option,
+          itinerary_data: itinerarySnapshot,
+          send_options: sendOptions,
+        } as any)
+
+      if (shareInsertError) {
+        console.error('Error inserting itinerary_shares (falling back to per-option link):', shareInsertError)
+        if (fallbackItineraryUrl) {
+          itineraryUrl = fallbackItineraryUrl
+          shareToken = null
+        }
+      }
+    }
+
     // Format dates
     const startDateFormatted = requestData.start_date
       ? new Date(requestData.start_date).toLocaleDateString('en-US', {
@@ -409,32 +434,6 @@ export async function POST(request: Request) {
       } catch (e) {
         console.error('Error parsing sent_options:', e)
         sentOptions = []
-      }
-    }
-
-    const itinerarySnapshot =
-      include_itinerary && selectedOption ? JSON.parse(JSON.stringify(selectedOption)) : null
-
-    // Persist a stable share record for link-based access (one link per send).
-    // If the table isn't created yet (or policy blocks), DO NOT fail sending.
-    // Instead, fall back to the per-option link so email sending remains reliable.
-    if (include_itinerary && itinerarySnapshot && shareToken) {
-      const { error: shareInsertError } = await supabase
-        .from('itinerary_shares')
-        .insert({
-          share_token: shareToken,
-          request_id: requestData.id,
-          option_index: requestData.selected_option,
-          itinerary_data: itinerarySnapshot,
-          send_options: sendOptions,
-        } as any)
-
-      if (shareInsertError) {
-        console.error('Error inserting itinerary_shares (falling back to per-option link):', shareInsertError)
-        if (fallbackItineraryUrl) {
-          itineraryUrl = fallbackItineraryUrl
-          shareToken = null
-        }
       }
     }
 
