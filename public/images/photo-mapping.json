@@ -17,7 +17,7 @@
     "Ella": {
       "primary_image": "/images/damrotea.jpg",
       "alternative_images": [
-        "/favicon.png"
+        "/images/gregorylake.jpg"
       ],
       "keywords": ["ella", "hill country", "tea", "mountains", "train", "hiking", "nine arch bridge", "damro"]
     },
@@ -34,7 +34,7 @@
       "alternative_images": [
         "/images/gallefort.jpg",
         "/images/unawatuna.jpg",
-        "/favicon.png"
+        "/images/coconuttreehillmirissa.jpg"
       ],
       "keywords": ["galle", "fort", "colonial", "beach", "lighthouse", "dutch", "historic", "unawatuna", "mirissa"]
     },
@@ -48,7 +48,7 @@
     "Nuwara Eliya": {
       "primary_image": "/images/damrotea.jpg",
       "alternative_images": [
-        "/favicon.png"
+        "/images/gregorylake.jpg"
       ],
       "keywords": ["nuwara eliya", "tea", "golf", "waterfall", "cool climate", "little england", "hills", "damro", "gregory"]
     },
@@ -60,7 +60,7 @@
       "keywords": ["arugam bay", "surfing", "beach", "waves", "east coast", "surf"]
     },
     "Mirissa": {
-      "primary_image": "/favicon.png",
+      "primary_image": "/images/coconuttreehillmirissa.jpg",
       "alternative_images": [
         "/images/unawatuna.jpg"
       ],
@@ -69,7 +69,7 @@
     "Unawatuna": {
       "primary_image": "/images/unawatuna.jpg",
       "alternative_images": [
-        "/favicon.png"
+        "/images/coconuttreehillmirissa.jpg"
       ],
       "keywords": ["unawatuna", "beach", "snorkeling", "south coast", "relaxation"]
     }
@@ -84,19 +84,19 @@
       "keywords": ["temple", "religious", "buddhist", "sacred", "tooth relic", "spiritual", "kandy"]
     },
     "beach": {
-      "images": ["/images/galle.jpg", "/images/unawatuna.jpg", "/favicon.png", "/images/arugambay.jpg"],
+      "images": ["/images/galle.jpg", "/images/unawatuna.jpg", "/images/coconuttreehillmirissa.jpg", "/images/arugambay.jpg"],
       "keywords": ["beach", "ocean", "coast", "swimming", "relaxation", "sunset", "galle", "mirissa", "unawatuna"]
     },
     "tea": {
-      "images": ["/images/damrotea.jpg", "/favicon.png"],
+      "images": ["/images/damrotea.jpg", "/images/gregorylake.jpg"],
       "keywords": ["tea", "plantation", "factory", "cameron", "hill country", "ella", "nuwara eliya"]
     },
     "train": {
-      "images": ["/favicon.png", "/images/damrotea.jpg"],
+      "images": ["/images/gregorylake.jpg", "/images/damrotea.jpg"],
       "keywords": ["train", "railway", "journey", "scenic", "nine arch", "ella"]
     },
     "hiking": {
-      "images": ["/images/sigirya.jpg", "/favicon.png"],
+      "images": ["/images/sigirya.jpg", "/images/gregorylake.jpg"],
       "keywords": ["hiking", "trekking", "mountain", "trail", "adventure", "ella", "sigiriya"]
     },
     "dining": {
@@ -120,13 +120,13 @@
     "/images/arrivalincolombo.jpg",
     "/images/arugambay.jpg",
     "/images/atamasthana.jpg",
-    "/favicon.png",
+    "/images/coconuttreehillmirissa.jpg",
     "/images/damrotea.jpg",
     "/images/depart.jpg",
     "/images/elephant.jpg",
     "/images/galle.jpg",
     "/images/gallefort.jpg",
-    "/favicon.png",
+    "/images/gregorylake.jpg",
     "/images/kandy.jpg",
     "/images/leopard.jpg",
     "/images/seafoodplatter.jpg",
@@ -136,6 +136,6 @@
     "/images/unawatuna.jpg",
     "/images/wilpattubear.jpg"
   ],
-  "default_placeholder": "/favicon.png",
+  "default_placeholder": "/images/placeholder.jpg",
   "instructions": "CRITICAL PHOTO ASSIGNMENT RULES:\n1. Each day MUST have a unique photo - NO REPEATS within the same itinerary\n2. Match photos to the day's MAIN HIGHLIGHT (the primary experience/attraction)\n3. Priority order: Day title highlight > Location > Activity keywords\n4. Use alternative_images if primary is already used\n5. Track used images to ensure uniqueness\n6. If a day's highlight is unclear, use the location's primary_image\n7. Only use placeholder.jpg as absolute last resort\n\nWhen generating itineraries:\n- Analyze each day's title to identify the highlight\n- Match the highlight to the most appropriate photo\n- Ensure no photo is used twice in the same itinerary\n- Prefer activity-specific photos over generic location photos when the highlight is activity-based"
 }
