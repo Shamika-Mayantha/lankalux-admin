@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 const nodemailer = require('nodemailer')
 
+function makeShareToken() {
+  // URL-safe token
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 export async function POST(request: Request) {
   try {
     // Parse request body
@@ -127,6 +132,7 @@ export async function POST(request: Request) {
     const baseUrl = 'https://admin.lankalux.com'
     let itineraryUrl = ''
     let selectedOption: any = null
+    let shareToken: string | null = null
 
     if (include_itinerary) {
       if (requestData.selected_option === null || requestData.selected_option === undefined) {
@@ -173,11 +179,11 @@ export async function POST(request: Request) {
         )
       }
 
-      // IMPORTANT: always include option index in the public link.
-      // If we send only /itinerary/[token], the page redirects to the *current* selected_option
-      // which causes older emails to "overlap" and always show the latest selected option.
-      itineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}/${optionIndex}`
-      console.log('Itinerary URL:', { itineraryUrl, optionIndex })
+      // IMPORTANT: create a stable share token per-send so links never change,
+      // even if itineraries are regenerated later.
+      shareToken = makeShareToken()
+      itineraryUrl = `${baseUrl}/itinerary/share/${shareToken}`
+      console.log('Itinerary URL:', { itineraryUrl, optionIndex, shareToken })
     }
 
     let hotelPayload: import('@/lib/email-itinerary-hotel').HotelEmailPayload | null = null
@@ -266,8 +272,9 @@ export async function POST(request: Request) {
     ]
     const subjectSeed = (requestData.id || requestId || '').split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0)
     const emailSubject = premiumSubjects[subjectSeed % premiumSubjects.length]
-    const preheader = 'Your personalized journey through Sri Lanka is ready.'
+    const preheader = 'Your personalized Sri Lanka journey is ready.'
     const logoUrl = `${baseUrl}/favicon.png`
+    const ctaText = 'VIEW YOUR COMPLETE JOURNEY'
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -275,52 +282,49 @@ export async function POST(request: Request) {
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: 'Inter', Arial, Helvetica, sans-serif; color: #2c2c2c; background: #f6f5f3; margin: 0; padding: 28px 18px; }
-            .card { max-width: 660px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.07); }
-            .header { background: linear-gradient(180deg, #1a1a1a 0%, #2a2a2a 100%); padding: 24px 24px 20px; text-align: center; }
-            .logo { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; margin-bottom: 8px; }
-            .brand { color: #c9a14a; font-size: 30px; font-family: Georgia, 'Times New Roman', serif; letter-spacing: 0.5px; margin: 0; font-weight: 500; }
-            .subtitle { color: #ffffff; opacity: 0.78; font-size: 11px; letter-spacing: 0.1em; margin-top: 3px; }
-            .divider { height: 1px; background: #c9a14a; opacity: 0.8; }
-            .content { padding: 36px 36px 30px; line-height: 1.72; }
-            .lead { margin: 0 0 8px; font-size: 17px; color: #2f2f2f; }
-            .warm { margin: 0 0 22px; font-size: 15px; color: #5b5b5b; }
-            .meta { display: grid; grid-template-columns: 110px 1fr; row-gap: 10px; column-gap: 14px; margin: 8px 0 26px; }
-            .meta-label { color: #8d8d8d; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
-            .meta-value { color: #2f2f2f; font-size: 15px; font-weight: 600; }
-            .cta-wrap { text-align: center; margin: 8px 0 10px; }
-            .btn { display: inline-block; background: #c9a14a; color: #fff !important; text-decoration: none; padding: 14px 26px; border-radius: 12px; font-weight: 700; font-size: 15px; letter-spacing: 0.01em; }
-            .btn:hover { background: #b6903f; }
-            .link { text-align: center; word-break: break-all; color: #9b8a66; font-size: 12px; margin-top: 10px; }
-            .footer { padding: 0 36px 34px; font-size: 13px; color: #666; }
-            .contact { margin-top: 10px; font-size: 12px; color: #8a8a8a; }
+            body { font-family: Arial, Helvetica, sans-serif; color: #2c2c2c; background: #ffffff; margin: 0; padding: 0; }
+            .wrap { width: 100%; background: #ffffff; padding: 0; }
+            .card { max-width: 640px; margin: 0 auto; background: #ffffff; }
+            .top { background: #1f1f1f; padding: 26px 18px 18px; text-align: center; }
+            .logo { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; display: inline-block; margin: 0 auto 10px; }
+            .brand { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; letter-spacing: 0.5px; color: #c9a14a; font-weight: 500; }
+            .tag { margin-top: 6px; font-size: 11px; letter-spacing: 0.14em; color: #ffffff; opacity: 0.85; }
+            .goldline { height: 2px; background: #c9a14a; }
+            .content { padding: 24px 22px 26px; line-height: 1.7; }
+            .dear { margin: 0 0 14px; font-size: 14px; color: #2c2c2c; }
+            .p { margin: 0 0 14px; font-size: 13px; color: #4a4a4a; }
+            .meta { background: #f6f6f6; border-left: 3px solid #c9a14a; padding: 14px 14px; margin: 14px 0 16px; }
+            .meta-row { display: table; width: 100%; margin: 8px 0; }
+            .meta-k { display: table-cell; width: 140px; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: #6a6a6a; vertical-align: top; }
+            .meta-v { display: table-cell; font-size: 12px; color: #2c2c2c; font-weight: 600; vertical-align: top; }
+            .meta-v-gold { color: #c9a14a; font-weight: 700; }
+            .cta { text-align: center; margin: 18px 0 10px; }
+            .btn { display: inline-block; background: #c9a14a; color: #1b1b1b !important; text-decoration: none; padding: 12px 22px; border-radius: 6px; font-weight: 800; font-size: 12px; letter-spacing: 0.04em; }
+            .small { margin: 0; font-size: 12px; color: #6a6a6a; line-height: 1.65; }
             .preheader { display:none!important; visibility:hidden; opacity:0; color:transparent; height:0; width:0; font-size:1px; line-height:1px; }
           </style>
         </head>
         <body>
           <div class="preheader">${preheader}</div>
-          <div class="card">
-            <div class="header">
-              <img src="${logoUrl}" alt="LankaLux" class="logo" />
-              <h1 class="brand">LankaLux</h1>
-              <div class="subtitle">Your Journey</div>
-            </div>
-            <div class="divider"></div>
-            <div class="content">
-              <p class="lead">Dear ${requestData.client_name || 'Valued Client'},</p>
-              <p class="warm">Your personalized journey through Sri Lanka is ready.<br/>We’ve carefully designed this experience based on your preferences.</p>
-              <div class="meta">
-                ${journeyTitle ? `<div class="meta-label">Journey</div><div class="meta-value">${journeyTitle}</div>` : ''}
-                <div class="meta-label">Start</div><div class="meta-value">${startDateFormatted}</div>
-                <div class="meta-label">End</div><div class="meta-value">${endDateFormatted}</div>
-                ${requestData.duration ? `<div class="meta-label">Duration</div><div class="meta-value">${requestData.duration} Days</div>` : ''}
+          <div class="wrap">
+            <div class="card">
+              <div class="top">
+                <img src="${logoUrl}" alt="LankaLux" class="logo" />
+                <h1 class="brand">LankaLux</h1>
+                <div class="tag">JOURNEY</div>
               </div>
-              <div class="cta-wrap"><a class="btn" href="${itineraryUrl}">View Your Journey</a></div>
-              <p class="link">${itineraryUrl}</p>
-            </div>
-            <div class="footer">
-              Warm regards,<br/>LankaLux Team
-              <div class="contact">Questions? Reply to this email.</div>
+              <div class="goldline"></div>
+              <div class="content">
+                <p class="dear">Dear ${requestData.client_name || 'Valued Client'},</p>
+                <p class="p">We are absolutely delighted to share your personalized Sri Lanka journey with you. Every detail has been carefully crafted to ensure an unforgettable experience.</p>
+                <div class="meta">
+                  <div class="meta-row"><div class="meta-k">TRAVEL DATES</div><div class="meta-v">${startDateFormatted} - ${endDateFormatted}</div></div>
+                  ${journeyTitle ? `<div class="meta-row"><div class="meta-k">SELECTED JOURNEY</div><div class="meta-v meta-v-gold">${journeyTitle}</div></div>` : ''}
+                  ${requestData.duration ? `<div class="meta-row"><div class="meta-k">DURATION</div><div class="meta-v">${requestData.duration} Days</div></div>` : ''}
+                </div>
+                <div class="cta"><a class="btn" href="${itineraryUrl}">${ctaText}</a></div>
+                <p class="small">This link provides access to your complete journey details. We’ve designed every moment to showcase the beauty, culture, and wonder of Sri Lanka. If you have any questions or would like to discuss any modifications, please don’t hesitate to reach out—we’re here to make your journey perfect.</p>
+              </div>
             </div>
           </div>
         </body>
@@ -409,6 +413,26 @@ export async function POST(request: Request) {
     const itinerarySnapshot =
       include_itinerary && selectedOption ? JSON.parse(JSON.stringify(selectedOption)) : null
 
+    // Persist a stable share record for link-based access (one link per send).
+    if (include_itinerary && itinerarySnapshot && shareToken) {
+      const { error: shareInsertError } = await supabase
+        .from('itinerary_shares')
+        .insert({
+          share_token: shareToken,
+          request_id: requestData.id,
+          option_index: requestData.selected_option,
+          itinerary_data: itinerarySnapshot,
+          send_options: sendOptions,
+        } as any)
+      if (shareInsertError) {
+        console.error('Error inserting itinerary_shares:', shareInsertError)
+        return NextResponse.json(
+          { success: false, error: 'Failed to create share link. Please try again.' },
+          { status: 500 }
+        )
+      }
+    }
+
     sentOptions.push({
       ...(include_itinerary
         ? {
@@ -416,6 +440,7 @@ export async function POST(request: Request) {
             option_title: selectedOption.title,
             itinerary_url: itineraryUrl,
             itinerary_data: itinerarySnapshot,
+            share_token: shareToken,
           }
         : { option_index: null, option_title: null, itinerary_url: null }),
       sent_at: now,
@@ -426,7 +451,8 @@ export async function POST(request: Request) {
     })
     
     // Sort by sent_at (most recent first) and keep only the most recent 10 entries
-    // This prevents the array from growing too large while keeping recent history
+    // This prevents the array from growing too large while keeping recent history.
+    // Stable links are still preserved in `itinerary_shares` even if this list is trimmed.
     sentOptions.sort((a: any, b: any) => {
       const dateA = new Date(a.sent_at || 0).getTime()
       const dateB = new Date(b.sent_at || 0).getTime()

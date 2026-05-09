@@ -17,6 +17,40 @@ function cleanGeneratedDayTitle(rawTitle: unknown, dayNumber: number, location?:
   return cleaned
 }
 
+function norm(text: unknown) {
+  return String(text || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function jaccard(a: Set<string>, b: Set<string>) {
+  if (a.size === 0 || b.size === 0) return 0
+  let inter = 0
+  for (const v of a) if (b.has(v)) inter++
+  const union = a.size + b.size - inter
+  return union > 0 ? inter / union : 0
+}
+
+function optionSignature(option: any) {
+  const titleTokens = new Set<string>(norm(option?.title).split(' ').filter((w) => w.length > 3))
+  const route: string[] = Array.isArray(option?.days) ? option.days.map((d: any) => norm(d?.location)).filter(Boolean) : []
+  const routeSet = new Set<string>(route)
+  const activityTokens = new Set<string>(
+    (Array.isArray(option?.days) ? option.days : [])
+      .flatMap((d: any) => (Array.isArray(d?.activities) ? d.activities : []))
+      .flatMap((a: any) => norm(a).split(' '))
+      .filter((w: string) => w.length > 4)
+  )
+  return { titleTokens, routeSet, activityTokens, routeSequence: route.join(' > ') }
+}
+
+function similarityScore(a: any, b: any) {
+  const sa = optionSignature(a)
+  const sb = optionSignature(b)
+  const title = jaccard(sa.titleTokens, sb.titleTokens)
+  const route = jaccard(sa.routeSet, sb.routeSet)
+  const acts = jaccard(sa.activityTokens, sb.activityTokens)
+  return (title * 0.35) + (route * 0.35) + (acts * 0.3)
+}
+
 // Vercel Hobby plan has 10 second timeout - optimize for speed
 export const maxDuration = 10
 
@@ -83,6 +117,17 @@ export async function POST(request: Request) {
     }
 
     const requestData = data as any
+    // Read existing options (if regenerating) so we can force meaningful differences.
+    let previousOptions: any[] = []
+    if (requestData.itineraryoptions) {
+      try {
+        const parsed = typeof requestData.itineraryoptions === 'string' ? JSON.parse(requestData.itineraryoptions) : requestData.itineraryoptions
+        if (parsed?.options && Array.isArray(parsed.options)) previousOptions = parsed.options.filter(Boolean)
+      } catch {
+        previousOptions = []
+      }
+    }
+
 
     if (!requestData) {
       return NextResponse.json(
@@ -389,7 +434,9 @@ IMPORTANT RULES:
       const existingTitles = existingOptions.map((opt: any) => opt.title).join(', ')
       const existingSummaries = existingOptions.map((opt: any) => opt.summary?.substring(0, 100)).filter(Boolean).join(' | ')
       
-      const singleOptionPrompt = `${prompt}
+      const regenSeed = `\n\nREGENERATION SEED: ${Date.now()}-${Math.random().toString(36).slice(2)}\n`
+      const prevTitles = previousOptions.map((opt: any) => opt?.title).filter(Boolean).join(', ')
+      const singleOptionPrompt = `${prompt}${regenSeed}
 
 IMPORTANT: Generate ONLY ONE itinerary option (option ${optionNumber} of 3). 
 ${existingOptions.length > 0 ? `**CRITICAL UNIQUENESS REQUIREMENT: The following options have already been generated:
@@ -402,6 +449,7 @@ You MUST create a COMPLETELY DIFFERENT itinerary that:
 - Offers different types of experiences and activities
 - Has a unique title that clearly distinguishes it from the existing options
 - Do NOT repeat similar activities, locations, or themes from the existing options**` : ''}
+${prevTitles ? `\n\nCRITICAL REGENERATION REQUIREMENT: This request already had previous itinerary options. Your new option MUST be materially different from the previous set.\n- Avoid reusing the same route sequence and headline activities.\n- Avoid similar title/theme to: ${prevTitles}\n` : ''}
 ${requestData.additional_preferences && requestData.additional_preferences.trim() ? `**INCORPORATING CLIENT PREFERENCES: The client has mentioned these highlights/preferences: "${requestData.additional_preferences}". These are important to the client, but they are highlights to incorporate into a well-rounded itinerary - NOT the entire focus. IMPORTANT: These preferences can be mixed in different places throughout the itinerary - they do NOT need to be visited in order or all together. Create a comprehensive itinerary that includes these preferences along with other diverse experiences, activities, and locations. The itinerary should be balanced and showcase the best of Sri Lanka while incorporating the client's specific interests. Plan your route based on geographic flow (no backtracking), and incorporate preferences wherever they naturally fit along that route.**` : ''}
 Return JSON in this format: { "title": "...", "summary": "...", "total_kilometers": <number>, "days": [...] }
 
@@ -415,8 +463,9 @@ Return JSON in this format: { "title": "...", "summary": "...", "total_kilometer
 
       let completion
       let generatedContent = ''
-      const maxRetries = 2
+      const maxRetries = 4
       let currentMaxTokens = 6000
+      let uniquenessRetryNote = ''
       
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
@@ -430,7 +479,7 @@ Return JSON in this format: { "title": "...", "summary": "...", "total_kilometer
               },
               {
                 role: 'user',
-                content: singleOptionPrompt,
+                content: singleOptionPrompt + uniquenessRetryNote,
               },
             ],
             temperature: 0.9,
@@ -508,6 +557,19 @@ Return JSON in this format: { "title": "...", "summary": "...", "total_kilometer
         ...day,
         title: cleanGeneratedDayTitle(day.title, idx + 1, day.location),
       }))
+
+      // Reject near-duplicate options vs previous options set.
+      if (previousOptions.length > 0) {
+        const scored = previousOptions
+          .map((opt: any) => ({ score: similarityScore(option, opt), opt }))
+          .sort((a: any, b: any) => b.score - a.score)
+        const top = scored[0]
+        if (top && top.score >= 0.55) {
+          const sig = optionSignature(top.opt)
+          uniquenessRetryNote = `\n\nCRITICAL UNIQUENESS RETRY: Your output is too similar to a previous option (similarity ${(top.score * 100).toFixed(0)}%). Regenerate a substantially different itinerary.\n- Avoid this route pattern: ${sig.routeSequence || 'N/A'}\n- Avoid this title/theme style: ${top.opt?.title || 'N/A'}\n- Change the city sequence and most activities.\n`
+          throw new Error('Generated option too similar to previous options')
+        }
+      }
       
       return option
     }
