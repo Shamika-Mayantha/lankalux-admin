@@ -350,7 +350,7 @@ export async function POST(request: Request) {
                   ${requestData.duration ? `<div class="meta-row"><div class="meta-k">DURATION</div><div class="meta-v">${requestData.duration} Days</div></div>` : ''}
                 </div>
                 <div class="cta"><a class="btn" href="${itineraryUrl}">${ctaText}</a></div>
-                <p class="small">This link provides access to your complete journey details. We’ve designed every moment to showcase the beauty, culture, and wonder of Sri Lanka. If you have any questions or would like to discuss any modifications, please don’t hesitate to reach out—we’re here to make your journey perfect.</p>
+                <p class="small">This link provides access to your complete journey details. We’ve designed every moment to showcase the beauty, culture, and wonder of Sri Lanka. If you have any questions or would like to discuss any modifications, please don’t hesitate to reach out. We’re here to make your journey perfect.</p>
               </div>
             </div>
           </div>
