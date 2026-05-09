@@ -324,10 +324,10 @@ export async function POST(request: Request) {
             .meta-row { display: table; width: 100%; margin: 8px 0; }
             .meta-k { display: table-cell; width: 145px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #6f6f6f; font-weight: 700; vertical-align: top; }
             .meta-v { display: table-cell; font-size: 12px; color: #323232; font-weight: 500; vertical-align: top; }
-            .meta-v-gold { color: #c9a14a; font-weight: 700; font-size: 28px; font-family: Georgia, 'Times New Roman', serif; line-height: 1.2; }
+            .meta-v-gold { color: #c9a14a; font-weight: 600; font-size: 20px; font-family: Georgia, 'Times New Roman', serif; line-height: 1.35; }
             .rule { height: 1px; background: #d9d9d9; border: 0; margin: 20px 0; }
             .cta { text-align: center; margin: 0 0 0; }
-            .btn { display: inline-block; background: #c9a14a; color: #1147b8 !important; text-decoration: none; padding: 12px 26px; border-radius: 4px; font-weight: 800; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+            .btn { display: inline-block; background: #c9a14a; color: #1147b8 !important; text-decoration: none; padding: 12px 26px; border-radius: 4px; font-weight: 700; font-size: 12px; letter-spacing: 0.03em; text-transform: uppercase; }
             .small { margin: 0 0 16px; font-size: 12px; color: #676767; line-height: 1.8; }
             .signoff { margin: 0 0 6px; font-size: 12px; color: #666666; }
             .team { margin: 0 0 22px; font-size: 12px; color: #c9a14a; font-weight: 700; }

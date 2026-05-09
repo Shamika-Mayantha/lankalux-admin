@@ -209,7 +209,9 @@ export async function POST(request: Request) {
         }
       } catch {}
     }
-    const comparisonOptions = existingOptions.filter((opt: any, idx: number) => idx !== optionIndex && !!opt)
+    // Compare against ALL current options, including the option being regenerated,
+    // so we don't produce a near-clone of the previous version.
+    const comparisonOptions = existingOptions.filter((opt: any) => !!opt)
 
     // Read photo mapping file with full details for unique assignment
     let photoMappingInfo = ''
@@ -417,7 +419,7 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
                     .map((opt: any, idx: number) => ({ idx, score: similarityScore(testOption, opt), opt }))
                     .sort((a: any, b: any) => b.score - a.score)
                   const top = scored[0]
-                  if (top && top.score >= 0.55) {
+                  if (top && top.score >= 0.45) {
                     const sig = optionSignature(top.opt)
                     uniquenessRetryNote = `\n\nCRITICAL UNIQUENESS RETRY: Your previous output was too similar to an existing option (similarity ${(top.score * 100).toFixed(0)}%). Regenerate a substantially different option.\n- Avoid this route pattern: ${sig.routeSequence || 'N/A'}\n- Avoid this existing title style: ${top.opt?.title || 'N/A'}\n- Use a different primary theme, different city sequence, and mostly different activities.\n`
                     if (attempt < maxRetries) continue
