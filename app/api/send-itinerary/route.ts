@@ -133,6 +133,7 @@ export async function POST(request: Request) {
     let itineraryUrl = ''
     let selectedOption: any = null
     let shareToken: string | null = null
+    let fallbackItineraryUrl: string | null = null
 
     if (include_itinerary) {
       if (requestData.selected_option === null || requestData.selected_option === undefined) {
@@ -183,6 +184,7 @@ export async function POST(request: Request) {
       // even if itineraries are regenerated later.
       shareToken = makeShareToken()
       itineraryUrl = `${baseUrl}/itinerary/share/${shareToken}`
+      fallbackItineraryUrl = `${baseUrl}/itinerary/${requestData.public_token}/${optionIndex}`
       console.log('Itinerary URL:', { itineraryUrl, optionIndex, shareToken })
     }
 
@@ -271,7 +273,7 @@ export async function POST(request: Request) {
       'Your Tailor-Made Sri Lanka Journey Is Ready',
     ]
     const subjectSeed = (requestData.id || requestId || '').split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0)
-    const emailSubject = premiumSubjects[subjectSeed % premiumSubjects.length]
+    const emailSubject = journeyTitle ? `LankaLux Journey - ${journeyTitle}` : premiumSubjects[subjectSeed % premiumSubjects.length]
     const preheader = 'Your personalized Sri Lanka journey is ready.'
     const logoUrl = `${baseUrl}/favicon.png`
     const ctaText = 'VIEW YOUR COMPLETE JOURNEY'
@@ -414,6 +416,8 @@ export async function POST(request: Request) {
       include_itinerary && selectedOption ? JSON.parse(JSON.stringify(selectedOption)) : null
 
     // Persist a stable share record for link-based access (one link per send).
+    // If the table isn't created yet (or policy blocks), DO NOT fail sending.
+    // Instead, fall back to the per-option link so email sending remains reliable.
     if (include_itinerary && itinerarySnapshot && shareToken) {
       const { error: shareInsertError } = await supabase
         .from('itinerary_shares')
@@ -424,12 +428,13 @@ export async function POST(request: Request) {
           itinerary_data: itinerarySnapshot,
           send_options: sendOptions,
         } as any)
+
       if (shareInsertError) {
-        console.error('Error inserting itinerary_shares:', shareInsertError)
-        return NextResponse.json(
-          { success: false, error: 'Failed to create share link. Please try again.' },
-          { status: 500 }
-        )
+        console.error('Error inserting itinerary_shares (falling back to per-option link):', shareInsertError)
+        if (fallbackItineraryUrl) {
+          itineraryUrl = fallbackItineraryUrl
+          shareToken = null
+        }
       }
     }
 
