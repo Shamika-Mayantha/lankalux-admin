@@ -150,9 +150,11 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
   if (patch.status) next.status = patch.status
   if ('cancellation_reason' in patch) next.cancellation_reason = patch.cancellation_reason ?? null
   if (patch.start_date !== undefined || patch.end_date !== undefined) {
+    if ('start_date' in next && !next.start_date) next.start_date = null
+    if ('end_date' in next && !next.end_date) next.end_date = null
     next.duration = inclusiveDuration(
-      (patch.start_date as string) ?? current.start_date,
-      (patch.end_date as string) ?? current.end_date
+      (typeof next.start_date === 'string' ? next.start_date : current.start_date),
+      (typeof next.end_date === 'string' ? next.end_date : current.end_date)
     )
   }
 
@@ -177,6 +179,20 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
   }
   if (patch.notes !== undefined && patch.notes !== current.notes) {
     await logActivity({ request_id: id, actor, event_type: 'notes_added' })
+  }
+  if (
+    (patch.start_date !== undefined && patch.start_date !== current.start_date) ||
+    (patch.end_date !== undefined && patch.end_date !== current.end_date)
+  ) {
+    await logActivity({
+      request_id: id,
+      actor,
+      event_type: 'dates_changed',
+      detail: {
+        from: { start: current.start_date, end: current.end_date },
+        to: { start: data.start_date, end: data.end_date, duration: data.duration },
+      },
+    })
   }
 
   return data as ClientRequestRow
