@@ -46,7 +46,7 @@ export default function DashboardPage() {
   }, [rows, range])
 
   const counts = useMemo(() => {
-    const c: Record<RequestStatus, number> = { new: 0, follow_up: 0, sold: 0, after_sales: 0, cancelled: 0 }
+    const c: Record<RequestStatus, number> = { new: 0, follow_up: 0, sold: 0, after_sales: 0, cancelled: 0, expired: 0 }
     for (const r of filtered) {
       const s = normalizeStatus(r.status) || 'new'
       c[s]++
@@ -55,8 +55,8 @@ export default function DashboardPage() {
   }, [filtered])
 
   const today = new Date().toISOString().slice(0, 10)
-  const upcomingArrivals = filtered.filter((r) => r.start_date && r.start_date >= today && normalizeStatus(r.status) !== 'cancelled').slice(0, 6)
-  const upcomingDepartures = filtered.filter((r) => r.end_date && r.end_date >= today && normalizeStatus(r.status) !== 'cancelled').slice(0, 6)
+  const upcomingArrivals = filtered.filter((r) => r.start_date && r.start_date >= today && !['cancelled', 'expired'].includes(normalizeStatus(r.status) || '')).slice(0, 6)
+  const upcomingDepartures = filtered.filter((r) => r.end_date && r.end_date >= today && !['cancelled', 'expired'].includes(normalizeStatus(r.status) || '')).slice(0, 6)
 
   return (
     <div>

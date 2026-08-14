@@ -296,10 +296,10 @@ export function RequestWorkspace() {
         </div>
         <div className="ll-row">
           <span className={`ll-pill ${status}`}>{STATUS_LABEL[status]}</span>
-          <button className="ll-btn secondary" disabled={!!busy || !selected} onClick={openEmail}>
+          <button className="ll-btn secondary" disabled={!!busy || !selected || status === 'expired'} onClick={openEmail}>
             Send email
           </button>
-          <button className="ll-btn wa" disabled={!!busy || !selected} onClick={openWhatsApp}>
+          <button className="ll-btn wa" disabled={!!busy || !selected || status === 'expired'} onClick={openWhatsApp}>
             WhatsApp
           </button>
           <button
@@ -311,6 +311,11 @@ export function RequestWorkspace() {
           </button>
         </div>
       </div>
+      {status === 'expired' && (
+        <div className="ll-error">
+          This request expired because the arrival date passed more than 3 days ago. Choose a new arrival date to reopen it.
+        </div>
+      )}
       {busy && <p className="ll-muted">{busy}</p>}
       {notice && <div className="ll-ok">{notice}</div>}
       {error && <div className="ll-error">{error}</div>}
@@ -336,11 +341,11 @@ export function RequestWorkspace() {
                 ))}
               </select>
             </label>
-            {status === 'cancelled' && (
+            {status === 'cancelled' || status === 'expired' ? (
               <button className="ll-btn secondary" onClick={() => saveField({ restore: true })}>
                 Restore
               </button>
-            )}
+            ) : null}
           </div>
           <div className="ll-fields-2">
             <label>

@@ -1,5 +1,6 @@
 import { parseItineraryJson } from '../validation/itinerary.schema'
 import { assignDayImages, matchDestination } from '../services/image-map.service'
+import { shouldExpireRequest } from '../config/status'
 
 function assert(cond: unknown, msg: string) {
   if (!cond) throw new Error(msg)
@@ -38,5 +39,11 @@ const images = assignDayImages([
 ])
 assert(images.every((arr) => arr[0]?.startsWith('/images/')), 'images assigned from library')
 assert(new Set(images.map((a) => a[0])).size === 5, 'unique images per day where possible')
+
+assert(shouldExpireRequest({ start_date: '2026-08-10', status: 'new' }, '2026-08-14') === true, 'expire 4 days after start')
+assert(shouldExpireRequest({ start_date: '2026-08-11', status: 'new' }, '2026-08-14') === true, 'expire on day 3')
+assert(shouldExpireRequest({ start_date: '2026-08-12', status: 'new' }, '2026-08-14') === false, 'do not expire at 2 days')
+assert(shouldExpireRequest({ start_date: '2026-08-10', status: 'sold' }, '2026-08-14') === false, 'sold trips do not expire')
+assert(shouldExpireRequest({ start_date: '2026-08-20', status: 'follow_up' }, '2026-08-14') === false, 'future dates stay open')
 
 console.log('console core checks passed')
