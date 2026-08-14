@@ -30,37 +30,35 @@ export function renderJourneyEmail(opts: {
   const subject = `LankaLux Journey — ${j.title}`
   const hotelBlock =
     includeHotels && j.hotels.length
-      ? `<h3 style="color:#c9a14a;font-family:Georgia,serif;">Suggested stays</h3>${j.hotels
+      ? `<h3 style="color:#B18544;font-family:'Be Vietnam Pro',Arial,sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;">Suggested stays</h3>${j.hotels
           .map(
             (h) =>
-              `<p style="margin:0 0 12px;"><strong>${esc(h.name)}</strong><br/>${esc(h.destination)} · ${esc(h.star_category)}<br/>${esc(h.room_category)} ${h.meal_plan ? '· ' + esc(h.meal_plan) : ''}</p>`
+              `<p style="margin:0 0 12px;"><strong style="color:#1A2A1D;">${esc(h.name)}</strong><br/>${esc(h.destination)} · ${esc(h.star_category)}<br/>${esc(h.room_category)} ${h.meal_plan ? '· ' + esc(h.meal_plan) : ''}</p>`
           )
           .join('')}`
       : ''
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
-<body style="margin:0;background:#efefef;font-family:Georgia,'Times New Roman',serif;color:#2f2f2f;">
-  <div style="max-width:620px;margin:24px auto;background:#fff;border:1px solid #e2e2e2;">
-    <div style="background:#1b1c1f;padding:28px 20px;text-align:center;">
-      <img src="${esc(logoUrl)}" alt="LankaLux" width="56" height="56" style="border-radius:50%;object-fit:cover;"/>
-      <h1 style="margin:12px 0 0;color:#c9a14a;font-weight:500;font-size:32px;">LankaLux</h1>
-      <p style="margin:6px 0 0;color:#f2f2f2;letter-spacing:.14em;font-size:11px;text-transform:uppercase;">Journey</p>
+<body style="margin:0;background:#F9F4EB;font-family:'Open Sans',Segoe UI,Arial,sans-serif;color:#252523;">
+  <div style="max-width:620px;margin:24px auto;background:#fff;border:1px solid rgba(26,42,29,0.12);">
+    <div style="background:#F9F4EB;padding:28px 20px;text-align:center;">
+      <img src="${esc(logoUrl)}" alt="LankaLux" width="220" style="display:block;width:220px;height:auto;margin:0 auto;"/>
     </div>
-    <div style="height:2px;background:#c9a14a;"></div>
+    <div style="height:1px;background:#B18544;"></div>
     <div style="padding:28px;">
       <p>Dear ${esc(j.clientName.split(' ')[0] || 'Guest')},</p>
-      <p style="color:#5d5d5d;line-height:1.75;">${esc(introduction).replace(/\n/g, '<br/>')}</p>
-      <div style="background:#f4f4f4;border-left:3px solid #c9a14a;padding:12px 14px;margin:20px 0;">
-        <p style="margin:0 0 8px;color:#c9a14a;font-size:18px;">${esc(j.title)}</p>
-        <p style="margin:0;font-size:13px;">${esc(dates(j))}<br/>${esc(j.durationLabel)} · ${esc(partyLine(j))}</p>
+      <p style="color:#6b6b66;line-height:1.75;">${esc(introduction).replace(/\n/g, '<br/>')}</p>
+      <div style="background:#F1E9DA;border-left:3px solid #B18544;padding:12px 14px;margin:20px 0;">
+        <p style="margin:0 0 8px;color:#1A2A1D;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(j.title)}</p>
+        <p style="margin:0;font-size:13px;color:#6b6b66;">${esc(dates(j))}<br/>${esc(j.durationLabel)} · ${esc(partyLine(j))}</p>
       </div>
       ${hotelBlock}
       <p style="text-align:center;margin:28px 0;">
-        <a href="${esc(shareUrl)}" style="background:#c9a14a;color:#1b1c1f;text-decoration:none;padding:12px 26px;border-radius:4px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:12px;font-family:Arial,sans-serif;">View your complete journey</a>
+        <a href="${esc(shareUrl)}" style="background:#1A2A1D;color:#F9F4EB;text-decoration:none;padding:14px 28px;border-radius:0;font-weight:500;letter-spacing:.02em;font-size:14px;font-family:'Open Sans',Arial,sans-serif;display:inline-block;">View your complete journey</a>
       </p>
-      <p style="font-size:13px;color:#666;">If you would like any changes, simply reply to this email.</p>
-      <p>Warm regards,<br/><strong style="color:#c9a14a;">${esc(BRAND.name)}</strong><br/>${esc(BRAND.tagline)}</p>
+      <p style="font-size:13px;color:#6b6b66;">If you would like any changes, simply reply to this email.</p>
+      <p>Warm regards,<br/><strong style="color:#1A2A1D;">${esc(BRAND.name)}</strong><br/><span style="color:#B18544;">${esc(BRAND.tagline)}</span></p>
     </div>
   </div>
 </body></html>`

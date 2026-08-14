@@ -22,9 +22,9 @@ export default function VehiclesPage() {
       <div className="ll-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
         {vehicles.map((v) => (
           <div className="ll-card" key={v.id}>
-            {v.photos[0] && <img src={v.photos[0]} alt={v.name} style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 10 }} />}
+            {v.photos[0] && <img src={v.photos[0]} alt={v.name} className="ll-thumb" />}
             <h3>{v.type}</h3>
-            <p style={{ fontSize: 22 }}>{v.name}</p>
+            <p className="ll-card-title">{v.name}</p>
             <p className="ll-muted">
               {v.passenger_capacity} passengers · {v.luggage_capacity || '—'}
             </p>

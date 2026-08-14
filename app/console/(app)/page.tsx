@@ -18,6 +18,13 @@ function startOfRange(range: Range) {
   return d
 }
 
+function greeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
 export default function DashboardPage() {
   const [rows, setRows] = useState<ClientRequestRow[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -53,7 +60,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="ll-h1">Dashboard</h1>
+      <h1 className="ll-greeting">{greeting()}</h1>
       <p className="ll-sub">Actionable work for the LankaLux desk.</p>
       {error && <div className="ll-error">{error}</div>}
       <div className="ll-row" style={{ marginBottom: 18 }}>
@@ -69,17 +76,17 @@ export default function DashboardPage() {
       <div className="ll-grid">
         {(Object.keys(STATUS_LABEL) as RequestStatus[]).map((s) => (
           <div className="ll-card" key={s}>
-            <h3>{STATUS_LABEL[s]}</h3>
-            <p>{counts[s]}</p>
+            <h3>{s === 'new' ? 'Requests' : STATUS_LABEL[s]}</h3>
+            <p className="ll-stat">{counts[s]}</p>
           </div>
         ))}
       </div>
-      <div className="ll-grid" style={{ marginTop: 18, gridTemplateColumns: '1fr 1fr' }}>
+      <div className="ll-grid-2" style={{ marginTop: 18 }}>
         <div className="ll-card">
           <h3>Upcoming arrivals</h3>
           {upcomingArrivals.length === 0 && <p className="ll-muted">None in this range.</p>}
           {upcomingArrivals.map((r) => (
-            <p key={r.id} style={{ fontSize: 15 }}>
+            <p key={r.id}>
               <Link href={`/console/requests/${r.id}`}>{r.client_name}</Link> · {r.start_date}
             </p>
           ))}
@@ -88,7 +95,7 @@ export default function DashboardPage() {
           <h3>Upcoming departures</h3>
           {upcomingDepartures.length === 0 && <p className="ll-muted">None in this range.</p>}
           {upcomingDepartures.map((r) => (
-            <p key={r.id} style={{ fontSize: 15 }}>
+            <p key={r.id}>
               <Link href={`/console/requests/${r.id}`}>{r.client_name}</Link> · {r.end_date}
             </p>
           ))}

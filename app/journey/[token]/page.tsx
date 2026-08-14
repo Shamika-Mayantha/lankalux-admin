@@ -1,4 +1,5 @@
 import '@/features/journey/journey.css'
+import { BRAND } from '@/config/brand'
 import { JourneyView } from '@/features/journey/JourneyView'
 import { getClientItinerary } from '@/services/itinerary.service'
 import type { Metadata } from 'next'
@@ -31,7 +32,7 @@ export default async function PublicJourneyPage({ params }: Props) {
     return (
       <div className="journey-root">
         <header className="journey-hero">
-          <img src="/favicon.png" alt="LankaLux" className="journey-logo" />
+          <img src={BRAND.logoSrc} alt="LankaLux" className="journey-logo" />
           <h1 className="journey-title">Journey unavailable</h1>
           <p className="journey-summary">{message}</p>
         </header>

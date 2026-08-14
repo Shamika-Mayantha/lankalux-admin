@@ -23,6 +23,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [ready, setReady] = useState(false)
   const [email, setEmail] = useState<string | null>(null)
+  const [navOpen, setNavOpen] = useState(false)
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
@@ -65,7 +66,8 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
   if (!ready) {
     return (
       <div className="ll-boot">
-        <p>Loading console…</p>
+        <img src={BRAND.logoSrc} alt="LankaLux" style={{ height: 48 }} />
+        <p className="ll-muted">Loading console…</p>
       </div>
     )
   }
@@ -76,33 +78,42 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="ll-shell">
-      <aside className="ll-side">
-        <div className="ll-brand">
-          <img src={BRAND.logoSrc} alt="" />
-          <div>
-            <strong>LankaLux</strong>
-            <span>Admin Console</span>
-          </div>
-        </div>
-        <nav>
-          {NAV.map((item) => {
-            const active = pathname === item.href || (item.href !== '/console' && pathname.startsWith(item.href))
-            return (
-              <Link key={item.href} href={item.href} className={active ? 'active' : ''}>
-                {item.label}
-              </Link>
-            )
-          })}
-        </nav>
-        <div className="ll-side-foot">
-          <p>{email}</p>
-          <button type="button" onClick={logout}>
+    <div className={`ll-shell ${navOpen ? 'nav-open' : ''}`}>
+      <header className="ll-top">
+        <Link href="/console" className="ll-lockup" aria-label="LankaLux">
+          <img src={BRAND.logoSrc} alt="LankaLux" />
+        </Link>
+        <div className="ll-top-actions">
+          <span>{email}</span>
+          <button type="button" className="ll-btn secondary" onClick={logout}>
             Logout
           </button>
+          <button type="button" className="ll-menu-btn" aria-label="Open navigation" onClick={() => setNavOpen((v) => !v)}>
+            <span />
+            <span />
+            <span />
+          </button>
         </div>
-      </aside>
-      <main className="ll-main">{children}</main>
+      </header>
+      <div className="ll-backdrop" onClick={() => setNavOpen(false)} />
+      <div className="ll-body">
+        <aside className="ll-side">
+          <nav>
+            {NAV.map((item) => {
+              const active = pathname === item.href || (item.href !== '/console' && pathname.startsWith(item.href))
+              return (
+                <Link key={item.href} href={item.href} className={active ? 'active' : ''} onClick={() => setNavOpen(false)}>
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
+          <div className="ll-side-foot">
+            <p>Admin console</p>
+          </div>
+        </aside>
+        <main className="ll-main">{children}</main>
+      </div>
     </div>
   )
 }

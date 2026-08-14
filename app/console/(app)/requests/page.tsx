@@ -37,7 +37,7 @@ export default function RequestsPage() {
         </Link>
       </div>
       {error && <div className="ll-error">{error}</div>}
-      <div className="ll-row" style={{ marginBottom: 16 }}>
+      <div className="ll-filters">
         <input placeholder="Search name, email, id" value={q} onChange={(e) => setQ(e.target.value)} />
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="all">All statuses</option>

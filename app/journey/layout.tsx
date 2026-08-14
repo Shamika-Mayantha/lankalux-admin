@@ -1,6 +1,5 @@
-import type { Metadata } from 'next'
 import { Be_Vietnam_Pro, Open_Sans } from 'next/font/google'
-import '@/features/console/console.css'
+import type { Metadata } from 'next'
 
 const display = Be_Vietnam_Pro({
   subsets: ['latin'],
@@ -18,16 +17,15 @@ const body = Open_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'LankaLux Admin Console',
+  title: 'LankaLux Journey',
   icons: {
     icon: [
       { url: '/brand/lankalux-favicon.ico', sizes: 'any' },
       { url: '/brand/lankalux-favicon.png', type: 'image/png' },
     ],
-    apple: '/brand/lankalux-favicon.png',
   },
 }
 
-export default function ConsoleGroupLayout({ children }: { children: React.ReactNode }) {
-  return <div className={`ll-root ${display.variable} ${body.variable}`}>{children}</div>
+export default function JourneyLayout({ children }: { children: React.ReactNode }) {
+  return <div className={`journey-fonts ${display.variable} ${body.variable}`}>{children}</div>
 }

@@ -95,7 +95,7 @@ export default function HotelsPage() {
         {hotels.map((h) => (
           <div className="ll-card" key={h.id}>
             <h3>{h.destination || 'Stay'}</h3>
-            <p style={{ fontSize: 20 }}>{h.name}</p>
+            <p className="ll-card-title">{h.name}</p>
             <p className="ll-muted">
               {h.star_category} · {h.room_category} · {h.active ? 'Active' : 'Inactive'}
             </p>

@@ -26,7 +26,6 @@ export function JourneyView({ journey }: { journey: CanonicalJourney }) {
     <article className="journey-root">
       <header className="journey-hero">
         <img src={BRAND.logoSrc} alt="LankaLux" className="journey-logo" />
-        <p className="journey-brand">LankaLux</p>
         <p className="journey-kicker">A journey prepared for</p>
         <h1 className="journey-client">{journey.clientName}</h1>
         <h2 className="journey-title">{journey.title}</h2>

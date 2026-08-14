@@ -40,11 +40,12 @@ export default function ConsoleLoginPage() {
 
   return (
     <div className="ll-login">
-      <div className="ll-card" style={{ width: 380 }}>
-        <div style={{ textAlign: 'center', marginBottom: 16 }}>
-          <img src={BRAND.logoSrc} alt="LankaLux" width={64} height={64} style={{ borderRadius: '50%' }} />
-          <h1 className="ll-h1" style={{ fontSize: 26 }}>LankaLux</h1>
-          <p className="ll-sub">Admin Console</p>
+      <div className="ll-card ll-login-card">
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <img src={BRAND.logoSrc} alt="LankaLux" />
+          <p className="ll-sub" style={{ marginTop: 16, marginBottom: 0 }}>
+            Admin Console
+          </p>
         </div>
         {expired && <div className="ll-error">Session expired. Please log in again.</div>}
         <div className="ll-form">

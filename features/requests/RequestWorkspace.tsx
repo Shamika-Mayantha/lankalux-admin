@@ -581,7 +581,7 @@ function Editor({
               </select>
             </label>
             {day.recommended_images[0] && (
-              <img src={day.recommended_images[0]} alt="" style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 8 }} />
+              <img src={day.recommended_images[0]} alt="" className="ll-thumb" style={{ maxHeight: 160, height: 160 }} />
             )}
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { consoleFetch } from '@/lib/console-api'
+import { BRAND } from '@/config/brand'
 
 type Flags = Record<string, string>
 
@@ -31,7 +32,8 @@ export default function SettingsPage() {
       {error && <div className="ll-error">{error}</div>}
       <div className="ll-card">
         <h3>Company</h3>
-        <p style={{ fontSize: 18 }}>LankaLux · Tailor-made journeys across Sri Lanka</p>
+        <p className="ll-card-title">LankaLux</p>
+        <p className="ll-muted">{BRAND.tagline}</p>
       </div>
       <table className="ll-table" style={{ marginTop: 18 }}>
         <thead>
