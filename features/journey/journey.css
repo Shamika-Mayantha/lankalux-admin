@@ -1,0 +1,171 @@
+.journey-root {
+  --j-gold: #c9a14a;
+  --j-ink: #1c1b19;
+  --j-muted: #5e5a53;
+  --j-paper: #f7f4ee;
+  background: var(--j-paper);
+  color: var(--j-ink);
+  min-height: 100vh;
+  font-family: "Georgia", "Times New Roman", serif;
+}
+
+.journey-hero,
+.journey-days,
+.journey-footer {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.journey-hero {
+  text-align: center;
+  padding-top: 56px;
+  padding-bottom: 40px;
+}
+
+.journey-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.journey-brand {
+  margin: 16px 0 0;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: var(--j-gold);
+}
+
+.journey-kicker {
+  margin: 28px 0 0;
+  color: var(--j-muted);
+  font-size: 14px;
+}
+
+.journey-client {
+  margin: 8px 0 0;
+  font-weight: 500;
+  font-size: 42px;
+}
+
+.journey-title {
+  margin: 12px 0 0;
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--j-gold);
+}
+
+.journey-meta,
+.journey-summary {
+  color: var(--j-muted);
+  line-height: 1.7;
+}
+
+.journey-summary {
+  margin-top: 20px;
+  font-size: 17px;
+}
+
+.journey-day {
+  padding: 36px 0;
+  border-top: 1px solid rgba(28, 27, 25, 0.08);
+}
+
+.journey-day-num {
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--j-gold);
+  margin: 0;
+}
+
+.journey-day-title {
+  margin: 8px 0 4px;
+  font-size: 28px;
+  font-weight: 500;
+}
+
+.journey-day-loc {
+  margin: 0 0 18px;
+  color: var(--j-muted);
+  font-size: 14px;
+}
+
+.journey-photo-wrap {
+  margin: 0 -24px 20px;
+}
+
+.journey-photo {
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  display: block;
+}
+
+.journey-desc {
+  line-height: 1.8;
+  font-size: 16.5px;
+}
+
+.journey-acts {
+  padding-left: 18px;
+  line-height: 1.7;
+  color: #3a3834;
+}
+
+.journey-travel {
+  margin-top: 16px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--j-muted);
+}
+
+.journey-footer {
+  padding: 48px 24px 80px;
+  border-top: 1px solid rgba(28, 27, 25, 0.08);
+}
+
+.journey-footer h3 {
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--j-gold);
+}
+
+.journey-v-name {
+  font-size: 20px;
+  margin: 0 0 6px;
+}
+
+.journey-v-photos {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.journey-v-photos img {
+  width: 32%;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.journey-contact {
+  text-align: center;
+  margin-top: 48px;
+}
+
+.journey-contact a {
+  color: var(--j-gold);
+}
+
+@media (min-width: 800px) {
+  .journey-photo-wrap {
+    margin: 0 0 20px;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+}
