@@ -79,7 +79,7 @@ export function toStructured(raw: unknown, startDate?: string | null): Structure
 
 function emptyPayload(style: ItineraryStyle): StructuredItinerary {
   const meta = STYLE_META[style]
-  return { title: meta.subtitle, summary: '', duration: '', days: [] }
+  return { title: meta.subtitle, summary: '', duration: '', days: [], price: '' }
 }
 
 function recordFromRow(row: Record<string, unknown>): ItineraryRecord {
@@ -572,6 +572,7 @@ export async function toCanonical(request: ClientRequestRow, itinerary: Itinerar
     importantInformation: BRAND.importantInformation,
     optionNumber: itinerary.option_number,
     style: itinerary.style,
+    price: itinerary.payload.price || null,
   }
 }
 

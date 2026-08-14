@@ -7,6 +7,7 @@ import { STYLE_META, STATUS_LABEL, REQUEST_STATUSES, normalizeStatus, type Itine
 import { BRAND } from '@/config/brand'
 import { allLibraryImages } from '@/services/image-map.service'
 import { JourneyView } from '@/features/journey/JourneyView'
+import { PhotoPicker } from '@/features/console/PhotoPicker'
 import '@/features/journey/journey.css'
 import type { ActivityEvent, CanonicalJourney, ClientRequestRow, ItineraryDay, ItineraryRecord, StructuredItinerary, VehicleRecord } from '@/types/domain'
 
@@ -45,6 +46,9 @@ export function RequestWorkspace() {
   const [waOpen, setWaOpen] = useState(false)
   const [emailIntro, setEmailIntro] = useState('')
   const [includeHotels, setIncludeHotels] = useState(false)
+  const [includePrice, setIncludePrice] = useState(false)
+  const [sendPrice, setSendPrice] = useState('')
+  const [emailHtml, setEmailHtml] = useState<string | null>(null)
   const [waMessage, setWaMessage] = useState('')
   const [waHref, setWaHref] = useState('')
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([])
@@ -147,23 +151,69 @@ export function RequestWorkspace() {
     setEmailIntro(
       `We are delighted to share your personalised Sri Lanka journey. Every day has been paced with care so you can travel beautifully, not hurriedly.`
     )
+    const savedPrice = selected?.payload?.price || row?.budget || ''
+    setSendPrice(savedPrice)
+    setIncludePrice(!!savedPrice)
+    setEmailHtml(null)
     setEmailOpen(true)
+  }
+
+  function sendPayload() {
+    return {
+      requestId: id,
+      introduction: emailIntro,
+      includeHotels,
+      includeItinerary: true,
+      includePrice,
+      price: includePrice ? sendPrice.trim() : null,
+    }
+  }
+
+  async function previewEmail() {
+    setBusy('Preparing preview…')
+    setError(null)
+    try {
+      const json = await consoleFetch('/api/v2/email', {
+        method: 'POST',
+        body: JSON.stringify({ ...sendPayload(), preview: true }),
+      })
+      setEmailHtml(json.html)
+      if (json.journey) setPreview(json.journey)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Preview failed')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function previewClientJourney() {
+    setBusy('Loading preview…')
+    setError(null)
+    try {
+      const json = await consoleFetch(`/api/v2/requests/${id}/published`)
+      const sending = emailOpen || waOpen
+      setPreview({
+        ...json.journey,
+        price: sending
+          ? includePrice && sendPrice.trim()
+            ? sendPrice.trim()
+            : null
+          : json.journey.price || null,
+      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Preview failed')
+    } finally {
+      setBusy(null)
+    }
   }
 
   async function sendEmail() {
     setBusy('Sending email…')
     setError(null)
     try {
-      const json = await consoleFetch('/api/v2/email', {
-        method: 'POST',
-        body: JSON.stringify({
-          requestId: id,
-          introduction: emailIntro,
-          includeHotels,
-          includeItinerary: true,
-        }),
-      })
+      const json = await consoleFetch('/api/v2/email', { method: 'POST', body: JSON.stringify(sendPayload()) })
       setEmailOpen(false)
+      setEmailHtml(null)
       setNotice(`Email sent to ${json.to}.`)
       await reload()
     } catch (e) {
@@ -174,13 +224,24 @@ export function RequestWorkspace() {
   }
 
   async function openWhatsApp() {
+    const savedPrice = selected?.payload?.price || row?.budget || ''
+    setSendPrice(savedPrice)
+    setIncludePrice(!!savedPrice)
+    setWaMessage('')
+    setWaHref('')
+    setWaOpen(true)
+  }
+
+  async function prepareWhatsApp() {
     setBusy('Creating share link…')
     setError(null)
     try {
-      const json = await consoleFetch('/api/v2/whatsapp', { method: 'POST', body: JSON.stringify({ requestId: id }) })
+      const json = await consoleFetch('/api/v2/whatsapp', {
+        method: 'POST',
+        body: JSON.stringify({ requestId: id, includePrice, price: includePrice ? sendPrice.trim() : null }),
+      })
       setWaMessage(json.message)
       setWaHref(json.href)
-      setWaOpen(true)
       await reload()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'WhatsApp failed')
@@ -214,6 +275,7 @@ export function RequestWorkspace() {
       hotels: [],
       includedServices: BRAND.includedServices,
       importantInformation: BRAND.importantInformation,
+      price: draft.price || null,
     }
   }, [row, draft, itineraries, editOption, vehicles])
 
@@ -243,16 +305,9 @@ export function RequestWorkspace() {
           <button
             className="ll-btn secondary"
             disabled={!selected}
-            onClick={async () => {
-              try {
-                const json = await consoleFetch(`/api/v2/requests/${id}/published`)
-                setPreview(json.journey)
-              } catch (e) {
-                setError(e instanceof Error ? e.message : 'Preview failed')
-              }
-            }}
+            onClick={() => previewClientJourney()}
           >
-            Client preview
+            Preview
           </button>
         </div>
       </div>
@@ -381,21 +436,45 @@ export function RequestWorkspace() {
 
       {emailOpen && (
         <div className="ll-modal-back" onClick={() => setEmailOpen(false)}>
-          <div className="ll-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="ll-modal wide" onClick={(e) => e.stopPropagation()}>
             <h2>Send email</h2>
-            <p className="ll-muted">The itinerary itself is the saved selected journey — it is not regenerated.</p>
+            <p className="ll-muted">The saved selected itinerary is sent as-is. Preview it before it leaves.</p>
             <div className="ll-form">
               <label>To<input readOnly value={row.email || ''} /></label>
               <label>
                 Introduction
-                <textarea rows={6} value={emailIntro} onChange={(e) => setEmailIntro(e.target.value)} />
+                <textarea rows={5} value={emailIntro} onChange={(e) => setEmailIntro(e.target.value)} />
               </label>
-              <label>
-                <input type="checkbox" checked={includeHotels} onChange={(e) => setIncludeHotels(e.target.checked)} /> Include hotels
+              <label className="ll-check">
+                <input type="checkbox" checked={includeHotels} onChange={(e) => setIncludeHotels(e.target.checked)} />
+                Include hotels
               </label>
+              <label className="ll-check">
+                <input type="checkbox" checked={includePrice} onChange={(e) => setIncludePrice(e.target.checked)} />
+                Include price
+              </label>
+              {includePrice && (
+                <label>
+                  Price shown to the client
+                  <input
+                    value={sendPrice}
+                    onChange={(e) => setSendPrice(e.target.value)}
+                    placeholder="USD 2,850 per person"
+                  />
+                </label>
+              )}
+              {emailHtml && (
+                <iframe title="Email preview" className="ll-preview-frame" srcDoc={emailHtml} />
+              )}
               <div className="ll-row">
+                <button className="ll-btn secondary" disabled={!!busy} onClick={previewClientJourney}>
+                  Preview journey
+                </button>
+                <button className="ll-btn secondary" disabled={!!busy} onClick={previewEmail}>
+                  Preview email
+                </button>
                 <button className="ll-btn" disabled={!!busy} onClick={sendEmail}>
-                  {busy ? 'Sending email…' : 'Send'}
+                  {busy ? 'Sending…' : 'Send'}
                 </button>
                 <button className="ll-btn secondary" onClick={() => setEmailOpen(false)}>
                   Cancel
@@ -409,16 +488,45 @@ export function RequestWorkspace() {
       {waOpen && (
         <div className="ll-modal-back" onClick={() => setWaOpen(false)}>
           <div className="ll-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>WhatsApp preview</h2>
-            <p className="ll-muted">This text is built from the selected saved itinerary.</p>
-            <textarea rows={16} value={waMessage} onChange={(e) => setWaMessage(e.target.value)} />
-            <div className="ll-row" style={{ marginTop: 12 }}>
-              <a className="ll-btn wa" href={`https://wa.me/${waHref.split('wa.me/')[1]?.split('?')[0] || ''}?text=${encodeURIComponent(waMessage)}`} target="_blank" rel="noreferrer">
-                Open WhatsApp
-              </a>
-              <button className="ll-btn secondary" onClick={() => setWaOpen(false)}>
-                Close
-              </button>
+            <h2>WhatsApp</h2>
+            <p className="ll-muted">Choose what the client should see, then prepare the message.</p>
+            <div className="ll-form">
+              <label className="ll-check">
+                <input type="checkbox" checked={includePrice} onChange={(e) => setIncludePrice(e.target.checked)} />
+                Include price
+              </label>
+              {includePrice && (
+                <label>
+                  Price shown to the client
+                  <input
+                    value={sendPrice}
+                    onChange={(e) => setSendPrice(e.target.value)}
+                    placeholder="USD 2,850 per person"
+                  />
+                </label>
+              )}
+              {waMessage ? (
+                <label>
+                  Message
+                  <textarea rows={14} value={waMessage} onChange={(e) => setWaMessage(e.target.value)} />
+                </label>
+              ) : null}
+              <div className="ll-row">
+                <button className="ll-btn secondary" disabled={!!busy} onClick={previewClientJourney}>
+                  Preview journey
+                </button>
+                <button className="ll-btn" disabled={!!busy} onClick={prepareWhatsApp}>
+                  {busy ? 'Preparing…' : waMessage ? 'Refresh message' : 'Prepare message'}
+                </button>
+                {waHref ? (
+                  <a className="ll-btn wa" href={`https://wa.me/${waHref.split('wa.me/')[1]?.split('?')[0] || ''}?text=${encodeURIComponent(waMessage)}`} target="_blank" rel="noreferrer">
+                    Open WhatsApp
+                  </a>
+                ) : null}
+                <button className="ll-btn secondary" onClick={() => setWaOpen(false)}>
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -460,6 +568,7 @@ function Editor({
   onPreview: () => void
 }) {
   const library = allLibraryImages()
+  const [openDay, setOpenDay] = useState<number | null>(0)
 
   function patchDay(i: number, patch: Partial<ItineraryDay>) {
     const days = draft.days.map((d, idx) => (idx === i ? { ...d, ...patch } : d))
@@ -478,118 +587,134 @@ function Editor({
 
   return (
     <div>
-      <div className="ll-row" style={{ marginBottom: 12 }}>
-        {([1, 2, 3] as const).map((n) => (
-          <button key={n} className={`ll-btn ${option === n ? '' : 'secondary'}`} onClick={() => setOption(n)}>
-            Option {n}
+      <div className="ll-editor-bar">
+        <div className="ll-row">
+          {([1, 2, 3] as const).map((n) => (
+            <button key={n} className={`ll-btn ${option === n ? '' : 'secondary'}`} onClick={() => setOption(n)}>
+              Option {n}
+            </button>
+          ))}
+        </div>
+        <div className="ll-row">
+          <button className="ll-btn secondary" onClick={onPreview}>
+            Preview
           </button>
-        ))}
-        <button className="ll-btn" disabled={busy} onClick={onSave}>
-          {busy ? 'Saving…' : 'Save'}
-        </button>
-        <button className="ll-btn secondary" onClick={onPreview}>
-          Preview
-        </button>
+          <button className="ll-btn" disabled={busy} onClick={onSave}>
+            {busy ? 'Saving…' : 'Save itinerary'}
+          </button>
+        </div>
       </div>
-      <div className="ll-form">
+
+      <div className="ll-form" style={{ maxWidth: 'none' }}>
         <label>
-          Title
+          Journey title
           <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
         </label>
         <label>
-          Summary
-          <textarea value={draft.summary} onChange={(e) => setDraft({ ...draft, summary: e.target.value })} />
+          Introduction
+          <textarea rows={3} value={draft.summary} onChange={(e) => setDraft({ ...draft, summary: e.target.value })} />
         </label>
-        <label>
-          Vehicle
-          <select
-            value={draft.vehicle_id || ''}
-            onChange={(e) => setDraft({ ...draft, vehicle_id: e.target.value || null })}
-          >
-            <option value="">None</option>
-            {vehicles.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Internal notes
-          <textarea value={draft.internal_notes || ''} onChange={(e) => setDraft({ ...draft, internal_notes: e.target.value })} />
-        </label>
-      </div>
-      {draft.days.map((day, i) => (
-        <div key={i} className="ll-card" style={{ marginTop: 14 }}>
-          <div className="ll-row" style={{ justifyContent: 'space-between' }}>
-            <strong>Day {day.day}</strong>
-            <div className="ll-row">
-              <button className="ll-btn ghost" onClick={() => moveDay(i, -1)}>
-                Up
-              </button>
-              <button className="ll-btn ghost" onClick={() => moveDay(i, 1)}>
-                Down
-              </button>
-              <button
-                className="ll-btn ghost"
-                onClick={() => setDraft({ ...draft, days: draft.days.filter((_, idx) => idx !== i).map((d, idx) => ({ ...d, day: idx + 1 })) })}
-              >
-                Delete day
-              </button>
-            </div>
-          </div>
-          <div className="ll-form" style={{ marginTop: 10 }}>
-            <label>
-              Title
-              <input value={day.title} onChange={(e) => patchDay(i, { title: e.target.value })} />
-            </label>
-            <label>
-              Location
-              <input value={day.location} onChange={(e) => patchDay(i, { location: e.target.value })} />
-            </label>
-            <label>
-              Overnight
-              <input value={day.overnight_location} onChange={(e) => patchDay(i, { overnight_location: e.target.value })} />
-            </label>
-            <label>
-              Date
-              <input value={day.date} onChange={(e) => patchDay(i, { date: e.target.value })} />
-            </label>
-            <label>
-              Description
-              <textarea value={day.description} onChange={(e) => patchDay(i, { description: e.target.value })} />
-            </label>
-            <label>
-              Activities (one per line)
-              <textarea
-                value={day.activities.join('\n')}
-                onChange={(e) => patchDay(i, { activities: e.target.value.split('\n').filter((x) => x.trim()) })}
-              />
-            </label>
-            <label>
-              Image
-              <select
-                value={day.recommended_images[0] || ''}
-                onChange={(e) => patchDay(i, { recommended_images: e.target.value ? [e.target.value] : [] })}
-              >
-                <option value="">Auto / none</option>
-                {library.map((src) => (
-                  <option key={src} value={src}>
-                    {src.replace('/images/', '')}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {day.recommended_images[0] && (
-              <img src={day.recommended_images[0]} alt="" className="ll-thumb" style={{ maxHeight: 160, height: 160 }} />
-            )}
-          </div>
+        <div className="ll-fields-2">
+          <label>
+            Quote price
+            <input
+              value={draft.price || ''}
+              onChange={(e) => setDraft({ ...draft, price: e.target.value })}
+              placeholder="USD 2,850 per person"
+            />
+          </label>
+          <label>
+            Vehicle
+            <select
+              value={draft.vehicle_id || ''}
+              onChange={(e) => setDraft({ ...draft, vehicle_id: e.target.value || null })}
+            >
+              <option value="">None</option>
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
-      ))}
+      </div>
+
+      {draft.days.map((day, i) => {
+        const expanded = openDay === i
+        return (
+          <article key={i} className="ll-day">
+            <header className="ll-day-head">
+              <button type="button" className="ll-more" onClick={() => setOpenDay(expanded ? null : i)} style={{ textAlign: 'left' }}>
+                <p className="ll-day-num">Day {String(day.day).padStart(2, '0')}</p>
+                <strong style={{ display: 'block', color: 'var(--forest)', marginTop: 4 }}>{day.title || 'Untitled day'}</strong>
+                <span className="ll-muted">{day.location || 'Add a location'}</span>
+              </button>
+              <div className="ll-row">
+                <button className="ll-btn ghost" onClick={() => moveDay(i, -1)}>
+                  Up
+                </button>
+                <button className="ll-btn ghost" onClick={() => moveDay(i, 1)}>
+                  Down
+                </button>
+                <button
+                  className="ll-btn ghost"
+                  onClick={() => {
+                    setDraft({ ...draft, days: draft.days.filter((_, idx) => idx !== i).map((d, idx) => ({ ...d, day: idx + 1 })) })
+                    setOpenDay(null)
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            </header>
+            {expanded && (
+              <div className="ll-day-body ll-form" style={{ maxWidth: 'none' }}>
+                <PhotoPicker
+                  value={day.recommended_images[0] || ''}
+                  images={library}
+                  onChange={(src) => patchDay(i, { recommended_images: src ? [src] : [] })}
+                />
+                <label>
+                  Title
+                  <input value={day.title} onChange={(e) => patchDay(i, { title: e.target.value })} />
+                </label>
+                <div className="ll-fields-2">
+                  <label>
+                    Location
+                    <input value={day.location} onChange={(e) => patchDay(i, { location: e.target.value })} />
+                  </label>
+                  <label>
+                    Overnight
+                    <input value={day.overnight_location} onChange={(e) => patchDay(i, { overnight_location: e.target.value })} />
+                  </label>
+                </div>
+                <label>
+                  What happens this day
+                  <textarea rows={4} value={day.description} onChange={(e) => patchDay(i, { description: e.target.value })} />
+                </label>
+                <label>
+                  Highlights
+                  <textarea
+                    rows={3}
+                    value={day.activities.join('\n')}
+                    onChange={(e) => patchDay(i, { activities: e.target.value.split('\n').filter((x) => x.trim()) })}
+                    placeholder="One highlight per line"
+                  />
+                </label>
+              </div>
+            )}
+          </article>
+        )
+      })}
       <button
         className="ll-btn secondary"
-        style={{ marginTop: 12 }}
-        onClick={() => setDraft({ ...draft, days: [...draft.days, emptyDay(draft.days.length + 1)] })}
+        style={{ marginTop: 16 }}
+        onClick={() => {
+          const next = emptyDay(draft.days.length + 1)
+          setDraft({ ...draft, days: [...draft.days, next] })
+          setOpenDay(draft.days.length)
+        }}
       >
         Add a day
       </button>

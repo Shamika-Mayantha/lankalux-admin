@@ -105,6 +105,15 @@ html:has(.journey-root) body {
   line-height: 1.85;
 }
 
+.journey-price {
+  margin: 22px 0 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--gold);
+  letter-spacing: -0.02em;
+}
+
 .journey-day {
   padding: 36px 0;
   border-top: 1px solid var(--line);

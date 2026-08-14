@@ -35,6 +35,7 @@ export function JourneyView({ journey }: { journey: CanonicalJourney }) {
             .join(' · ')}
         </p>
         {journey.summary ? <p className="journey-summary">{journey.summary}</p> : null}
+        {journey.price ? <p className="journey-price">{journey.price}</p> : null}
       </header>
 
       <div className="journey-days">

@@ -37,6 +37,7 @@ export const itinerarySchema = z
     title: z.string().min(1, 'Itinerary title is required'),
     summary: z.string().min(1, 'Itinerary summary is required'),
     duration: z.union([z.string(), z.number()]).optional(),
+    price: z.string().optional(),
     days: z.array(daySchema).min(1, 'Itinerary must contain at least one day'),
     total_kilometers: z.union([z.number(), z.string()]).optional(),
   })
