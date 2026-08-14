@@ -1,4 +1,5 @@
 import { BRAND } from '@/config/brand'
+import { formatKilometers, totalKilometersFor } from '@/services/kilometers.service'
 import type { CanonicalJourney } from '@/types/domain'
 
 function esc(s: string) {
@@ -13,6 +14,14 @@ function partyLine(j: CanonicalJourney) {
   const bits = [`${j.party.adults} adult${j.party.adults === 1 ? '' : 's'}`]
   if (j.party.children) bits.push(`${j.party.children} child${j.party.children === 1 ? '' : 'ren'}`)
   return bits.join(', ')
+}
+
+function kmLine(j: CanonicalJourney) {
+  return formatKilometers(j.totalKilometers || totalKilometersFor(j.days))
+}
+
+function metaLine(j: CanonicalJourney) {
+  return [j.durationLabel, kmLine(j), partyLine(j)].filter(Boolean).join(' · ')
 }
 
 function dates(j: CanonicalJourney) {
@@ -60,7 +69,7 @@ export function renderJourneyEmail(opts: {
       <p style="color:#6b6b66;line-height:1.75;">${esc(introduction).replace(/\n/g, '<br/>')}</p>
       <div style="background:#F1E9DA;border-left:3px solid #B18544;padding:12px 14px;margin:20px 0;">
         <p style="margin:0 0 8px;color:#1A2A1D;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(j.title)}</p>
-        <p style="margin:0;font-size:13px;color:#6b6b66;">${esc(dates(j))}<br/>${esc(j.durationLabel)} · ${esc(partyLine(j))}</p>
+        <p style="margin:0;font-size:13px;color:#6b6b66;">${esc(dates(j))}<br/>${esc(metaLine(j))}</p>
         ${j.price ? `<p style="margin:10px 0 0;color:#B18544;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(j.price)}</p>` : ''}
       </div>
       ${hotelBlock}
@@ -80,7 +89,7 @@ export function renderJourneyEmail(opts: {
     '',
     j.title,
     dates(j),
-    `${j.durationLabel} · ${partyLine(j)}`,
+    metaLine(j),
     ...(j.price ? [j.price] : []),
     '',
     'View your complete itinerary:',
@@ -108,6 +117,7 @@ export function renderWhatsAppMessage(opts: { journey: CanonicalJourney; shareUr
     j.title,
     dates(j),
     nights != null ? `${nights} night${nights === 1 ? '' : 's'}` : j.durationLabel,
+    ...(kmLine(j) ? [kmLine(j)] : []),
     ...(j.price ? [j.price] : []),
     '',
     'You can view your complete itinerary here:',

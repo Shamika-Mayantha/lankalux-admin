@@ -6,6 +6,7 @@ import { consoleFetch } from '@/lib/console-api'
 import { STYLE_META, STATUS_LABEL, REQUEST_STATUSES, normalizeStatus, type ItineraryStyle } from '@/config/status'
 import { BRAND } from '@/config/brand'
 import { allLibraryImages } from '@/services/image-map.service'
+import { formatKilometers, totalKilometersFor } from '@/services/kilometers.service'
 import { JourneyView } from '@/features/journey/JourneyView'
 import { PhotoPicker } from '@/features/console/PhotoPicker'
 import '@/features/journey/journey.css'
@@ -276,6 +277,7 @@ export function RequestWorkspace() {
       includedServices: BRAND.includedServices,
       importantInformation: BRAND.importantInformation,
       price: draft.price || null,
+      totalKilometers: totalKilometersFor(draft.days),
     }
   }, [row, draft, itineraries, editOption, vehicles])
 
@@ -403,7 +405,10 @@ export function RequestWorkspace() {
                     <>
                       <strong>{rec.title}</strong>
                       <p className="ll-muted">{rec.summary}</p>
-                      <p className="ll-muted">{rec.payload.days.length} days · {rec.payload.days.map((d) => d.location).filter(Boolean).join(' → ')}</p>
+                      <p className="ll-km">{formatKilometers(totalKilometersFor(rec.payload.days)) || '—'}</p>
+                      <p className="ll-muted">
+                        {rec.payload.days.length} days · {rec.payload.days.map((d) => d.location).filter(Boolean).join(' → ')}
+                      </p>
                     </>
                   ) : (
                     !loading && <p className="ll-muted">Not generated yet.</p>
@@ -596,6 +601,7 @@ function Editor({
 }) {
   const library = allLibraryImages()
   const [openDay, setOpenDay] = useState<number | null>(0)
+  const liveKilometers = totalKilometersFor(draft.days)
 
   function patchDay(i: number, patch: Partial<ItineraryDay>) {
     const days = draft.days.map((d, idx) => (idx === i ? { ...d, ...patch } : d))
@@ -665,6 +671,13 @@ function Editor({
             </select>
           </label>
         </div>
+        <label>
+          Total kilometers
+          <input readOnly value={formatKilometers(liveKilometers) || 'Add locations to calculate'} />
+        </label>
+        <p className="ll-muted" style={{ marginTop: '-0.4rem' }}>
+          Colombo start and finish, road distances on transfer days, 90 km on local days.
+        </p>
       </div>
 
       {draft.days.map((day, i) => {

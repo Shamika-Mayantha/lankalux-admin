@@ -30,6 +30,8 @@ export type StructuredItinerary = {
   internal_notes?: string
   /** Client-facing quote, e.g. "USD 2,850 per person" */
   price?: string | null
+  /** Road kilometres, Colombo to Colombo. Computed, not taken from the model. */
+  total_kilometers?: number
 }
 
 export type ItineraryRecord = {
@@ -95,6 +97,8 @@ export type CanonicalJourney = {
   style?: ItineraryStyle
   /** Shown on the client journey when the admin chooses to include the price. */
   price?: string | null
+  /** Total road kilometres for the published journey. */
+  totalKilometers?: number
 }
 
 export type ClientRequestRow = {

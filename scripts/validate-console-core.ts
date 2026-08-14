@@ -1,5 +1,6 @@
 import { parseItineraryJson } from '../validation/itinerary.schema'
 import { assignDayImages, matchDestination } from '../services/image-map.service'
+import { calculateTotalKilometers, LOCAL_DAY_KM } from '../services/kilometers.service'
 import { shouldExpireRequest } from '../config/status'
 
 function assert(cond: unknown, msg: string) {
@@ -45,5 +46,32 @@ assert(shouldExpireRequest({ start_date: '2026-08-11', status: 'new' }, '2026-08
 assert(shouldExpireRequest({ start_date: '2026-08-12', status: 'new' }, '2026-08-14') === false, 'do not expire at 2 days')
 assert(shouldExpireRequest({ start_date: '2026-08-10', status: 'sold' }, '2026-08-14') === false, 'sold trips do not expire')
 assert(shouldExpireRequest({ start_date: '2026-08-20', status: 'follow_up' }, '2026-08-14') === false, 'future dates stay open')
+
+const classic = calculateTotalKilometers([
+  { location: 'Sigiriya' },
+  { location: 'Kandy' },
+  { location: 'Nuwara Eliya' },
+  { location: 'Ella' },
+  { location: 'Yala' },
+  { location: 'Galle' },
+])
+assert(classic.total === 170 + 100 + 80 + 50 + 120 + 200 + 120, `classic route should be 840km, got ${classic.total}`)
+
+const withLocalDay = calculateTotalKilometers([
+  { location: 'Sigiriya' },
+  { location: 'Sigiriya' },
+  { location: 'Kandy' },
+])
+assert(
+  withLocalDay.total === 170 + LOCAL_DAY_KM + 100 + 115,
+  `local day should add 90km, got ${withLocalDay.total}`
+)
+
+const endsInColombo = calculateTotalKilometers([{ location: 'Galle' }, { location: 'Colombo' }])
+assert(endsInColombo.total === 120 + 120, `Colombo finish should not double-count return, got ${endsInColombo.total}`)
+assert(
+  !endsInColombo.legs.some((leg) => leg.kind === 'return'),
+  'no extra return leg when the last overnight is Colombo'
+)
 
 console.log('console core checks passed')

@@ -1,6 +1,7 @@
 import { BRAND } from '@/config/brand'
 import { PROMPT_VERSION, STYLE_META, styleFromNumber, type ItineraryStyle } from '@/config/status'
 import { assignDayImages } from '@/services/image-map.service'
+import { applyJourneyKilometers, totalKilometersFor } from '@/services/kilometers.service'
 import { logActivity } from '@/services/activity.service'
 import { getRequest, parseChildrenAges } from '@/services/request.service'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
@@ -69,11 +70,13 @@ export function toStructured(raw: unknown, startDate?: string | null): Structure
       hotel_id: null,
     }
   })
+  const km = applyJourneyKilometers(days)
   return {
     title: data.title.trim(),
     summary: data.summary.trim(),
-    duration: data.duration != null ? String(data.duration) : `${days.length} days`,
-    days,
+    duration: data.duration != null ? String(data.duration) : `${km.days.length} days`,
+    days: km.days,
+    total_kilometers: km.total,
   }
 }
 
@@ -84,7 +87,11 @@ function emptyPayload(style: ItineraryStyle): StructuredItinerary {
 
 function recordFromRow(row: Record<string, unknown>): ItineraryRecord {
   const option_number = Number(row.option_number) as 1 | 2 | 3
-  const payload = (row.payload && typeof row.payload === 'object' ? row.payload : emptyPayload(styleFromNumber(option_number))) as StructuredItinerary
+  const rawPayload = (row.payload && typeof row.payload === 'object' ? row.payload : emptyPayload(styleFromNumber(option_number))) as StructuredItinerary
+  const payload: StructuredItinerary =
+    rawPayload.days?.length
+      ? { ...rawPayload, total_kilometers: totalKilometersFor(rawPayload.days) }
+      : rawPayload
   return {
     id: String(row.id),
     request_id: String(row.request_id),
@@ -173,6 +180,7 @@ async function syncLegacyJson(requestId: string, records: ItineraryRecord[]) {
       title: rec.payload.title,
       summary: rec.payload.summary,
       duration: rec.payload.duration,
+      total_kilometers: rec.payload.total_kilometers ?? totalKilometersFor(rec.payload.days),
       days: rec.payload.days.map((d) => ({
         day: d.day,
         date: d.date,
@@ -437,8 +445,11 @@ export async function updateItineraryDraft(
   const current = all.find((r) => r.option_number === optionNumber)
   if (!current) throw new AppError('Itinerary not found', 404)
 
+  const km = applyJourneyKilometers(payload.days)
   const nextPayload: StructuredItinerary = {
     ...payload,
+    days: km.days,
+    total_kilometers: km.total,
     vehicle_id: extras?.vehicle_id !== undefined ? extras.vehicle_id : payload.vehicle_id,
     internal_notes: extras?.internal_notes ?? payload.internal_notes,
   }
@@ -573,6 +584,7 @@ export async function toCanonical(request: ClientRequestRow, itinerary: Itinerar
     optionNumber: itinerary.option_number,
     style: itinerary.style,
     price: itinerary.payload.price || null,
+    totalKilometers: totalKilometersFor(itinerary.payload.days),
   }
 }
 

@@ -505,6 +505,15 @@ html:has(.ll-root) body {
   color: var(--forest);
 }
 
+.ll-km {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--forest);
+  letter-spacing: -0.02em;
+}
+
 .ll-muted { color: var(--muted); font-size: 13px; }
 
 .ll-login-card {

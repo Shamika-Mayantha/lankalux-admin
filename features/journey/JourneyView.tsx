@@ -1,4 +1,5 @@
 import { BRAND } from '@/config/brand'
+import { formatKilometers, totalKilometersFor } from '@/services/kilometers.service'
 import type { CanonicalJourney } from '@/types/domain'
 import './journey.css'
 
@@ -21,6 +22,7 @@ function formatIso(iso: string | null) {
 export function JourneyView({ journey }: { journey: CanonicalJourney }) {
   const start = formatIso(journey.startDate)
   const end = formatIso(journey.endDate)
+  const kilometers = journey.totalKilometers || totalKilometersFor(journey.days)
 
   return (
     <article className="journey-root">
@@ -30,7 +32,12 @@ export function JourneyView({ journey }: { journey: CanonicalJourney }) {
         <h1 className="journey-client">{journey.clientName}</h1>
         <h2 className="journey-title">{journey.title}</h2>
         <p className="journey-meta">
-          {[start && end ? `${start} — ${end}` : start || end, journey.durationLabel, partyLabel(journey)]
+          {[
+            start && end ? `${start} — ${end}` : start || end,
+            journey.durationLabel,
+            formatKilometers(kilometers),
+            partyLabel(journey),
+          ]
             .filter(Boolean)
             .join(' · ')}
         </p>
