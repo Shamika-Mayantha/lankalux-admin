@@ -1,4 +1,4 @@
-import './journey.css'
+import '@/features/journey/journey.css'
 import { JourneyView } from '@/features/journey/JourneyView'
 import { getClientItinerary } from '@/services/itinerary.service'
 import type { Metadata } from 'next'

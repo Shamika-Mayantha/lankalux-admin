@@ -1,5 +1,6 @@
 import { BRAND } from '@/config/brand'
 import type { CanonicalJourney } from '@/types/domain'
+import './journey.css'
 
 function partyLabel(j: CanonicalJourney) {
   const parts = [`${j.party.adults} adult${j.party.adults === 1 ? '' : 's'}`]
