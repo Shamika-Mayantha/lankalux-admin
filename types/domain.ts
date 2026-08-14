@@ -28,6 +28,8 @@ export type StructuredItinerary = {
   days: ItineraryDay[]
   vehicle_id?: string | null
   internal_notes?: string
+  /** Client-facing quote, e.g. "USD 2,850 per person" */
+  price?: string | null
 }
 
 export type ItineraryRecord = {
@@ -91,6 +93,8 @@ export type CanonicalJourney = {
   shareToken?: string
   optionNumber?: number
   style?: ItineraryStyle
+  /** Shown on the client journey when the admin chooses to include the price. */
+  price?: string | null
 }
 
 export type ClientRequestRow = {

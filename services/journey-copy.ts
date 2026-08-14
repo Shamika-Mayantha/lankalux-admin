@@ -19,6 +19,15 @@ function dates(j: CanonicalJourney) {
   return [j.startDate, j.endDate].filter(Boolean).join(' – ') || 'Dates to be confirmed'
 }
 
+export function withQuotedPrice(
+  journey: CanonicalJourney,
+  includePrice?: boolean,
+  price?: string | null
+): CanonicalJourney {
+  const quoted = (price ?? journey.price ?? '').trim()
+  return { ...journey, price: includePrice && quoted ? quoted : null }
+}
+
 export function renderJourneyEmail(opts: {
   journey: CanonicalJourney
   introduction: string
@@ -52,6 +61,7 @@ export function renderJourneyEmail(opts: {
       <div style="background:#F1E9DA;border-left:3px solid #B18544;padding:12px 14px;margin:20px 0;">
         <p style="margin:0 0 8px;color:#1A2A1D;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(j.title)}</p>
         <p style="margin:0;font-size:13px;color:#6b6b66;">${esc(dates(j))}<br/>${esc(j.durationLabel)} · ${esc(partyLine(j))}</p>
+        ${j.price ? `<p style="margin:10px 0 0;color:#B18544;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(j.price)}</p>` : ''}
       </div>
       ${hotelBlock}
       <p style="text-align:center;margin:28px 0;">
@@ -71,6 +81,7 @@ export function renderJourneyEmail(opts: {
     j.title,
     dates(j),
     `${j.durationLabel} · ${partyLine(j)}`,
+    ...(j.price ? [j.price] : []),
     '',
     'View your complete itinerary:',
     shareUrl,
@@ -97,6 +108,7 @@ export function renderWhatsAppMessage(opts: { journey: CanonicalJourney; shareUr
     j.title,
     dates(j),
     nights != null ? `${nights} night${nights === 1 ? '' : 's'}` : j.durationLabel,
+    ...(j.price ? [j.price] : []),
     '',
     'You can view your complete itinerary here:',
     '',

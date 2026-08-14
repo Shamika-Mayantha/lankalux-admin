@@ -12,11 +12,22 @@ export function makeShareToken() {
 export async function createShareLink(opts: {
   requestId: string
   actor?: string
-  sendOptions?: Record<string, unknown>
+  sendOptions?: {
+    channel?: string
+    includeHotels?: boolean
+    includePrice?: boolean
+    price?: string | null
+  }
 }): Promise<{ token: string; url: string; journey: CanonicalJourney }> {
   const journey = await getPublishedItinerary(opts.requestId)
   const token = makeShareToken()
-  const snapshot: CanonicalJourney = { ...journey, shareToken: token }
+  const snapshot: CanonicalJourney = {
+    ...journey,
+    shareToken: token,
+    price: opts.sendOptions?.includePrice
+      ? String(opts.sendOptions.price || journey.price || '').trim() || null
+      : null,
+  }
   const supabase = getServiceClient()
 
   const { error } = await supabase.from('share_links').insert({
