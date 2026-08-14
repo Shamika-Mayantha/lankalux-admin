@@ -342,6 +342,28 @@ export function RequestWorkspace() {
               </button>
             )}
           </div>
+          <div className="ll-fields-2">
+            <label>
+              Arrival
+              <input
+                type="date"
+                value={row.start_date || ''}
+                onChange={(e) => saveField({ start_date: e.target.value || null })}
+              />
+            </label>
+            <label>
+              Departure
+              <input
+                type="date"
+                value={row.end_date || ''}
+                onChange={(e) => saveField({ end_date: e.target.value || null })}
+              />
+            </label>
+          </div>
+          <label>
+            Duration
+            <input readOnly value={row.duration ? `${row.duration} days` : 'Set arrival and departure'} />
+          </label>
           <label>Email<input defaultValue={row.email || ''} onBlur={(e) => saveField({ email: e.target.value })} /></label>
           <label>WhatsApp<input defaultValue={row.whatsapp || ''} onBlur={(e) => saveField({ whatsapp: e.target.value })} /></label>
           <label>Country<input defaultValue={row.origin_country || ''} onBlur={(e) => saveField({ origin_country: e.target.value })} /></label>
