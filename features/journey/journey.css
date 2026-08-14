@@ -1,0 +1,233 @@
+/* Client journey preview — tokens from lankalux.com / lankalux-design.css */
+html[data-ll-brand],
+html:has(.journey-fonts),
+html:has(.journey-root) {
+  zoom: 1;
+  background: #f9f4eb;
+}
+
+html[data-ll-brand] body,
+html:has(.journey-fonts) body,
+html:has(.journey-root) body {
+  background: #f9f4eb !important;
+  color: #252523;
+}
+
+.journey-fonts,
+.journey-root {
+  --ivory: #f9f4eb;
+  --forest: #1a2a1d;
+  --gold: #b18544;
+  --charcoal: #252523;
+  --ivory-deep: #f1e9da;
+  --line: rgba(26, 42, 29, 0.12);
+  --muted: #6b6b66;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --font-display: var(--ll-font-display), "Be Vietnam Pro", sans-serif;
+  --font-body: var(--ll-font-body), "Open Sans", sans-serif;
+}
+
+.journey-root {
+  background: var(--ivory);
+  color: var(--charcoal);
+  min-height: 100vh;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.journey-hero,
+.journey-days,
+.journey-footer {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.journey-hero {
+  text-align: center;
+  padding-top: 48px;
+  padding-bottom: 40px;
+}
+
+.journey-logo {
+  height: 56px;
+  width: auto;
+  max-width: min(280px, 80vw);
+  object-fit: contain;
+  margin: 0 auto;
+  display: block;
+}
+
+.journey-brand {
+  margin: 18px 0 0;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gold);
+  font-family: var(--font-display);
+}
+
+.journey-kicker {
+  margin: 28px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.journey-client {
+  margin: 8px 0 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(32px, 5vw, 48px);
+  letter-spacing: -0.03em;
+  color: var(--forest);
+  line-height: 1.15;
+}
+
+.journey-title {
+  margin: 12px 0 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--gold);
+}
+
+.journey-meta,
+.journey-summary {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.journey-summary {
+  margin-top: 20px;
+  font-size: 17px;
+  color: var(--charcoal);
+  line-height: 1.85;
+}
+
+.journey-day {
+  padding: 36px 0;
+  border-top: 1px solid var(--line);
+}
+
+.journey-day-num {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gold);
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.journey-day-title {
+  margin: 8px 0 4px;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--forest);
+  letter-spacing: -0.02em;
+}
+
+.journey-day-loc {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.journey-photo-wrap {
+  margin: 0 -24px 20px;
+}
+
+.journey-photo {
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  display: block;
+}
+
+.journey-desc {
+  line-height: 1.8;
+  font-size: 16.5px;
+  color: var(--charcoal);
+}
+
+.journey-acts {
+  padding-left: 18px;
+  line-height: 1.7;
+  color: var(--charcoal);
+}
+
+.journey-travel {
+  margin-top: 16px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.journey-footer {
+  padding: 48px 24px 80px;
+  border-top: 1px solid var(--line);
+}
+
+.journey-footer h3 {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.journey-footer section {
+  margin-bottom: 28px;
+}
+
+.journey-v-name {
+  font-family: var(--font-display);
+  font-size: 20px;
+  margin: 0 0 6px;
+  color: var(--forest);
+}
+
+.journey-v-photos {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.journey-v-photos img {
+  width: 32%;
+  height: 90px;
+  object-fit: cover;
+}
+
+.journey-hotel {
+  background: var(--ivory-deep);
+  border: 1px solid var(--line);
+  padding: 16px 18px;
+  margin-bottom: 10px;
+}
+
+.journey-contact {
+  text-align: center;
+  margin-top: 48px;
+}
+
+.journey-contact a {
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.28s var(--ease);
+}
+
+.journey-contact a:hover {
+  border-bottom-color: var(--gold);
+}
+
+@media (min-width: 800px) {
+  .journey-photo-wrap {
+    margin: 0 0 20px;
+  }
+}
