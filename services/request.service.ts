@@ -1,4 +1,4 @@
-import { ID_PREFIX } from '@/config/status'
+import { ID_PREFIX, shouldExpireRequest, isStartDateExpired, normalizeStatus } from '@/config/status'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
 import { logActivity } from '@/services/activity.service'
 import type { ClientRequestRow, RequestInput } from '@/types/domain'
@@ -72,14 +72,41 @@ export async function listRequests(): Promise<ClientRequestRow[]> {
   const supabase = getServiceClient()
   const { data, error } = await supabase.from('Client Requests').select('*').order('created_at', { ascending: false })
   if (error) throw new AppError(`Supabase request failed: ${error.message}`, 500)
-  return (data || []) as ClientRequestRow[]
+  return applyExpiry((data || []) as ClientRequestRow[])
 }
 
 export async function getRequest(id: string): Promise<ClientRequestRow> {
   const supabase = getServiceClient()
   const { data, error } = await supabase.from('Client Requests').select('*').eq('id', id).single()
   if (error || !data) throw new AppError('Request not found', 404)
-  return data as ClientRequestRow
+  const [row] = await applyExpiry([data as ClientRequestRow])
+  return row
+}
+
+async function applyExpiry(rows: ClientRequestRow[]): Promise<ClientRequestRow[]> {
+  const stale = rows.filter((r) => shouldExpireRequest(r))
+  if (!stale.length) return rows
+  const supabase = getServiceClient()
+  const now = new Date().toISOString()
+  await Promise.all(
+    stale.map(async (r) => {
+      const { error } = await supabase
+        .from('Client Requests')
+        .update({ status: 'expired', updated_at: now })
+        .eq('id', r.id)
+      if (error) {
+        console.error('expire request', r.id, error.message)
+        return
+      }
+      await logActivity({
+        request_id: r.id,
+        event_type: 'request_expired',
+        detail: { start_date: r.start_date, after_days: 3 },
+      })
+    })
+  )
+  const expiredIds = new Set(stale.map((r) => r.id))
+  return rows.map((r) => (expiredIds.has(r.id) ? { ...r, status: 'expired' } : r))
 }
 
 export async function createRequest(input: RequestInput, actor?: string): Promise<ClientRequestRow> {
@@ -158,6 +185,14 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
     )
   }
 
+  const startForExpiry = (typeof next.start_date === 'string' ? next.start_date : current.start_date) as string | null
+  const statusForExpiry = String(next.status || current.status || '')
+  if (shouldExpireRequest({ start_date: startForExpiry, status: statusForExpiry })) {
+    next.status = 'expired'
+  } else if (normalizeStatus(current.status) === 'expired' && !isStartDateExpired(startForExpiry) && !patch.status) {
+    next.status = 'follow_up'
+  }
+
   const { data, error } = await supabase.from('Client Requests').update(next).eq('id', id).select('*').single()
   if (error || !data) throw new AppError(error?.message || 'Failed to update request', 500)
 
@@ -199,5 +234,9 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
 }
 
 export async function restoreRequest(id: string, actor?: string): Promise<ClientRequestRow> {
+  const current = await getRequest(id)
+  if (isStartDateExpired(current.start_date)) {
+    throw new AppError('Set a new arrival date before restoring this request.', 400)
+  }
   return updateRequest(id, { status: 'follow_up', cancellation_reason: null }, actor)
 }

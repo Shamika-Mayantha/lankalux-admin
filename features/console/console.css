@@ -470,6 +470,7 @@ html:has(.ll-root) body {
 .ll-pill.sold { background: var(--forest); color: var(--ivory); }
 .ll-pill.after_sales { background: var(--ivory-deep); color: var(--forest); border: 1px solid var(--line-strong); }
 .ll-pill.cancelled { background: var(--error-bg); color: var(--error-text); }
+.ll-pill.expired { background: var(--ivory); color: var(--muted); border: 1px solid var(--line-strong); }
 
 .ll-option-grid {
   display: grid;
