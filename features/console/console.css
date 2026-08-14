@@ -1,4 +1,17 @@
 /* Design tokens from lankalux.com / lankalux-design.css */
+html[data-ll-brand],
+html:has(.ll-root) {
+  zoom: 1;
+  background: #F9F4EB;
+}
+
+html[data-ll-brand] body,
+html:has(.ll-root) body {
+  background: #F9F4EB !important;
+  color: #252523;
+  font-family: var(--ll-font-body), "Open Sans", sans-serif;
+}
+
 .ll-root {
   --ivory: #F9F4EB;
   --forest: #1A2A1D;

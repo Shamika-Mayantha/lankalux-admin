@@ -1,4 +1,18 @@
 /* Client journey preview — tokens from lankalux.com / lankalux-design.css */
+html[data-ll-brand],
+html:has(.journey-fonts),
+html:has(.journey-root) {
+  zoom: 1;
+  background: #f9f4eb;
+}
+
+html[data-ll-brand] body,
+html:has(.journey-fonts) body,
+html:has(.journey-root) body {
+  background: #f9f4eb !important;
+  color: #252523;
+}
+
 .journey-fonts,
 .journey-root {
   --ivory: #f9f4eb;

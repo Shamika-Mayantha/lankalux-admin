@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Be_Vietnam_Pro, Open_Sans } from 'next/font/google'
+import { BrandDocument } from '@/features/console/BrandDocument'
 import '@/features/console/console.css'
 
 const display = Be_Vietnam_Pro({
@@ -29,5 +30,10 @@ export const metadata: Metadata = {
 }
 
 export default function ConsoleGroupLayout({ children }: { children: React.ReactNode }) {
-  return <div className={`ll-root ${display.variable} ${body.variable}`}>{children}</div>
+  return (
+    <div className={`ll-root ${display.variable} ${body.variable}`}>
+      <BrandDocument />
+      {children}
+    </div>
+  )
 }

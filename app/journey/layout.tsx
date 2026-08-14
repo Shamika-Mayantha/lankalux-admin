@@ -1,5 +1,6 @@
 import { Be_Vietnam_Pro, Open_Sans } from 'next/font/google'
 import type { Metadata } from 'next'
+import { BrandDocument } from '@/features/console/BrandDocument'
 
 const display = Be_Vietnam_Pro({
   subsets: ['latin'],
@@ -27,5 +28,10 @@ export const metadata: Metadata = {
 }
 
 export default function JourneyLayout({ children }: { children: React.ReactNode }) {
-  return <div className={`journey-fonts ${display.variable} ${body.variable}`}>{children}</div>
+  return (
+    <div className={`journey-fonts ${display.variable} ${body.variable}`}>
+      <BrandDocument />
+      {children}
+    </div>
+  )
 }
