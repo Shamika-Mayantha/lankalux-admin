@@ -338,7 +338,7 @@ export async function POST(request: Request) {
               background: #F9F4EB;
               padding: 28px 20px 24px;
               text-align: center;
-              border-bottom: 1px solid #b18544;
+              border-bottom: 1px solid rgba(26, 42, 29, 0.12);
             }
             .logo {
               width: 220px;
