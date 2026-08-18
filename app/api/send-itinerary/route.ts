@@ -324,7 +324,7 @@ export async function POST(request: Request) {
               font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
               line-height: 1.75;
               color: #252523;
-              background: #f9f4eb;
+              background: #ffffff;
               margin: 0;
               padding: 18px 10px;
             }
@@ -335,7 +335,7 @@ export async function POST(request: Request) {
               border: 1px solid rgba(26, 42, 29, 0.12);
             }
             .header {
-              background: #ffffff;
+              background: #F9F4EB;
               padding: 28px 20px 24px;
               text-align: center;
               border-bottom: 1px solid #b18544;

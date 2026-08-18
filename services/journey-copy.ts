@@ -75,9 +75,9 @@ export function renderJourneyEmail(opts: {
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
-<body style="margin:0;background:#F9F4EB;font-family:'Open Sans',Segoe UI,Arial,sans-serif;color:#252523;">
+<body style="margin:0;background:#FFFFFF;font-family:'Open Sans',Segoe UI,Arial,sans-serif;color:#252523;">
   <div style="max-width:620px;margin:24px auto;background:#fff;border:1px solid rgba(26,42,29,0.12);">
-    <div style="background:#FFFFFF;padding:28px 20px;text-align:center;">
+    <div style="background:#F9F4EB;padding:28px 20px;text-align:center;">
       <img src="${esc(logoUrl)}" alt="LankaLux" width="220" style="display:block;width:220px;height:auto;margin:0 auto;"/>
     </div>
     <div style="height:1px;background:#B18544;"></div>
