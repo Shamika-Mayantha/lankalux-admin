@@ -433,18 +433,6 @@ export default function RequestDetailsPage() {
       requestData.link_opens = []
     }
 
-    // Auto-update status to follow_up if email_sent_count > 0 (do not overwrite explicit 'cancelled')
-    const statusLower = (requestData.status || '').toLowerCase()
-    if (requestData.email_sent_count && requestData.email_sent_count > 0 && requestData.status !== 'follow_up' && statusLower !== 'cancelled') {
-      // Update status in database
-      await (supabase.from('Client Requests') as any)
-        .update({ status: 'follow_up', updated_at: new Date().toISOString() })
-        .eq('id', id)
-      
-      // Update local data
-      requestData.status = 'follow_up'
-    }
-
     // Update local state values
     if (requestData) {
       setClientNameValue(requestData.client_name || '')
@@ -2077,8 +2065,8 @@ LankaLux Team`
                   <textarea
                     value={additionalPreferencesValue}
                     onChange={(e) => setAdditionalPreferencesValue(e.target.value)}
-                    rows={12}
-                    className={`${field} resize-y min-h-[320px]`}
+                    rows={18}
+                    className={`${field} resize-y min-h-[460px] h-[52vh] max-h-[72vh]`}
                     placeholder="e.g., honeymoon, wildlife safari, luxury focus, train journeys, ayurveda retreat, family friendly, adventure"
                   />
                   <p className="text-xs text-secondary text-left">
@@ -2107,7 +2095,7 @@ LankaLux Team`
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl border border-accent bg-inner-theme p-6 md:p-8 min-h-[220px]">
+                <div className="rounded-xl border border-accent bg-inner-theme p-6 md:p-8 min-h-[340px]">
                   {request.additional_preferences ? (
                     <p className="text-secondary whitespace-pre-wrap leading-relaxed">
                       {request.additional_preferences}
