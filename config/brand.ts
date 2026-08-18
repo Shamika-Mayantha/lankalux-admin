@@ -40,15 +40,17 @@ export const BRAND = {
   fontBody: '"Open Sans", sans-serif',
 
   includedServices: [
-    'Private chauffeur-driven vehicle throughout the journey',
+    'Private chauffeur-guide vehicle throughout the journey',
     'Airport meet and greet on arrival',
-    'Handcrafted daily itinerary with paced travel',
-    '24/7 LankaLux journey support',
+    'A thoughtfully planned, personalised day-by-day itinerary',
+    '24/7 LankaLux journey support throughout your trip',
   ],
   importantInformation: [
-    'This itinerary is a personalised proposal and can be adjusted at any time.',
-    'Wildlife sightings, weather and road conditions may lead to gentle changes of plan.',
-    'Hotel names, where shown, are suggestions pending availability.',
+    "This itinerary is a personalised proposal and can be adjusted to suit the client's preferences at any time.",
+    'Train tickets, safari jeep excursions, attraction entrance fees and other optional activities are not included unless specifically stated otherwise.',
+    'These experiences may be arranged by LankaLux where possible, but the applicable fees are paid separately or directly on site.',
+    'Certain activities, excursions and entrance fees may be subject to local pricing, availability and operating conditions.',
+    'Wildlife sightings cannot be guaranteed, and weather, road or local conditions may occasionally require small adjustments to the planned journey.',
   ],
 }
 

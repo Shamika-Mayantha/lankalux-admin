@@ -181,7 +181,7 @@ export function JourneyView({
 
         <section>
           <h3>Included</h3>
-          <ul>
+          <ul className="journey-foot-list">
             {journey.includedServices.map((s) => (
               <li key={s}>{s}</li>
             ))}
@@ -189,7 +189,7 @@ export function JourneyView({
         </section>
         <section>
           <h3>Good to know</h3>
-          <ul>
+          <ul className="journey-foot-list">
             {journey.importantInformation.map((s) => (
               <li key={s}>{s}</li>
             ))}

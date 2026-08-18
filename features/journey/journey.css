@@ -213,6 +213,21 @@ html:has(.journey-root) body {
   margin-bottom: 28px;
 }
 
+.journey-foot-list {
+  margin: 10px 0 0;
+  padding-left: 22px;
+  list-style: disc;
+}
+
+.journey-foot-list li {
+  margin: 0 0 10px;
+  line-height: 1.8;
+}
+
+.journey-foot-list li::marker {
+  color: var(--gold);
+}
+
 .journey-v-name {
   font-family: var(--font-display);
   font-size: 20px;
