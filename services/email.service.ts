@@ -4,7 +4,7 @@ import { BRAND } from '@/config/brand'
 import { logActivity } from '@/services/activity.service'
 import { getPublishedItinerary } from '@/services/itinerary.service'
 import { createShareLink } from '@/services/share.service'
-import { renderJourneyEmail, withQuotedPrice } from '@/services/journey-copy'
+import { renderJourneyEmail, withQuotedPrice, withVehicleIncluded } from '@/services/journey-copy'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
 import { getRequest } from '@/services/request.service'
 
@@ -12,10 +12,14 @@ export async function previewJourneyEmail(opts: {
   requestId: string
   introduction?: string
   includeHotels?: boolean
+  includeVehicle?: boolean
   includePrice?: boolean
   price?: string | null
 }) {
-  const journey = withQuotedPrice(await getPublishedItinerary(opts.requestId), opts.includePrice, opts.price)
+  const journey = withVehicleIncluded(
+    withQuotedPrice(await getPublishedItinerary(opts.requestId), opts.includePrice, opts.price),
+    opts.includeVehicle
+  )
   const introduction =
     opts.introduction?.trim() ||
     'We are delighted to share your personalised Sri Lanka journey. Every day has been paced with care so you can travel beautifully, not hurriedly.'
@@ -24,6 +28,7 @@ export async function previewJourneyEmail(opts: {
     introduction,
     shareUrl: `${appUrl()}/journey`,
     includeHotels: opts.includeHotels,
+    includeVehicle: opts.includeVehicle,
     logoUrl: `${appUrl()}${BRAND.logoSrc}`,
   })
   return { ...compiled, journey }
@@ -34,6 +39,7 @@ export async function sendJourneyEmail(opts: {
   actor?: string
   introduction?: string
   includeHotels?: boolean
+  includeVehicle?: boolean
   includeItinerary?: boolean
   includePrice?: boolean
   price?: string | null
@@ -57,6 +63,7 @@ export async function sendJourneyEmail(opts: {
       sendOptions: {
         channel: 'email',
         includeHotels: !!opts.includeHotels,
+        includeVehicle: opts.includeVehicle !== false,
         includePrice: !!opts.includePrice,
         price: opts.price || null,
       },
@@ -75,10 +82,11 @@ export async function sendJourneyEmail(opts: {
   const logoUrl = `${appUrl()}${BRAND.logoSrc}`
   const compiled = journey
     ? renderJourneyEmail({
-        journey: withQuotedPrice(journey, opts.includePrice, opts.price),
+        journey: withVehicleIncluded(withQuotedPrice(journey, opts.includePrice, opts.price), opts.includeVehicle),
         introduction,
         shareUrl: shareUrl || appUrl(),
         includeHotels: opts.includeHotels,
+        includeVehicle: opts.includeVehicle,
         logoUrl,
       })
     : {

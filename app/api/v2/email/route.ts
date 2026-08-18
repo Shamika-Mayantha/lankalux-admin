@@ -10,6 +10,7 @@ export async function POST(request: Request) {
       requestId?: string
       introduction?: string
       includeHotels?: boolean
+      includeVehicle?: boolean
       includeItinerary?: boolean
       includePrice?: boolean
       price?: string | null
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
       actor: user.email,
       introduction: body.introduction,
       includeHotels: body.includeHotels,
+      includeVehicle: body.includeVehicle,
       includeItinerary: body.includeItinerary,
       includePrice: body.includePrice,
       price: body.price,

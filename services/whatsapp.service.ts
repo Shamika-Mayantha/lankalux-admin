@@ -1,6 +1,6 @@
 import { logActivity } from '@/services/activity.service'
 import { createShareLink } from '@/services/share.service'
-import { renderWhatsAppMessage, withQuotedPrice } from '@/services/journey-copy'
+import { renderWhatsAppMessage, withQuotedPrice, withVehicleIncluded } from '@/services/journey-copy'
 import { getRequest } from '@/services/request.service'
 import { AppError } from '@/services/supabase.server'
 import { recordCommunication } from '@/services/email.service'
@@ -12,6 +12,7 @@ function digits(phone: string) {
 export async function prepareWhatsApp(opts: {
   requestId: string
   actor?: string
+  includeVehicle?: boolean
   includePrice?: boolean
   price?: string | null
 }) {
@@ -24,11 +25,12 @@ export async function prepareWhatsApp(opts: {
     actor: opts.actor,
     sendOptions: {
       channel: 'whatsapp',
+      includeVehicle: opts.includeVehicle !== false,
       includePrice: !!opts.includePrice,
       price: opts.price || null,
     },
   })
-  const journey = withQuotedPrice(share.journey, opts.includePrice, opts.price)
+  const journey = withVehicleIncluded(withQuotedPrice(share.journey, opts.includePrice, opts.price), opts.includeVehicle)
   const message = renderWhatsAppMessage({ journey, shareUrl: share.url })
   const href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
 

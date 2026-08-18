@@ -4,11 +4,12 @@ import { prepareWhatsApp } from '@/services/whatsapp.service'
 export async function POST(request: Request) {
   try {
     const user = await requireAdmin(request)
-    const body = await readJson<{ requestId?: string; includePrice?: boolean; price?: string | null }>(request)
+    const body = await readJson<{ requestId?: string; includeVehicle?: boolean; includePrice?: boolean; price?: string | null }>(request)
     if (!body.requestId) return jsonErr(new Error('Request ID is required'))
     const result = await prepareWhatsApp({
       requestId: body.requestId,
       actor: user.email,
+      includeVehicle: body.includeVehicle,
       includePrice: body.includePrice,
       price: body.price,
     })

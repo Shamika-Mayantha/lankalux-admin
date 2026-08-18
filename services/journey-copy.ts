@@ -32,15 +32,24 @@ export function withQuotedPrice(
   return { ...journey, price: includePrice && quoted ? quoted : null }
 }
 
+export function withVehicleIncluded(journey: CanonicalJourney, includeVehicle?: boolean): CanonicalJourney {
+  return { ...journey, vehicle: includeVehicle === false ? null : journey.vehicle }
+}
+
 export function renderJourneyEmail(opts: {
   journey: CanonicalJourney
   introduction: string
   shareUrl: string
   includeHotels?: boolean
+  includeVehicle?: boolean
   logoUrl: string
 }): { subject: string; html: string; text: string } {
-  const { journey: j, introduction, shareUrl, includeHotels, logoUrl } = opts
+  const { journey: j, introduction, shareUrl, includeHotels, includeVehicle, logoUrl } = opts
   const subject = `LankaLux Journey — ${j.title}`
+  const vehicleBlock =
+    includeVehicle !== false && j.vehicle
+      ? `<h3 style="color:#B18544;font-family:'Be Vietnam Pro',Arial,sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;">Your vehicle</h3><p style="margin:0 0 12px;"><strong style="color:#1A2A1D;">${esc(j.vehicle.name)}</strong>${j.vehicle.description ? `<br/>${esc(j.vehicle.description)}` : ''}</p>`
+      : ''
   const hotelBlock =
     includeHotels && j.hotels.length
       ? `<h3 style="color:#B18544;font-family:'Be Vietnam Pro',Arial,sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;">Suggested stays</h3>${j.hotels
@@ -67,6 +76,7 @@ export function renderJourneyEmail(opts: {
         <p style="margin:0;font-size:13px;color:#6b6b66;">${esc(dates(j))}<br/>${esc(metaLine(j))}</p>
         ${j.price ? `<p style="margin:10px 0 0;color:#B18544;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(j.price)}</p>` : ''}
       </div>
+      ${vehicleBlock}
       ${hotelBlock}
       <p style="text-align:center;margin:28px 0;">
         <a href="${esc(shareUrl)}" style="background:#1A2A1D;color:#F9F4EB;text-decoration:none;padding:14px 28px;border-radius:0;font-weight:500;letter-spacing:.02em;font-size:14px;font-family:'Open Sans',Arial,sans-serif;display:inline-block;">View your complete journey</a>
@@ -86,6 +96,7 @@ export function renderJourneyEmail(opts: {
     dates(j),
     metaLine(j),
     ...(j.price ? [j.price] : []),
+    ...(includeVehicle !== false && j.vehicle ? ['', 'Vehicle', `${j.vehicle.name}${j.vehicle.description ? ` — ${j.vehicle.description}` : ''}`] : []),
     '',
     'View your complete itinerary:',
     shareUrl,
