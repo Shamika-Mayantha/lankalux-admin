@@ -7,6 +7,16 @@ function makeShareToken() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+function formatDateLabel(value: string | null | undefined) {
+  if (!value) return 'Not specified'
+  const parsed = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) return String(value)
+  const day = String(parsed.getDate()).padStart(2, '0')
+  const month = parsed.toLocaleDateString('en-US', { month: 'short' })
+  const year = parsed.getFullYear()
+  return `${day}-${month}-${year}`
+}
+
 export async function POST(request: Request) {
   try {
     // Parse request body
@@ -273,21 +283,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // Format dates
-    const startDateFormatted = requestData.start_date
-      ? new Date(requestData.start_date).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        })
-      : 'Not specified'
-    const endDateFormatted = requestData.end_date
-      ? new Date(requestData.end_date).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        })
-      : 'Not specified'
+    // Format dates as dd-MMM-yyyy
+    const startDateFormatted = formatDateLabel(requestData.start_date)
+    const endDateFormatted = formatDateLabel(requestData.end_date)
 
     const journeyTitle = include_itinerary && selectedOption?.title ? String(selectedOption.title) : null
     const premiumSubjects = [
@@ -299,7 +297,7 @@ export async function POST(request: Request) {
     ]
     const subjectSeed = (requestData.id || requestId || '').split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0)
     const emailSubject = journeyTitle ? `LankaLux Journey - ${journeyTitle}` : premiumSubjects[subjectSeed % premiumSubjects.length]
-    const preheader = 'Your personalized Sri Lanka journey is ready.'
+    const preheader = 'Your personalised LankaLux Journey is ready.'
     const logoUrl = `${baseUrl}/favicon.png`
     const ctaText = 'View your complete journey'
     const emailHtml = `
@@ -436,7 +434,7 @@ export async function POST(request: Request) {
             </div>
             <div class="content">
               <p class="greeting">Dear ${requestData.client_name || 'Valued Client'},</p>
-              <p class="intro-text">We are delighted to share your personalized Sri Lanka journey with you. The email keeps things simple, and full details are available securely on the journey link.</p>
+              <p class="intro-text">We are delighted to share your personalised LankaLux Journey with you. The email keeps things simple, and full details are available securely on the journey link.</p>
               <div class="meta">
                 <div class="meta-row">
                   <span class="meta-k">Travel dates</span>

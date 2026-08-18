@@ -236,7 +236,7 @@ export function RequestWorkspace() {
 
   async function openEmail() {
     setEmailIntro(
-      `We are delighted to share your personalised Sri Lanka journey. Every day has been paced with care so you can travel beautifully, not hurriedly.`
+      `We are delighted to share your personalised LankaLux Journey. Every day has been paced with care so you can travel beautifully, not hurriedly.`
     )
     const savedPrice = selected?.payload?.price || row?.budget || ''
     setSendPrice(savedPrice)

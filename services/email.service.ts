@@ -24,13 +24,12 @@ export async function previewJourneyEmail(opts: {
   )
   const introduction =
     opts.introduction?.trim() ||
-    'We are delighted to share your personalised Sri Lanka journey. Every day has been paced with care so you can travel beautifully, not hurriedly.'
+    'We are delighted to share your personalised LankaLux Journey. Every day has been paced with care so you can travel beautifully, not hurriedly.'
   const compiled = renderJourneyEmail({
     journey,
     introduction,
     shareUrl: `${appUrl()}/journey`,
     includeHotels: opts.includeHotels,
-    includeVehicle: opts.includeVehicle,
     logoUrl: `${appUrl()}${BRAND.logoSrc}`,
   })
   return { ...compiled, journey }
@@ -81,7 +80,7 @@ export async function sendJourneyEmail(opts: {
 
   const introduction =
     opts.introduction?.trim() ||
-    'We are delighted to share your personalised Sri Lanka journey. Every day has been paced with care so you can travel beautifully, not hurriedly.'
+    'We are delighted to share your personalised LankaLux Journey. Every day has been paced with care so you can travel beautifully, not hurriedly.'
 
   const logoUrl = `${appUrl()}${BRAND.logoSrc}`
   const compiled = journey
@@ -90,7 +89,6 @@ export async function sendJourneyEmail(opts: {
         introduction,
         shareUrl: shareUrl || appUrl(),
         includeHotels: opts.includeHotels,
-        includeVehicle: opts.includeVehicle,
         logoUrl,
       })
     : {
