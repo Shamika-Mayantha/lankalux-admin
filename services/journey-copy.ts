@@ -80,7 +80,7 @@ export function renderJourneyEmail(opts: {
     <div style="background:#F9F4EB;padding:28px 20px;text-align:center;">
       <img src="${esc(logoUrl)}" alt="LankaLux" width="220" style="display:block;width:220px;height:auto;margin:0 auto;"/>
     </div>
-    <div style="height:1px;background:rgba(26,42,29,0.12);"></div>
+    <div style="height:1px;background:#B18544;"></div>
     <div style="padding:28px;">
       <p>Dear ${esc(j.clientName.split(' ')[0] || 'Guest')},</p>
       <p style="color:#6b6b66;line-height:1.75;">${esc(introduction).replace(/\n/g, '<br/>')}</p>
