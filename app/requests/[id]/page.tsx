@@ -107,6 +107,8 @@ export default function RequestDetailsPage() {
   const [numberOfChildrenValue, setNumberOfChildrenValue] = useState('')
   const [childrenAgesValue, setChildrenAgesValue] = useState<string[]>([])
   const [additionalPreferencesValue, setAdditionalPreferencesValue] = useState('')
+  const [editingAdditionalPreferences, setEditingAdditionalPreferences] = useState(false)
+  const [savingAdditionalPreferences, setSavingAdditionalPreferences] = useState(false)
   const [saving, setSaving] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [reopening, setReopening] = useState(false)
@@ -514,7 +516,6 @@ export default function RequestDetailsPage() {
           number_of_adults: numberOfAdultsValue ? parseInt(numberOfAdultsValue) : null,
           number_of_children: numberOfChildrenValue ? parseInt(numberOfChildrenValue) : null,
           children_ages: childrenAgesValue.length > 0 ? JSON.stringify(childrenAgesValue.map(age => parseInt(age)).filter(age => !isNaN(age))) : null,
-          additional_preferences: additionalPreferencesValue.trim() || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', request.id)
@@ -539,8 +540,47 @@ export default function RequestDetailsPage() {
     }
   }
 
+  const handleSaveAdditionalPreferences = async () => {
+    if (!request) return
+
+    try {
+      setSavingAdditionalPreferences(true)
+      const normalizedPreferences = additionalPreferencesValue.trim() || null
+
+      const { error } = await (supabase.from('Client Requests') as any)
+        .update({
+          additional_preferences: normalizedPreferences,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', request.id)
+
+      if (error) {
+        console.error('Error updating additional preferences:', error)
+        alert('Failed to save interests. Please try again.')
+        setSavingAdditionalPreferences(false)
+        return
+      }
+
+      setRequest((prev) => {
+        if (!prev) return prev
+        return { ...prev, additional_preferences: normalizedPreferences }
+      })
+      setAdditionalPreferencesValue(normalizedPreferences || '')
+      setEditingAdditionalPreferences(false)
+      setSavingAdditionalPreferences(false)
+    } catch (err) {
+      console.error('Unexpected error saving additional preferences:', err)
+      alert('An unexpected error occurred. Please try again.')
+      setSavingAdditionalPreferences(false)
+    }
+  }
+
   const handleGenerateSingleOption = async (optionIndex: number) => {
     if (!request) return
+    if (editingAdditionalPreferences) {
+      alert('Please save or cancel interests before generating itineraries.')
+      return
+    }
 
     try {
       setGeneratingOption(optionIndex)
@@ -1724,7 +1764,6 @@ LankaLux Team`
                         } else {
                           setChildrenAgesValue([])
                         }
-                        setAdditionalPreferencesValue(request.additional_preferences || '')
                         setEditingClientInfo(false)
                       }}
                       disabled={saving}
@@ -2018,20 +2057,64 @@ LankaLux Team`
 
         {/* Additional preferences */}
         <div className={card}>
-              <h2 className="text-left text-2xl font-semibold text-accent-theme mb-8">Additional preferences</h2>
-              {editingClientInfo ? (
-                <textarea
-                  value={additionalPreferencesValue}
-                  onChange={(e) => setAdditionalPreferencesValue(e.target.value)}
-                  rows={6}
-                  className={`${field} resize-y min-h-[160px]`}
-                  placeholder="e.g., honeymoon, wildlife safari, luxury focus, train journeys, ayurveda retreat, family friendly, adventure"
-                />
-              ) : (
-                <div className="rounded-xl border border-accent bg-inner-theme p-6 md:p-8">
-                  <p className="text-secondary whitespace-pre-wrap leading-relaxed">
-                    {request.additional_preferences || 'No preferences specified'}
+              <div className="flex items-center justify-between gap-4 mb-8">
+                <h2 className="text-left text-2xl font-semibold text-accent-theme">Interests / additional preferences</h2>
+                {!editingAdditionalPreferences && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdditionalPreferencesValue(request.additional_preferences || '')
+                      setEditingAdditionalPreferences(true)
+                    }}
+                    className={`${btnPri} shrink-0`}
+                  >
+                    Edit interests
+                  </button>
+                )}
+              </div>
+              {editingAdditionalPreferences ? (
+                <div className="space-y-6">
+                  <textarea
+                    value={additionalPreferencesValue}
+                    onChange={(e) => setAdditionalPreferencesValue(e.target.value)}
+                    rows={12}
+                    className={`${field} resize-y min-h-[320px]`}
+                    placeholder="e.g., honeymoon, wildlife safari, luxury focus, train journeys, ayurveda retreat, family friendly, adventure"
+                  />
+                  <p className="text-xs text-secondary text-left">
+                    Save these interests before generating itineraries so AI uses the latest details.
                   </p>
+                  <div className="flex flex-wrap gap-4">
+                    <button
+                      type="button"
+                      onClick={handleSaveAdditionalPreferences}
+                      disabled={savingAdditionalPreferences}
+                      className={`${btnPri} disabled:opacity-50`}
+                    >
+                      {savingAdditionalPreferences ? 'Saving...' : 'Save interests'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdditionalPreferencesValue(request.additional_preferences || '')
+                        setEditingAdditionalPreferences(false)
+                      }}
+                      disabled={savingAdditionalPreferences}
+                      className={`${btnSec} disabled:opacity-50`}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-accent bg-inner-theme p-6 md:p-8 min-h-[220px]">
+                  {request.additional_preferences ? (
+                    <p className="text-secondary whitespace-pre-wrap leading-relaxed">
+                      {request.additional_preferences}
+                    </p>
+                  ) : (
+                    <p className="text-secondary italic">No interests/preferences specified yet.</p>
+                  )}
                 </div>
               )}
         </div>
