@@ -87,11 +87,10 @@ export function renderJourneyEmail(opts: {
       <div style="background:#F1E9DA;border-left:3px solid #B18544;padding:12px 14px;margin:20px 0;">
         <p style="margin:0 0 8px;color:#1A2A1D;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(j.title)}</p>
         <p style="margin:0;font-size:13px;color:#6b6b66;">${esc(dates(j))}<br/>${esc(metaLine(j))}</p>
-        ${j.price ? `<p style="margin:10px 0 0;color:#B18544;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(j.price)}</p>` : ''}
       </div>
       ${hotelBlock}
       <p style="text-align:center;margin:28px 0;">
-        <a href="${esc(shareUrl)}" style="background:#1A2A1D;color:#F9F4EB;text-decoration:none;padding:14px 28px;border-radius:0;font-weight:500;letter-spacing:.02em;font-size:14px;font-family:'Open Sans',Arial,sans-serif;display:inline-block;">View your complete journey</a>
+        <a href="${esc(shareUrl)}" style="background:#1A2A1D;color:#F9F4EB;text-decoration:none;padding:14px 28px;border-radius:0;font-weight:500;letter-spacing:.02em;font-size:14px;font-family:'Open Sans',Arial,sans-serif;display:inline-block;border:1px solid #B18544;">View your LankaLux Journey</a>
       </p>
       <p style="font-size:13px;color:#6b6b66;">If you would like any changes, simply reply to this email.</p>
       <p>Warm regards,<br/><strong style="color:#1A2A1D;">${esc(BRAND.name)}</strong><br/><span style="color:#B18544;">${esc(BRAND.tagline)}</span></p>
@@ -107,9 +106,8 @@ export function renderJourneyEmail(opts: {
     j.title,
     dates(j),
     metaLine(j),
-    ...(j.price ? [j.price] : []),
     '',
-    'View your complete itinerary:',
+    'View your LankaLux Journey:',
     shareUrl,
     '',
     'Warm regards,',

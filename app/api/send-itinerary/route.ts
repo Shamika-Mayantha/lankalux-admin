@@ -299,7 +299,7 @@ export async function POST(request: Request) {
     const emailSubject = journeyTitle ? `LankaLux Journey - ${journeyTitle}` : premiumSubjects[subjectSeed % premiumSubjects.length]
     const preheader = 'Your personalised LankaLux Journey is ready.'
     const logoUrl = `${baseUrl}/favicon.png`
-    const ctaText = 'View your complete journey'
+    const ctaText = 'View your LankaLux Journey'
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -397,6 +397,7 @@ export async function POST(request: Request) {
               font-size: 14px;
               font-weight: 600;
               letter-spacing: .02em;
+              border: 1px solid #b18544;
             }
             .small {
               margin: 0 0 14px;
@@ -463,7 +464,7 @@ export async function POST(request: Request) {
       `End: ${endDateFormatted}`,
       requestData.duration ? `Duration: ${requestData.duration} Days` : '',
       '',
-      'You can view your personalized itinerary here:',
+      'You can view your LankaLux Journey here:',
       itineraryUrl,
       '',
       'Warm regards,',
