@@ -1,4 +1,5 @@
 import { BRAND } from '@/config/brand'
+import { appUrl } from '@/config/env'
 import { PROMPT_VERSION, STYLE_META, styleFromNumber, type ItineraryStyle } from '@/config/status'
 import { assignDayImages } from '@/services/image-map.service'
 import { applyJourneyKilometers, totalKilometersFor } from '@/services/kilometers.service'
@@ -531,7 +532,10 @@ export async function getPublishedItinerary(requestId: string): Promise<Canonica
   return toCanonical(request, selected)
 }
 
-export async function getClientItinerary(shareToken: string): Promise<CanonicalJourney> {
+export async function getClientItinerary(
+  shareToken: string,
+  opts?: { trackOpen?: boolean }
+): Promise<CanonicalJourney> {
   const supabase = getServiceClient()
   const { data, error } = await supabase
     .from('share_links')
@@ -543,6 +547,16 @@ export async function getClientItinerary(shareToken: string): Promise<CanonicalJ
   if (data && !error) {
     const snapshot = data.itinerary_snapshot as CanonicalJourney
     if (snapshot?.days) {
+      if (opts?.trackOpen && data.request_id) {
+        await logActivity({
+          request_id: String(data.request_id),
+          event_type: 'itinerary_link_opened',
+          detail: {
+            shareToken,
+            url: `${appUrl()}/journey/${shareToken}`,
+          },
+        })
+      }
       return { ...snapshot, shareToken }
     }
   }

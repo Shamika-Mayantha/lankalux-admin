@@ -11,7 +11,7 @@ type Props = { params: Promise<{ token: string }> }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const { token } = await params
-    const journey = await getClientItinerary(token)
+    const journey = await getClientItinerary(token, { trackOpen: false })
     return { title: `${journey.title} · LankaLux`, description: journey.summary }
   } catch {
     return { title: 'LankaLux Journey' }
@@ -23,7 +23,7 @@ export default async function PublicJourneyPage({ params }: Props) {
   let journey = null as Awaited<ReturnType<typeof getClientItinerary>> | null
   let message = ''
   try {
-    journey = await getClientItinerary(token)
+    journey = await getClientItinerary(token, { trackOpen: true })
   } catch (err) {
     message = err instanceof Error ? err.message : 'This journey could not be found.'
   }

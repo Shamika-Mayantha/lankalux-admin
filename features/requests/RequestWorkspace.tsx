@@ -92,6 +92,13 @@ function activityItineraryUrl(entry: ActivityEvent): string | null {
   return `/journey/${encodeURIComponent(token)}`
 }
 
+function activityLabel(eventType: string) {
+  if (eventType === 'itinerary_link_opened') return 'Client opened itinerary link'
+  if (eventType === 'email_sent') return 'Itinerary email sent'
+  if (eventType === 'whatsapp_shared') return 'Itinerary shared on WhatsApp'
+  return eventType.replace(/_/g, ' ')
+}
+
 export function RequestWorkspace() {
   const params = useParams<{ id: string }>()
   const id = params.id
@@ -626,7 +633,7 @@ export function RequestWorkspace() {
               return (
                 <tr key={a.id || i}>
                   <td>{a.created_at ? new Date(a.created_at).toLocaleString() : ''}</td>
-                  <td>{a.event_type}</td>
+                  <td>{activityLabel(a.event_type)}</td>
                   <td>
                     {url ? (
                       <a href={url} target="_blank" rel="noreferrer">

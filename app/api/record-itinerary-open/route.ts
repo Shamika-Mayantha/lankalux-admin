@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logActivity } from '@/services/activity.service'
 
 /** Record when a client opens the itinerary link. Call from public itinerary page. */
 export async function POST(request: Request) {
@@ -65,6 +66,19 @@ export async function POST(request: Request) {
       console.error('Error recording link open:', updateError)
       return NextResponse.json({ error: 'Failed to record' }, { status: 500 })
     }
+
+    await logActivity({
+      request_id: String(requestRow.id),
+      event_type: 'itinerary_link_opened',
+      detail: {
+        token,
+        option_index: optionIndex !== null && !isNaN(optionIndex) ? optionIndex : null,
+        url:
+          optionIndex !== null && !isNaN(optionIndex)
+            ? `/itinerary/${encodeURIComponent(token)}/${optionIndex}`
+            : `/itinerary/${encodeURIComponent(token)}`,
+      },
+    })
 
     return NextResponse.json({ ok: true })
   } catch (e) {
