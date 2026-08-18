@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+function omitTotalKilometers<T extends Record<string, any>>(itinerary: T): Omit<T, 'total_kilometers'> {
+  const { total_kilometers, ...safeItinerary } = itinerary
+  return safeItinerary
+}
+
 // This is a PUBLIC API endpoint - no authentication required
 // It uses the service role key to bypass RLS for public itinerary access
 export async function GET(request: Request) {
@@ -103,7 +108,7 @@ export async function GET(request: Request) {
               duration: data.duration,
               selected_option: data.selected_option
             },
-            itinerary,
+            itinerary: omitTotalKilometers(itinerary),
             send_options: sentOption.send_options || null
           })
         }
@@ -157,7 +162,7 @@ export async function GET(request: Request) {
               duration: data.duration,
               selected_option: data.selected_option
             },
-            itinerary: option
+            itinerary: omitTotalKilometers(option)
           })
         }
       }

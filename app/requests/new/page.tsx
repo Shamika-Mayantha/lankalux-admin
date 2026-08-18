@@ -3,6 +3,19 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { DatePicker } from '@/components/ui/DatePicker'
+
+function isCompleteIsoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [year, month, day] = value.split('-').map(Number)
+  if (year < 1900 || year > 2099) return false
+  const date = new Date(year, month - 1, day)
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  )
+}
 
 export default function NewRequestPage() {
   const [clientName, setClientName] = useState('')
@@ -21,7 +34,7 @@ export default function NewRequestPage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (startDate && endDate) {
+    if (isCompleteIsoDate(startDate) && isCompleteIsoDate(endDate)) {
       const start = new Date(startDate)
       const end = new Date(endDate)
       if (end >= start) {
@@ -101,6 +114,21 @@ export default function NewRequestPage() {
       return
     }
 
+    if (startDate && !isCompleteIsoDate(startDate)) {
+      setError('Please enter a complete start date (YYYY-MM-DD)')
+      return
+    }
+
+    if (endDate && !isCompleteIsoDate(endDate)) {
+      setError('Please enter a complete end date (YYYY-MM-DD)')
+      return
+    }
+
+    if (startDate && endDate && startDate > endDate) {
+      setError('End date cannot be before start date')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -145,12 +173,6 @@ export default function NewRequestPage() {
       console.error('Unexpected error:', err)
       setError('An unexpected error occurred. Please try again.')
       setLoading(false)
-    }
-  }
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && e.ctrlKey && !loading) {
-      handleSubmit()
     }
   }
 
@@ -254,16 +276,14 @@ export default function NewRequestPage() {
               <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-2">
                 Start Date
               </label>
-              <input
+              <DatePicker
                 id="start_date"
-                type="date"
                 value={startDate}
-                onChange={(e) => {
-                  const selectedStartDate = e.target.value
+                onChange={(selectedStartDate) => {
                   // If end date is set and the new start date is after end date, clear end date
                   if (endDate && selectedStartDate) {
-                    const isValidEndDate = /^\d{4}-\d{2}-\d{2}$/.test(endDate)
-                    const isValidStartDate = /^\d{4}-\d{2}-\d{2}$/.test(selectedStartDate)
+                    const isValidEndDate = isCompleteIsoDate(endDate)
+                    const isValidStartDate = isCompleteIsoDate(selectedStartDate)
                     if (isValidEndDate && isValidStartDate && selectedStartDate > endDate) {
                       setEndDate('')
                     }
@@ -272,8 +292,8 @@ export default function NewRequestPage() {
                 }}
                 min={today}
                 max="2099-12-31"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
                 disabled={loading}
+                theme="light"
               />
             </div>
 
@@ -282,35 +302,14 @@ export default function NewRequestPage() {
               <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-2">
                 End Date
               </label>
-              <input
+              <DatePicker
                 id="end_date"
-                type="date"
                 value={endDate}
-                onChange={(e) => {
-                  // Just update the value without validation
-                  setEndDate(e.target.value)
-                }}
-                onBlur={(e) => {
-                  // Validate only when user finishes entering the date (on blur)
-                  const selectedEndDate = e.target.value
-                  if (selectedEndDate && startDate) {
-                    // Check if both dates are complete (valid date format: YYYY-MM-DD)
-                    const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(selectedEndDate)
-                    const isStartDateValid = /^\d{4}-\d{2}-\d{2}$/.test(startDate)
-                    
-                    if (isValidDate && isStartDateValid && selectedEndDate < startDate) {
-                      alert('End date cannot be before start date')
-                      // Clear the invalid end date
-                      setEndDate('')
-                      // Refocus the input
-                      e.target.focus()
-                    }
-                  }
-                }}
+                onChange={setEndDate}
                 min={startDate || today}
                 max="2099-12-31"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
                 disabled={loading}
+                theme="light"
               />
             </div>
 
@@ -435,15 +434,11 @@ export default function NewRequestPage() {
                 id="additional_preferences"
                 value={additionalPreferences}
                 onChange={(e) => setAdditionalPreferences(e.target.value)}
-                onKeyPress={handleKeyPress}
                 placeholder="e.g., honeymoon, wildlife safari, luxury focus, train journeys, ayurveda retreat, family friendly, adventure"
-                rows={6}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y"
+                rows={14}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y min-h-[340px]"
                 disabled={loading}
               />
-              <p className="mt-2 text-xs text-gray-500">
-                Press Ctrl+Enter to submit
-              </p>
             </div>
 
             {/* Error Message */}
