@@ -355,7 +355,7 @@ export async function POST(request: Request) {
             }
             .intro-text {
               font-size: 15px;
-              color: #55544f;
+              color: #6b6b66;
               margin-bottom: 22px;
             }
             .meta {
@@ -364,7 +364,7 @@ export async function POST(request: Request) {
               padding: 14px 16px;
               margin: 0 0 22px;
             }
-            .meta-row { margin-bottom: 10px; font-size: 13px; color: #55544f; }
+            .meta-row { margin-bottom: 10px; font-size: 13px; color: #6b6b66; }
             .meta-row:last-child { margin-bottom: 0; }
             .meta-k {
               color: #6b6b66;
@@ -401,7 +401,7 @@ export async function POST(request: Request) {
             .small {
               margin: 0 0 14px;
               font-size: 14px;
-              color: #55544f;
+              color: #6b6b66;
               line-height: 1.8;
             }
             .signoff {
