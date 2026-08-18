@@ -77,7 +77,8 @@ export async function POST(request: Request) {
     const emailPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587
     const emailUser = process.env.SMTP_USER
     const emailPass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD
-    const emailFrom = process.env.SMTP_FROM || emailUser
+    // Always use the customer-facing sender address requested by business.
+    const emailFrom = 'hello@lankalux.com'
 
     if (!emailHost || !emailUser || !emailPass) {
       console.error('Missing email configuration')
@@ -685,7 +686,8 @@ export async function POST(request: Request) {
       })
       
       const emailResult = await transporter.sendMail({
-        from: `"LankaLux" <${process.env.SMTP_USER}>`,
+        from: `"LankaLux" <${emailFrom}>`,
+        replyTo: emailFrom,
         to: requestData.email,
         subject: emailSubject,
         text: emailText,
