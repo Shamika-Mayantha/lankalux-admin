@@ -1,5 +1,4 @@
 import { BRAND } from '@/config/brand'
-import { formatKilometers, totalKilometersFor } from '@/services/kilometers.service'
 import type { CanonicalJourney } from '@/types/domain'
 
 function esc(s: string) {
@@ -16,12 +15,8 @@ function partyLine(j: CanonicalJourney) {
   return bits.join(', ')
 }
 
-function kmLine(j: CanonicalJourney) {
-  return formatKilometers(j.totalKilometers || totalKilometersFor(j.days))
-}
-
 function metaLine(j: CanonicalJourney) {
-  return [j.durationLabel, kmLine(j), partyLine(j)].filter(Boolean).join(' · ')
+  return [j.durationLabel, partyLine(j)].filter(Boolean).join(' · ')
 }
 
 function dates(j: CanonicalJourney) {
@@ -117,7 +112,6 @@ export function renderWhatsAppMessage(opts: { journey: CanonicalJourney; shareUr
     j.title,
     dates(j),
     nights != null ? `${nights} night${nights === 1 ? '' : 's'}` : j.durationLabel,
-    ...(kmLine(j) ? [kmLine(j)] : []),
     ...(j.price ? [j.price] : []),
     '',
     'You can view your complete itinerary here:',

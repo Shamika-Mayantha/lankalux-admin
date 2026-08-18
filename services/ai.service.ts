@@ -56,7 +56,8 @@ HARD RULES
 - Geographic flow in ONE direction. No backtracking (do not go north then south then north).
 - At most one major location transfer per day.
 - Do not invent hotels that must be booked; describe overnight towns only.
-- Activities are timed strings: "09:00 - Description".
+- Activities are timed strings in 12-hour format with AM/PM: "09:00 AM - Description".
+- Each day "description" must include useful place insight (what guests will see, local character, and why this stop is special) in 2-4 clear sentences.
 - Do NOT include image URLs. The server maps photographs.
 
 JSON SHAPE

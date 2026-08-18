@@ -19,6 +19,63 @@ function formatIso(iso: string | null) {
   return d.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+const LOCATION_INSIGHTS: Record<string, string> = {
+  colombo:
+    "Sri Lanka's coastal capital blends colonial architecture, vibrant local markets, modern cafes, and oceanfront city life.",
+  sigiriya:
+    "Sigiriya is famous for the ancient Lion Rock fortress, dramatic views, historic frescoes, and surrounding cultural villages.",
+  kandy:
+    "Kandy is the cultural heart of the island, known for the Temple of the Tooth, lakefront walks, and traditional arts.",
+  ella:
+    "Ella offers cool hill-country air, tea landscapes, scenic train routes, waterfalls, and panoramic mountain viewpoints.",
+  yala:
+    "Yala is one of Sri Lanka's top wildlife regions, where safari drives often reveal leopards, elephants, and birdlife.",
+  galle:
+    "Galle charms with its UNESCO-listed fort, cobbled lanes, boutique shops, and sunset views over the southern coast.",
+  nuwaraeliya:
+    "Nuwara Eliya is known for misty tea estates, colonial-era charm, cool weather, and beautiful highland scenery.",
+  bentota:
+    "Bentota is a relaxed beach destination ideal for lagoon experiences, coastal sunsets, and luxury seaside downtime.",
+  mirissa:
+    "Mirissa combines palm-lined beaches, whale-watching opportunities, and a laid-back southern coast atmosphere.",
+}
+
+function toTwelveHour(hour: number, minute: number) {
+  const suffix = hour >= 12 ? 'PM' : 'AM'
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12
+  return `${hour12}:${String(minute).padStart(2, '0')} ${suffix}`
+}
+
+function formatActivityTime(line: string) {
+  const match = line.match(/^(\d{1,2}):(\d{2})(?:\s*([aApP][mM]))?\s*[-–]\s*(.+)$/)
+  if (!match) return line
+  const rawHour = Number(match[1])
+  const minute = Number(match[2])
+  const ampm = match[3]?.toUpperCase()
+  const rest = match[4]?.trim() || ''
+  if (!Number.isFinite(rawHour) || !Number.isFinite(minute) || minute < 0 || minute > 59) return line
+  if (rawHour < 0 || rawHour > 23) return line
+  let hour24 = rawHour
+  if (ampm === 'AM' || ampm === 'PM') {
+    if (hour24 === 12) {
+      hour24 = ampm === 'AM' ? 0 : 12
+    } else if (ampm === 'PM') {
+      hour24 += 12
+    }
+  }
+  return `${toTwelveHour(hour24, minute)} - ${rest}`
+}
+
+function normalizeLocationKey(location: string) {
+  return location.toLowerCase().replace(/[^a-z]/g, '')
+}
+
+function getLocationInsight(location: string) {
+  const key = normalizeLocationKey(location)
+  if (LOCATION_INSIGHTS[key]) return LOCATION_INSIGHTS[key]
+  return `${location} offers meaningful local culture, authentic food, scenic highlights, and memorable experiences tailored to your journey.`
+}
+
 export function JourneyView({
   journey,
   showDistance = true,
@@ -29,6 +86,14 @@ export function JourneyView({
   const start = formatIso(journey.startDate)
   const end = formatIso(journey.endDate)
   const kilometers = journey.totalKilometers || totalKilometersFor(journey.days)
+  const uniqueLocations = Array.from(
+    new Map(
+      journey.days
+        .map((d) => d.location?.trim())
+        .filter((location): location is string => !!location)
+        .map((location) => [normalizeLocationKey(location), location])
+    ).values()
+  )
 
   return (
     <article className="journey-root">
@@ -74,7 +139,7 @@ export function JourneyView({
               {day.activities.length ? (
                 <ul className="journey-acts">
                   {day.activities.map((a) => (
-                    <li key={a}>{a}</li>
+                    <li key={a}>{formatActivityTime(a)}</li>
                   ))}
                 </ul>
               ) : null}
@@ -116,6 +181,20 @@ export function JourneyView({
                 {h.description ? <p>{h.description}</p> : null}
               </div>
             ))}
+          </section>
+        ) : null}
+
+        {uniqueLocations.length > 0 ? (
+          <section>
+            <h3>Destination insights</h3>
+            <div className="journey-insights">
+              {uniqueLocations.map((location) => (
+                <article key={location} className="journey-insight-card">
+                  <p className="journey-insight-title">{location}</p>
+                  <p>{getLocationInsight(location)}</p>
+                </article>
+              ))}
+            </div>
           </section>
         ) : null}
 
