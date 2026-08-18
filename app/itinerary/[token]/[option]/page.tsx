@@ -37,6 +37,21 @@ function formatPriceDisplay(raw: string): string {
   return raw.replace(/\d{1,3}(?=(\d{3})+(?!\d))/g, (n) => n + ',')
 }
 
+/** Hide distance values in client-facing text while preserving time details */
+function stripKilometerText(text: string): string {
+  return text
+    .replace(/\b(?:distance|total distance)\s*[:\-]?\s*\d+(?:\.\d+)?\s*(?:km|kms|kilomet(?:er|re)s?)\b/gi, '')
+    .replace(/\b\d+(?:\.\d+)?\s*(?:km|kms|kilomet(?:er|re)s?)\b/gi, '')
+    .replace(/\(\s*[/,\-]?\s*\)/g, '')
+    .replace(/\(\s*[/,\-]\s*/g, '(')
+    .replace(/\s*[/,\-]\s*\)/g, ')')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([,.;:!?)])/g, '$1')
+    .replace(/\(\s+/g, '(')
+    .replace(/\s+\)/g, ')')
+    .trim()
+}
+
 interface ItineraryOption {
   title: string
   summary: string
@@ -484,7 +499,7 @@ export default function PublicItineraryPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-[#fafafa] border-l-4 border-[#c8a45d] p-8 rounded-r-lg">
             <p className="text-lg text-gray-700 leading-relaxed font-serif">
-              {selectedItinerary.summary}
+              {stripKilometerText(selectedItinerary.summary)}
             </p>
           </div>
         </div>
@@ -533,11 +548,13 @@ export default function PublicItineraryPage() {
                           <h3 className="text-xl font-serif font-semibold text-[#2c2c2c] mb-2">
                             {getDayDateLabel(request.start_date, day.day)}
                           </h3>
-                          <p className="text-xl font-serif font-semibold text-[#2c2c2c] mb-2">{getDayTitleDisplay(day.title)}</p>
+                          <p className="text-xl font-serif font-semibold text-[#2c2c2c] mb-2">
+                            {stripKilometerText(getDayTitleDisplay(day.title))}
+                          </p>
                         </>
                       ) : (
                         <h3 className="text-2xl font-serif font-bold text-[#2c2c2c] mb-2">
-                          Day {day.day} – {day.title}
+                          Day {day.day} – {stripKilometerText(day.title)}
                         </h3>
                       )}
                       <p className="text-lg text-[#c8a45d] font-semibold uppercase tracking-wide">
@@ -551,7 +568,7 @@ export default function PublicItineraryPage() {
                           What to Expect
                         </h4>
                         <p className="text-gray-700 leading-relaxed font-serif italic">
-                          {day.what_to_expect}
+                          {stripKilometerText(day.what_to_expect)}
                         </p>
                       </div>
                     )}
@@ -561,7 +578,10 @@ export default function PublicItineraryPage() {
                         Activities
                       </h4>
                       <ul className="space-y-3">
-                        {day.activities.map((activity, actIndex) => (
+                        {day.activities
+                          .map((activity) => stripKilometerText(activity))
+                          .filter((activity) => activity.length > 0)
+                          .map((activity, actIndex) => (
                           <li key={actIndex} className="flex items-start">
                             <span className="text-[#c8a45d] mr-3 mt-1">•</span>
                             <span className="text-gray-700 leading-relaxed">{activity}</span>
@@ -579,7 +599,10 @@ export default function PublicItineraryPage() {
                           If time allows, you can do these activities optionally
                         </p>
                         <ul className="space-y-3">
-                          {day.optional_activities.map((activity, actIndex) => (
+                          {day.optional_activities
+                            .map((activity) => stripKilometerText(activity))
+                            .filter((activity) => activity.length > 0)
+                            .map((activity, actIndex) => (
                             <li key={actIndex} className="flex items-start">
                               <span className="text-[#c8a45d] mr-3 mt-1">+</span>
                               <span className="text-gray-700 leading-relaxed">{activity}</span>
