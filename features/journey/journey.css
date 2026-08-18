@@ -115,7 +115,7 @@ html:has(.journey-root) body {
 }
 
 .journey-day {
-  padding: 36px 0;
+  padding: 46px 0;
   border-top: 1px solid var(--line);
 }
 
@@ -159,12 +159,32 @@ html:has(.journey-root) body {
   line-height: 1.8;
   font-size: 16.5px;
   color: var(--charcoal);
+  margin-bottom: 16px;
 }
 
 .journey-acts {
   padding-left: 18px;
   line-height: 1.7;
   color: var(--charcoal);
+  margin: 0 0 18px;
+  list-style: disc;
+}
+
+.journey-acts li {
+  margin-bottom: 10px;
+}
+
+.journey-list-title {
+  margin: 4px 0 8px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.journey-optional li::marker {
+  color: var(--gold);
 }
 
 .journey-travel {

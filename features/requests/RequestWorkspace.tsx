@@ -676,7 +676,7 @@ export function RequestWorkspace() {
                 Close preview
               </button>
             </div>
-            <JourneyView journey={preview} />
+            <JourneyView journey={preview} showDistance={false} />
           </div>
         </div>
       )}

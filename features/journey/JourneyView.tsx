@@ -76,6 +76,15 @@ function getLocationInsight(location: string) {
   return `${location} offers meaningful local culture, authentic food, scenic highlights, and memorable experiences tailored to your journey.`
 }
 
+function stripDistanceText(text: string) {
+  return text
+    .replace(/\b\d+(?:\.\d+)?\s*(?:km|kms|kilomet(?:er|re)s?)\b/gi, '')
+    .replace(/\b(?:distance|total distance)\s*[:\-]?\s*\d+(?:\.\d+)?\s*(?:km|kms|kilomet(?:er|re)s?)\b/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([,.;:!?])/g, '$1')
+    .trim()
+}
+
 export function JourneyView({
   journey,
   showDistance = true,
@@ -94,6 +103,7 @@ export function JourneyView({
         .map((location) => [normalizeLocationKey(location), location])
     ).values()
   )
+  const summaryText = showDistance ? journey.summary : stripDistanceText(journey.summary)
 
   return (
     <article className="journey-root">
@@ -112,7 +122,7 @@ export function JourneyView({
             .filter(Boolean)
             .join(' · ')}
         </p>
-        {journey.summary ? <p className="journey-summary">{journey.summary}</p> : null}
+        {summaryText ? <p className="journey-summary">{summaryText}</p> : null}
         {journey.price ? <p className="journey-price">{journey.price}</p> : null}
       </header>
 
@@ -135,20 +145,44 @@ export function JourneyView({
                   <img src={img} alt={day.location || day.title} className="journey-photo" />
                 </div>
               ) : null}
-              {day.description ? <p className="journey-desc">{day.description}</p> : null}
+              {day.description ? (
+                <p className="journey-desc">{showDistance ? day.description : stripDistanceText(day.description)}</p>
+              ) : null}
               {day.activities.length ? (
-                <ul className="journey-acts">
+                <>
+                  <h4 className="journey-list-title">Highlights</h4>
+                  <ul className="journey-acts">
                   {day.activities.map((a) => (
-                    <li key={a}>{formatActivityTime(a)}</li>
+                    <li key={a}>{showDistance ? formatActivityTime(a) : stripDistanceText(formatActivityTime(a))}</li>
                   ))}
-                </ul>
+                  </ul>
+                </>
+              ) : null}
+              {day.optional_activities.length ? (
+                <>
+                  <h4 className="journey-list-title">Optional experiences</h4>
+                  <ul className="journey-acts journey-optional">
+                    {day.optional_activities.map((a) => (
+                      <li key={a}>{showDistance ? formatActivityTime(a) : stripDistanceText(formatActivityTime(a))}</li>
+                    ))}
+                  </ul>
+                </>
               ) : null}
               {(day.travel.from || day.travel.to || day.travel.estimated_duration) && (
-                <p className="journey-travel">
-                  Travel{day.travel.from && day.travel.to ? ` ${day.travel.from} → ${day.travel.to}` : ''}
-                  {showDistance && day.travel.estimated_distance ? ` · ${day.travel.estimated_distance}` : ''}
-                  {day.travel.estimated_duration ? ` · ${day.travel.estimated_duration}` : ''}
-                </p>
+                (() => {
+                  const distanceSafeDuration = showDistance
+                    ? day.travel.estimated_duration
+                    : stripDistanceText(day.travel.estimated_duration)
+                  const hasTravelText = day.travel.from || day.travel.to || distanceSafeDuration
+                  if (!hasTravelText) return null
+                  return (
+                    <p className="journey-travel">
+                      Travel{day.travel.from && day.travel.to ? ` ${day.travel.from} → ${day.travel.to}` : ''}
+                      {showDistance && day.travel.estimated_distance ? ` · ${day.travel.estimated_distance}` : ''}
+                      {distanceSafeDuration ? ` · ${distanceSafeDuration}` : ''}
+                    </p>
+                  )
+                })()
               )}
             </section>
           )
