@@ -301,7 +301,7 @@ export async function POST(request: Request) {
     const emailSubject = journeyTitle ? `LankaLux Journey - ${journeyTitle}` : premiumSubjects[subjectSeed % premiumSubjects.length]
     const preheader = 'Your personalized Sri Lanka journey is ready.'
     const logoUrl = `${baseUrl}/favicon.png`
-    const ctaText = 'VIEW YOUR COMPLETE JOURNEY'
+    const ctaText = 'View your complete journey'
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -309,61 +309,149 @@ export async function POST(request: Request) {
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: Arial, Helvetica, sans-serif; color: #2f2f2f; background: #efefef; margin: 0; padding: 0; }
-            .wrap { width: 100%; background: #efefef; padding: 18px 0; }
-            .card { max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e2e2; }
-            .top { background: linear-gradient(90deg, #1b1c1f 0%, #2b2c2f 100%); padding: 28px 16px 22px; text-align: center; }
-            .logo { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; display: inline-block; margin: 0 auto 10px; }
-            .brand { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 36px; letter-spacing: 0.4px; color: #c9a14a; font-weight: 500; line-height: 1; }
-            .tag { margin-top: 6px; font-size: 11px; letter-spacing: 0.14em; color: #f2f2f2; font-weight: 600; }
-            .goldline { height: 2px; background: #c9a14a; }
-            .content { padding: 20px 28px 0; line-height: 1.75; }
-            .dear { margin: 0 0 14px; font-size: 14px; color: #2f2f2f; }
-            .p { margin: 0 0 16px; font-size: 13px; color: #5d5d5d; }
-            .meta { background: #f4f4f4; border-left: 3px solid #c9a14a; padding: 12px 14px; margin: 16px 0 22px; }
-            .meta-row { display: table; width: 100%; margin: 8px 0; }
-            .meta-k { display: table-cell; width: 145px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #6f6f6f; font-weight: 700; vertical-align: top; }
-            .meta-v { display: table-cell; font-size: 12px; color: #323232; font-weight: 500; vertical-align: top; }
-            .meta-v-gold { color: #c9a14a; font-weight: 600; font-size: 17px; font-family: Georgia, 'Times New Roman', serif; line-height: 1.4; }
-            .rule { height: 1px; background: #d9d9d9; border: 0; margin: 20px 0; }
-            .cta { text-align: center; margin: 0 0 0; }
-            .btn { display: inline-block; background: #c9a14a; color: #1147b8 !important; text-decoration: none; padding: 12px 26px; border-radius: 4px; font-weight: 700; font-size: 12px; letter-spacing: 0.03em; text-transform: uppercase; }
-            .small { margin: 0 0 16px; font-size: 12px; color: #676767; line-height: 1.8; }
-            .signoff { margin: 0 0 6px; font-size: 12px; color: #666666; }
-            .team { margin: 0 0 22px; font-size: 12px; color: #c9a14a; font-weight: 700; }
-            .foot { background: #1f2023; color: #bdbdbd; text-align: center; padding: 14px 18px; font-size: 10px; line-height: 1.6; }
-            .foot a { color: #c9a14a; text-decoration: underline; }
-            .preheader { display:none!important; visibility:hidden; opacity:0; color:transparent; height:0; width:0; font-size:1px; line-height:1px; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            .preheader {
+              display: none !important;
+              visibility: hidden;
+              opacity: 0;
+              color: transparent;
+              height: 0;
+              width: 0;
+              font-size: 1px;
+              line-height: 1px;
+              max-height: 0;
+              max-width: 0;
+            }
+            body {
+              font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+              line-height: 1.75;
+              color: #252523;
+              background: #f9f4eb;
+              margin: 0;
+              padding: 18px 10px;
+            }
+            .email-container {
+              max-width: 620px;
+              margin: 0 auto;
+              background: #ffffff;
+              border: 1px solid rgba(26, 42, 29, 0.12);
+            }
+            .header {
+              background: #f9f4eb;
+              padding: 28px 20px 24px;
+              text-align: center;
+              border-bottom: 1px solid #b18544;
+            }
+            .logo {
+              width: 220px;
+              max-width: 80%;
+              height: auto;
+              display: block;
+              margin: 0 auto;
+            }
+            .content { padding: 30px 28px; }
+            .greeting {
+              font-size: 16px;
+              margin-bottom: 14px;
+              color: #1a2a1d;
+            }
+            .intro-text {
+              font-size: 15px;
+              color: #55544f;
+              margin-bottom: 22px;
+            }
+            .meta {
+              background: #f1e9da;
+              border-left: 3px solid #b18544;
+              padding: 14px 16px;
+              margin: 0 0 22px;
+            }
+            .meta-row { margin-bottom: 10px; font-size: 13px; color: #55544f; }
+            .meta-row:last-child { margin-bottom: 0; }
+            .meta-k {
+              color: #6b6b66;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: .1em;
+              font-size: 11px;
+              display: block;
+              margin-bottom: 4px;
+            }
+            .meta-v {
+              color: #1a2a1d;
+              font-size: 14px;
+              line-height: 1.4;
+            }
+            .meta-v-gold {
+              color: #1a2a1d;
+              font-size: 20px;
+              font-family: 'Be Vietnam Pro', 'Open Sans', Arial, sans-serif;
+              font-weight: 600;
+              line-height: 1.3;
+            }
+            .cta { text-align: center; margin: 24px 0 26px; }
+            .btn {
+              display: inline-block;
+              background: #1a2a1d;
+              color: #f9f4eb !important;
+              text-decoration: none;
+              padding: 14px 28px;
+              font-size: 14px;
+              font-weight: 600;
+              letter-spacing: .02em;
+            }
+            .small {
+              margin: 0 0 14px;
+              font-size: 14px;
+              color: #55544f;
+              line-height: 1.8;
+            }
+            .signoff {
+              margin: 12px 0 4px;
+              font-size: 14px;
+              color: #1a2a1d;
+            }
+            .team {
+              margin: 0;
+              font-size: 14px;
+              color: #b18544;
+              font-weight: 600;
+            }
+            .foot {
+              background: #1a2a1d;
+              color: #f9f4eb;
+              text-align: center;
+              padding: 18px 16px;
+              font-size: 12px;
+            }
           </style>
         </head>
         <body>
           <div class="preheader">${preheader}</div>
-          <div class="wrap">
-            <div class="card">
-              <div class="top">
+          <div class="email-container">
+            <div class="header">
+              <a href="https://lankalux.com" style="text-decoration: none; display: block;">
                 <img src="${logoUrl}" alt="LankaLux" class="logo" />
-                <h1 class="brand">LankaLux</h1>
-                <div class="tag">JOURNEY</div>
-              </div>
-              <div class="goldline"></div>
-              <div class="content">
-                <p class="dear">Dear ${requestData.client_name || 'Valued Client'},</p>
-                <p class="p">We are absolutely delighted to share your personalized Sri Lanka journey with you. Every detail has been carefully crafted to ensure an unforgettable experience.</p>
-                <div class="meta">
-                  <div class="meta-row"><div class="meta-k">TRAVEL DATES</div><div class="meta-v">${startDateFormatted} - ${endDateFormatted}</div></div>
-                  ${journeyTitle ? `<div class="meta-row"><div class="meta-k">SELECTED JOURNEY</div><div class="meta-v meta-v-gold">${journeyTitle}</div></div>` : ''}
-                  ${requestData.duration ? `<div class="meta-row"><div class="meta-k">DURATION</div><div class="meta-v">${requestData.duration} Days</div></div>` : ''}
-                </div>
-                <hr class="rule" />
-                <div class="cta"><a class="btn" href="${itineraryUrl}">${ctaText}</a></div>
-                <hr class="rule" />
-                <p class="small">This link provides access to your complete journey details. We’ve designed every moment to showcase the beauty, culture, and wonder of Sri Lanka. If you have any questions or would like to discuss any modifications, please don’t hesitate to reach out. We’re here to make your journey perfect.</p>
-                <p class="small">We look forward to creating an extraordinary and unforgettable experience for you in the Pearl of the Indian Ocean.</p>
-                <p class="signoff">Warm regards,</p>
-                <p class="team">The LankaLux Team</p>
-              </div>
-              <div class="foot">© ${new Date().getFullYear()} <a href="${baseUrl}">LankaLux</a>. All rights reserved.<br/>Your journey to Sri Lanka begins here.</div>
+              </a>
             </div>
+            <div class="content">
+              <p class="greeting">Dear ${requestData.client_name || 'Valued Client'},</p>
+              <p class="intro-text">We are delighted to share your personalized Sri Lanka journey with you. The email keeps things simple, and full details are available securely on the journey link.</p>
+              <div class="meta">
+                <div class="meta-row">
+                  <span class="meta-k">Travel dates</span>
+                  <span class="meta-v">${startDateFormatted} - ${endDateFormatted}</span>
+                </div>
+                ${journeyTitle ? `<div class="meta-row"><span class="meta-k">Selected journey</span><span class="meta-v meta-v-gold">${journeyTitle}</span></div>` : ''}
+                ${requestData.duration ? `<div class="meta-row"><span class="meta-k">Duration</span><span class="meta-v">${requestData.duration} Days</span></div>` : ''}
+              </div>
+              <div class="cta"><a class="btn" href="${itineraryUrl}">${ctaText}</a></div>
+              <p class="small">Your complete journey details, including any price information shared for this send, are available only after opening the link above.</p>
+              <p class="small">If you have any questions or would like any adjustments, simply reply to this email.</p>
+              <p class="signoff">Warm regards,</p>
+              <p class="team">The LankaLux Team</p>
+            </div>
+            <div class="foot">© ${new Date().getFullYear()} LankaLux. All rights reserved.</div>
           </div>
         </body>
       </html>
