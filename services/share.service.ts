@@ -16,6 +16,7 @@ export async function createShareLink(opts: {
     channel?: string
     includeHotels?: boolean
     includeVehicle?: boolean
+    vehicle?: CanonicalJourney['vehicle']
     includePrice?: boolean
     price?: string | null
   }
@@ -25,7 +26,12 @@ export async function createShareLink(opts: {
   const snapshot: CanonicalJourney = {
     ...journey,
     shareToken: token,
-    vehicle: opts.sendOptions?.includeVehicle === false ? null : journey.vehicle,
+    vehicle:
+      opts.sendOptions?.includeVehicle === false
+        ? null
+        : opts.sendOptions?.vehicle !== undefined
+          ? opts.sendOptions.vehicle
+          : journey.vehicle,
     price: opts.sendOptions?.includePrice
       ? String(opts.sendOptions.price || journey.price || '').trim() || null
       : null,

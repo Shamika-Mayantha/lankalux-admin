@@ -13,12 +13,14 @@ export async function previewJourneyEmail(opts: {
   introduction?: string
   includeHotels?: boolean
   includeVehicle?: boolean
+  vehicle?: { id: string; name: string; description: string; photos: string[] } | null
   includePrice?: boolean
   price?: string | null
 }) {
   const journey = withVehicleIncluded(
     withQuotedPrice(await getPublishedItinerary(opts.requestId), opts.includePrice, opts.price),
-    opts.includeVehicle
+    opts.includeVehicle,
+    opts.vehicle
   )
   const introduction =
     opts.introduction?.trim() ||
@@ -40,6 +42,7 @@ export async function sendJourneyEmail(opts: {
   introduction?: string
   includeHotels?: boolean
   includeVehicle?: boolean
+  vehicle?: { id: string; name: string; description: string; photos: string[] } | null
   includeItinerary?: boolean
   includePrice?: boolean
   price?: string | null
@@ -64,6 +67,7 @@ export async function sendJourneyEmail(opts: {
         channel: 'email',
         includeHotels: !!opts.includeHotels,
         includeVehicle: opts.includeVehicle !== false,
+        vehicle: opts.includeVehicle === false ? null : opts.vehicle,
         includePrice: !!opts.includePrice,
         price: opts.price || null,
       },
@@ -82,7 +86,7 @@ export async function sendJourneyEmail(opts: {
   const logoUrl = `${appUrl()}${BRAND.logoSrc}`
   const compiled = journey
     ? renderJourneyEmail({
-        journey: withVehicleIncluded(withQuotedPrice(journey, opts.includePrice, opts.price), opts.includeVehicle),
+        journey: withVehicleIncluded(withQuotedPrice(journey, opts.includePrice, opts.price), opts.includeVehicle, opts.vehicle),
         introduction,
         shareUrl: shareUrl || appUrl(),
         includeHotels: opts.includeHotels,

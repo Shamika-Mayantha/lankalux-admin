@@ -11,6 +11,7 @@ export async function POST(request: Request) {
       introduction?: string
       includeHotels?: boolean
       includeVehicle?: boolean
+      vehicle?: { id: string; name: string; description: string; photos: string[] } | null
       includeItinerary?: boolean
       includePrice?: boolean
       price?: string | null
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
       introduction: body.introduction,
       includeHotels: body.includeHotels,
       includeVehicle: body.includeVehicle,
+      vehicle: body.vehicle,
       includeItinerary: body.includeItinerary,
       includePrice: body.includePrice,
       price: body.price,

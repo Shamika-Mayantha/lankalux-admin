@@ -86,6 +86,7 @@ export function RequestWorkspace() {
   const [emailIntro, setEmailIntro] = useState('')
   const [includeHotels, setIncludeHotels] = useState(false)
   const [includeVehicle, setIncludeVehicle] = useState(false)
+  const [sendVehicleId, setSendVehicleId] = useState('')
   const [includePrice, setIncludePrice] = useState(false)
   const [sendPrice, setSendPrice] = useState('')
   const [emailHtml, setEmailHtml] = useState<string | null>(null)
@@ -126,6 +127,18 @@ export function RequestWorkspace() {
     if (!vehicleId) return null
     return vehicles.find((v) => v.id === vehicleId) || null
   }, [selected, vehicles])
+  const sendVehicle = useMemo(() => {
+    if (!sendVehicleId) return null
+    return vehicles.find((v) => v.id === sendVehicleId) || null
+  }, [sendVehicleId, vehicles])
+  const sendVehiclePayload = useMemo(
+    () =>
+      sendVehicle
+        ? { id: sendVehicle.id, name: sendVehicle.name, description: sendVehicle.description || '', photos: sendVehicle.photos }
+        : null,
+    [sendVehicle]
+  )
+  const missingVehicleSelection = includeVehicle && !sendVehiclePayload
 
   async function generate(n: 1 | 2 | 3, style: ItineraryStyle) {
     setGenError((e) => ({ ...e, [n]: '' }))
@@ -227,6 +240,7 @@ export function RequestWorkspace() {
     )
     const savedPrice = selected?.payload?.price || row?.budget || ''
     setSendPrice(savedPrice)
+    setSendVehicleId(selectedVehicle?.id || '')
     setIncludeVehicle(!!selectedVehicle)
     setIncludePrice(!!savedPrice)
     setEmailHtml(null)
@@ -238,7 +252,8 @@ export function RequestWorkspace() {
       requestId: id,
       introduction: emailIntro,
       includeHotels,
-      includeVehicle: includeVehicle && !!selectedVehicle,
+      includeVehicle: includeVehicle && !!sendVehiclePayload,
+      vehicle: includeVehicle ? sendVehiclePayload : null,
       includeItinerary: true,
       includePrice,
       price: includePrice ? sendPrice.trim() : null,
@@ -272,7 +287,7 @@ export function RequestWorkspace() {
         ...json.journey,
         vehicle: sending
           ? includeVehicle
-            ? json.journey.vehicle
+            ? sendVehiclePayload
             : null
           : json.journey.vehicle,
         price: sending
@@ -307,6 +322,7 @@ export function RequestWorkspace() {
   async function openWhatsApp() {
     const savedPrice = selected?.payload?.price || row?.budget || ''
     setSendPrice(savedPrice)
+    setSendVehicleId(selectedVehicle?.id || '')
     setIncludeVehicle(!!selectedVehicle)
     setIncludePrice(!!savedPrice)
     setWaMessage('')
@@ -322,7 +338,8 @@ export function RequestWorkspace() {
         method: 'POST',
         body: JSON.stringify({
           requestId: id,
-          includeVehicle: includeVehicle && !!selectedVehicle,
+          includeVehicle: includeVehicle && !!sendVehiclePayload,
+          vehicle: includeVehicle ? sendVehiclePayload : null,
           includePrice,
           price: includePrice ? sendPrice.trim() : null,
         }),
@@ -607,13 +624,25 @@ export function RequestWorkspace() {
               <label className="ll-check">
                 <input
                   type="checkbox"
-                  checked={includeVehicle && !!selectedVehicle}
-                  disabled={!selectedVehicle}
+                  checked={includeVehicle}
                   onChange={(e) => setIncludeVehicle(e.target.checked)}
                 />
                 Include vehicle
               </label>
-              {!selectedVehicle ? <p className="ll-muted">Assign a vehicle in the itinerary editor to include it.</p> : null}
+              {includeVehicle ? (
+                <label>
+                  Vehicle shown to the client
+                  <select value={sendVehicleId} onChange={(e) => setSendVehicleId(e.target.value)}>
+                    <option value="">Select vehicle</option>
+                    {vehicles.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              {missingVehicleSelection ? <p className="ll-muted">Please select a vehicle to include.</p> : null}
               <label className="ll-check">
                 <input type="checkbox" checked={includePrice} onChange={(e) => setIncludePrice(e.target.checked)} />
                 Include price
@@ -638,7 +667,7 @@ export function RequestWorkspace() {
                 <button className="ll-btn secondary" disabled={!!busy} onClick={previewEmail}>
                   Preview email
                 </button>
-                <button className="ll-btn" disabled={!!busy} onClick={sendEmail}>
+                <button className="ll-btn" disabled={!!busy || missingVehicleSelection} onClick={sendEmail}>
                   {busy ? 'Sending…' : 'Send'}
                 </button>
                 <button className="ll-btn secondary" onClick={() => setEmailOpen(false)}>
@@ -659,13 +688,25 @@ export function RequestWorkspace() {
               <label className="ll-check">
                 <input
                   type="checkbox"
-                  checked={includeVehicle && !!selectedVehicle}
-                  disabled={!selectedVehicle}
+                  checked={includeVehicle}
                   onChange={(e) => setIncludeVehicle(e.target.checked)}
                 />
                 Include vehicle
               </label>
-              {!selectedVehicle ? <p className="ll-muted">Assign a vehicle in the itinerary editor to include it.</p> : null}
+              {includeVehicle ? (
+                <label>
+                  Vehicle shown to the client
+                  <select value={sendVehicleId} onChange={(e) => setSendVehicleId(e.target.value)}>
+                    <option value="">Select vehicle</option>
+                    {vehicles.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              {missingVehicleSelection ? <p className="ll-muted">Please select a vehicle to include.</p> : null}
               <label className="ll-check">
                 <input type="checkbox" checked={includePrice} onChange={(e) => setIncludePrice(e.target.checked)} />
                 Include price
@@ -690,7 +731,7 @@ export function RequestWorkspace() {
                 <button className="ll-btn secondary" disabled={!!busy} onClick={previewClientJourney}>
                   Preview journey
                 </button>
-                <button className="ll-btn" disabled={!!busy} onClick={prepareWhatsApp}>
+                <button className="ll-btn" disabled={!!busy || missingVehicleSelection} onClick={prepareWhatsApp}>
                   {busy ? 'Preparing…' : waMessage ? 'Refresh message' : 'Prepare message'}
                 </button>
                 {waHref ? (

@@ -32,8 +32,14 @@ export function withQuotedPrice(
   return { ...journey, price: includePrice && quoted ? quoted : null }
 }
 
-export function withVehicleIncluded(journey: CanonicalJourney, includeVehicle?: boolean): CanonicalJourney {
-  return { ...journey, vehicle: includeVehicle === false ? null : journey.vehicle }
+export function withVehicleIncluded(
+  journey: CanonicalJourney,
+  includeVehicle?: boolean,
+  vehicleOverride?: CanonicalJourney['vehicle']
+): CanonicalJourney {
+  if (includeVehicle === false) return { ...journey, vehicle: null }
+  if (vehicleOverride) return { ...journey, vehicle: vehicleOverride }
+  return journey
 }
 
 export function renderJourneyEmail(opts: {
