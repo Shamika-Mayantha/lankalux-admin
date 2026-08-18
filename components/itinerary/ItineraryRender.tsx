@@ -110,23 +110,23 @@ export function ItineraryRender({
     onItineraryChange({ ...itinerary, days: nextDays })
   }
   return (
-    <div className={mode === 'preview' ? 'max-w-4xl mx-auto bg-white rounded-3xl shadow-xl shadow-black/10 overflow-hidden' : 'min-h-screen bg-[#fbfaf7]'}>
-      <div className="bg-gradient-to-b from-[#f8f6f2] via-[#fffdf9] to-white py-12 border-b border-[#dcc48e]">
+    <div className={mode === 'preview' ? 'max-w-4xl mx-auto bg-white rounded-3xl shadow-xl shadow-black/10 overflow-hidden' : 'min-h-screen bg-[#f9f4eb]'}>
+      <div className="bg-gradient-to-b from-[#f9f4eb] via-[#f9f4eb] to-white py-12 border-b border-[rgba(26,42,29,0.12)]">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <p className="text-[12px] font-serif tracking-[0.08em] text-[#9c8352] mb-2">Prepared for</p>
-          <p className="text-[28px] font-serif text-[#2d2a26] mb-4">{clientName}</p>
+          <p className="text-[12px] font-serif tracking-[0.08em] text-[#b18544] mb-2">Prepared for</p>
+          <p className="text-[28px] font-serif text-[#1a2a1d] mb-4">{clientName}</p>
           {editable ? (
             <input
               value={itinerary.title || ''}
               onChange={(e) => onItineraryChange?.({ ...itinerary, title: e.target.value })}
               placeholder="Itinerary title"
-              className="w-full max-w-2xl mx-auto block text-center text-3xl md:text-4xl font-serif font-semibold text-[#2b261f] mb-4 leading-tight bg-white border border-[#e3d5b7] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#c8a45d]"
+              className="w-full max-w-2xl mx-auto block text-center text-3xl md:text-4xl font-serif font-semibold text-[#1a2a1d] mb-4 leading-tight bg-white border border-[rgba(26,42,29,0.12)] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#b18544]"
             />
           ) : (
-            <h1 className="text-3xl md:text-4xl font-serif font-semibold text-[#2b261f] mb-4 leading-tight">{elegantTitle(itinerary.title)}</h1>
+            <h1 className="text-3xl md:text-4xl font-serif font-semibold text-[#1a2a1d] mb-4 leading-tight">{elegantTitle(itinerary.title)}</h1>
           )}
-          <div className="w-20 h-[1px] bg-[#c9a14a]/70 mx-auto mb-5" />
-          <div className="flex flex-wrap justify-center gap-6 mt-4 text-sm text-[#6f6758]">
+          <div className="w-20 h-[1px] bg-[#b18544]/70 mx-auto mb-5" />
+          <div className="flex flex-wrap justify-center gap-6 mt-4 text-sm text-[#6b6b66]">
             {startDate ? <span>Start: {new Date(startDate).toLocaleDateString('en-US')}</span> : null}
             {endDate ? <span>End: {new Date(endDate).toLocaleDateString('en-US')}</span> : null}
             {duration ? <span>{duration} Days</span> : null}
@@ -135,37 +135,37 @@ export function ItineraryRender({
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-10">
-        <div className="p-7 rounded-2xl bg-[#fcfbf8] border border-[#ebdfc3]">
+        <div className="p-7 rounded-2xl bg-[#f1e9da] border border-[rgba(26,42,29,0.12)]">
           {editable ? (
             <textarea
               value={itinerary.summary || ''}
               onChange={(e) => onItineraryChange?.({ ...itinerary, summary: e.target.value })}
               rows={4}
               placeholder="Itinerary summary"
-              className="w-full text-[#4c473f] leading-8 font-serif text-lg bg-white border border-[#e3d5b7] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#c8a45d]"
+              className="w-full text-[#252523] leading-8 font-serif text-lg bg-white border border-[rgba(26,42,29,0.12)] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#b18544]"
             />
           ) : (
-            <p className="text-[#4c473f] leading-8 font-serif text-lg">{itinerary.summary}</p>
+            <p className="text-[#252523] leading-8 font-serif text-lg">{itinerary.summary}</p>
           )}
         </div>
       </div>
 
       {price ? (
         <div className="max-w-4xl mx-auto px-4 pb-8">
-          <div className="bg-gradient-to-br from-[#fdfaf2] to-white border border-[#dbc28f] rounded-2xl p-6">
-            <p className="text-2xl font-serif font-semibold text-[#b78f3a]">{price}</p>
+          <div className="bg-gradient-to-br from-[#f1e9da] to-white border border-[rgba(26,42,29,0.12)] rounded-2xl p-6">
+            <p className="text-2xl font-serif font-semibold text-[#b18544]">{price}</p>
           </div>
         </div>
       ) : null}
 
       <div className="max-w-4xl mx-auto px-6 pb-14">
-        <h2 className="text-3xl font-serif font-semibold text-[#2c2c2c] mb-10 text-center">Your Journey</h2>
+        <h2 className="text-3xl font-serif font-semibold text-[#1a2a1d] mb-10 text-center">Your Journey</h2>
         <div className="space-y-12">
           {itinerary.days.map((day, idx) => (
             <div key={`${day.day}-${idx}`}>
               {dayImageSrc(day, idx) ? (
                 <div
-                  className={`mb-6 rounded-2xl overflow-hidden ring-1 ring-[#e6dbc2] ${editable ? 'group relative' : ''}`}
+                  className={`mb-6 rounded-2xl overflow-hidden ring-1 ring-[rgba(26,42,29,0.12)] ${editable ? 'group relative' : ''}`}
                   draggable={editable}
                   onDragStart={(e) => {
                     if (!editable) return
@@ -207,7 +207,7 @@ export function ItineraryRender({
                   ) : null}
                 </div>
               ) : null}
-              <div className="bg-white border border-[#e3d5b7] rounded-2xl p-7 shadow-sm shadow-black/5">
+              <div className="bg-white border border-[rgba(26,42,29,0.12)] rounded-2xl p-7 shadow-sm shadow-black/5">
                 {(() => {
                   const heading = parseDayHeading(day.day, day.title)
                   const dayDate = formatDayDate(startDate, heading.day)
@@ -217,27 +217,27 @@ export function ItineraryRender({
                       : (day.location ? `Arrival in ${day.location}` : 'Journey Highlights')
                   return (
                     <div className="mb-7">
-                      <p className="text-lg font-semibold text-[#c49a44] mb-2 tracking-[0.03em]">Day {heading.day}</p>
+                      <p className="text-lg font-semibold text-[#b18544] mb-2 tracking-[0.03em]">Day {heading.day}</p>
                       {editable ? (
                         <input
                           value={day.title || ''}
                           onChange={(e) => updateDay(idx, (current) => ({ ...current, title: e.target.value }))}
                           placeholder="Day title"
-                          className="w-full text-[28px] leading-tight font-serif font-semibold text-[#22201c] mb-2 bg-[#fffcf5] border border-[#eadfca] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#c8a45d]"
+                          className="w-full text-[28px] leading-tight font-serif font-semibold text-[#1a2a1d] mb-2 bg-[#f9f4eb] border border-[rgba(26,42,29,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#b18544]"
                         />
                       ) : (
-                        <p className="text-[30px] leading-tight font-serif font-semibold text-[#22201c] mb-2">{headingTitle}</p>
+                        <p className="text-[30px] leading-tight font-serif font-semibold text-[#1a2a1d] mb-2">{headingTitle}</p>
                       )}
-                      {dayDate ? <p className="text-sm text-[#8b8579] mb-2">{dayDate}</p> : null}
+                      {dayDate ? <p className="text-sm text-[#6b6b66] mb-2">{dayDate}</p> : null}
                       {editable ? (
                         <input
                           value={day.location || ''}
                           onChange={(e) => updateDay(idx, (current) => ({ ...current, location: e.target.value }))}
                           placeholder="Location"
-                          className="w-full text-xs font-semibold uppercase tracking-[0.14em] text-[#b88b35] bg-[#fffcf5] border border-[#eadfca] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#c8a45d]"
+                          className="w-full text-xs font-semibold uppercase tracking-[0.14em] text-[#b18544] bg-[#f9f4eb] border border-[rgba(26,42,29,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#b18544]"
                         />
                       ) : day.location ? (
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#c49a44]">{day.location}</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#b18544]">{day.location}</p>
                       ) : null}
                     </div>
                   )
@@ -248,16 +248,16 @@ export function ItineraryRender({
                     onChange={(e) => updateDay(idx, (current) => ({ ...current, what_to_expect: e.target.value }))}
                     rows={3}
                     placeholder="What to expect / description"
-                    className="w-full text-[#5b5750] italic mb-5 leading-7 bg-[#fffcf5] border border-[#eadfca] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#c8a45d]"
+                    className="w-full text-[#252523] italic mb-5 leading-7 bg-[#f9f4eb] border border-[rgba(26,42,29,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#b18544]"
                   />
                 ) : day.what_to_expect ? (
-                  <p className="text-[#5b5750] italic mb-5 leading-7">{day.what_to_expect}</p>
+                  <p className="text-[#252523] italic mb-5 leading-7">{day.what_to_expect}</p>
                 ) : null}
                 {day.activities && day.activities.length > 0 ? (
-                  <ul className="space-y-2.5 text-[#4d4a45]">
+                  <ul className="space-y-2.5 text-[#252523]">
                     {day.activities.map((a, i) => (
                       <li key={i} className="flex items-start">
-                        <span className="text-[#c8a45d] mr-2 mt-2">•</span>
+                        <span className="text-[#b18544] mr-2 mt-2">•</span>
                         {editable ? (
                           <input
                             value={a}
@@ -269,7 +269,7 @@ export function ItineraryRender({
                               })
                             }
                             placeholder={`Activity ${i + 1}`}
-                            className="flex-1 bg-[#fffcf5] border border-[#eadfca] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#c8a45d]"
+                            className="flex-1 bg-[#f9f4eb] border border-[rgba(26,42,29,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#b18544]"
                           />
                         ) : (
                           <span>{a}</span>
@@ -283,7 +283,7 @@ export function ItineraryRender({
                     <button
                       type="button"
                       onClick={() => updateDay(idx, (current) => ({ ...current, activities: [...(current.activities || []), ''] }))}
-                      className="px-3 py-1.5 rounded-md border border-[#c8a45d] text-[#8b6f2a] text-sm hover:bg-[#faf3df]"
+                      className="px-3 py-1.5 rounded-md border border-[#b18544] text-[#1a2a1d] text-sm hover:bg-[#f1e9da]"
                     >
                       + Add Activity
                     </button>
@@ -309,7 +309,7 @@ export function ItineraryRender({
             <button
               type="button"
               onClick={() => onAdd?.()}
-            className="px-4 py-2 rounded-xl border border-[#c8a45d] text-[#8b6f2a] text-sm font-medium hover:bg-[#faf3df]"
+            className="px-4 py-2 rounded-xl border border-[#b18544] text-[#1a2a1d] text-sm font-medium hover:bg-[#f1e9da]"
             >
               + Add Image
             </button>
@@ -319,10 +319,10 @@ export function ItineraryRender({
 
       {vehicle ? (
         <div className="max-w-4xl mx-auto px-6 pb-12">
-          <div className="bg-white border border-[#e3d5b7] rounded-2xl p-7">
-            <h3 className="text-2xl font-serif font-semibold text-[#2c2c2c] mb-1">Your Vehicle</h3>
-            <p className="text-lg font-semibold text-[#c8a45d] mb-3">{vehicle.name}</p>
-            <p className="text-[#4d4a45] mb-5 leading-7">{vehicle.description}</p>
+          <div className="bg-white border border-[rgba(26,42,29,0.12)] rounded-2xl p-7">
+            <h3 className="text-2xl font-serif font-semibold text-[#1a2a1d] mb-1">Your Vehicle</h3>
+            <p className="text-lg font-semibold text-[#b18544] mb-3">{vehicle.name}</p>
+            <p className="text-[#252523] mb-5 leading-7">{vehicle.description}</p>
             {vehicle.images?.[0] ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={vehicle.images[0]} alt={vehicle.name} className="w-full h-64 object-cover rounded-xl" />
@@ -333,11 +333,11 @@ export function ItineraryRender({
 
       {hotel ? (
         <div className="max-w-4xl mx-auto px-6 pb-12">
-          <div className="bg-white border border-[#e3d5b7] rounded-2xl p-7">
-            <h3 className="text-2xl font-serif font-semibold text-[#2c2c2c] mb-1">Hotel</h3>
-            <p className="text-lg font-semibold text-[#c8a45d] mb-2">{hotel.name}</p>
-            <p className="text-[#6a655b] mb-2">{hotel.location}</p>
-            {hotel.description ? <p className="text-[#4d4a45] mb-5 leading-7">{hotel.description}</p> : null}
+          <div className="bg-white border border-[rgba(26,42,29,0.12)] rounded-2xl p-7">
+            <h3 className="text-2xl font-serif font-semibold text-[#1a2a1d] mb-1">Hotel</h3>
+            <p className="text-lg font-semibold text-[#b18544] mb-2">{hotel.name}</p>
+            <p className="text-[#6b6b66] mb-2">{hotel.location}</p>
+            {hotel.description ? <p className="text-[#252523] mb-5 leading-7">{hotel.description}</p> : null}
             {hotelUrls[0] ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={hotelUrls[0]} alt={hotel.name} className="w-full h-64 object-cover rounded-xl" />

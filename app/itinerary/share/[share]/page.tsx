@@ -82,10 +82,10 @@ export default function PublicSharedItineraryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-[#f9f4eb] flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#c8a45d] mb-4"></div>
-          <p className="text-gray-600">Loading your itinerary...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#b18544] mb-4"></div>
+          <p className="text-[#6b6b66]">Loading your itinerary...</p>
         </div>
       </div>
     )
@@ -93,10 +93,10 @@ export default function PublicSharedItineraryPage() {
 
   if (notFound || !request || !itinerary) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[#f9f4eb] flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-          <h1 className="text-3xl font-bold text-[#c8a45d] mb-4 font-serif">Itinerary Not Found</h1>
-          <p className="text-gray-600 mb-6">The itinerary link is invalid or no longer available.</p>
+          <h1 className="text-3xl font-bold text-[#b18544] mb-4 font-serif">Itinerary Not Found</h1>
+          <p className="text-[#6b6b66] mb-6">The itinerary link is invalid or no longer available.</p>
         </div>
       </div>
     )
