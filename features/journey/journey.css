@@ -239,25 +239,6 @@ html:has(.journey-root) body {
   margin-bottom: 10px;
 }
 
-.journey-insights {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
-}
-
-.journey-insight-card {
-  background: var(--ivory-deep);
-  border: 1px solid var(--line);
-  padding: 14px 16px;
-}
-
-.journey-insight-title {
-  margin: 0 0 6px;
-  font-family: var(--font-display);
-  color: var(--forest);
-  font-size: 18px;
-}
-
 .journey-contact {
   text-align: center;
   margin-top: 48px;
