@@ -67,14 +67,6 @@ function durationFromDates(startDate: string, endDate: string): number | null {
   return Math.floor((end.getTime() - start.getTime()) / 86400000) + 1
 }
 
-function journeyEmailSubject(clientName: string | null | undefined, journeyTitle: string | null | undefined) {
-  const firstName = (clientName || '').trim().split(/\s+/)[0] || 'Guest'
-  const title = (journeyTitle || '').trim()
-  return title
-    ? `Your LankaLux Journey, ${firstName} — ${title}`
-    : `Your LankaLux Journey, ${firstName}`
-}
-
 export function RequestWorkspace() {
   const params = useParams<{ id: string }>()
   const id = params.id
@@ -91,7 +83,6 @@ export function RequestWorkspace() {
   const [preview, setPreview] = useState<CanonicalJourney | null>(null)
   const [emailOpen, setEmailOpen] = useState(false)
   const [waOpen, setWaOpen] = useState(false)
-  const [emailSubject, setEmailSubject] = useState('')
   const [emailIntro, setEmailIntro] = useState('')
   const [includeHotels, setIncludeHotels] = useState(false)
   const [includeVehicle, setIncludeVehicle] = useState(false)
@@ -244,11 +235,9 @@ export function RequestWorkspace() {
   }
 
   async function openEmail() {
-    const selectedTitle = selected?.payload?.title || selected?.title || ''
     setEmailIntro(
       `We are delighted to share your personalised Sri Lanka journey. Every day has been paced with care so you can travel beautifully, not hurriedly.`
     )
-    setEmailSubject(journeyEmailSubject(row?.client_name, selectedTitle))
     const savedPrice = selected?.payload?.price || row?.budget || ''
     setSendPrice(savedPrice)
     setSendVehicleId(selectedVehicle?.id || '')
@@ -261,7 +250,6 @@ export function RequestWorkspace() {
   function sendPayload() {
     return {
       requestId: id,
-      subject: emailSubject.trim() || undefined,
       introduction: emailIntro,
       includeHotels,
       includeVehicle: includeVehicle && !!sendVehiclePayload,
@@ -625,14 +613,6 @@ export function RequestWorkspace() {
             <p className="ll-muted">The saved selected itinerary is sent as-is. Preview it before it leaves.</p>
             <div className="ll-form">
               <label>To<input readOnly value={row.email || ''} /></label>
-              <label>
-                Subject
-                <input
-                  value={emailSubject}
-                  onChange={(e) => setEmailSubject(e.target.value)}
-                  placeholder="Your LankaLux Journey"
-                />
-              </label>
               <label>
                 Introduction
                 <textarea rows={5} value={emailIntro} onChange={(e) => setEmailIntro(e.target.value)} />

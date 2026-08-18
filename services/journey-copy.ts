@@ -51,10 +51,7 @@ export function renderJourneyEmail(opts: {
   logoUrl: string
 }): { subject: string; html: string; text: string } {
   const { journey: j, introduction, shareUrl, includeHotels, includeVehicle, logoUrl } = opts
-  const firstName = (j.clientName || '').trim().split(/\s+/)[0] || 'Guest'
-  const subject = j.title
-    ? `Your LankaLux Journey, ${firstName} — ${j.title}`
-    : `Your LankaLux Journey, ${firstName}`
+  const subject = `LankaLux Journey — ${j.title}`
   const vehicleBlock =
     includeVehicle !== false && j.vehicle
       ? `<h3 style="color:#B18544;font-family:'Be Vietnam Pro',Arial,sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;">Your vehicle</h3><p style="margin:0 0 12px;"><strong style="color:#1A2A1D;">${esc(j.vehicle.name)}</strong>${j.vehicle.description ? `<br/>${esc(j.vehicle.description)}` : ''}</p>`

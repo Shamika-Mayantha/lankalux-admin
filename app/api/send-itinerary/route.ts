@@ -290,10 +290,15 @@ export async function POST(request: Request) {
       : 'Not specified'
 
     const journeyTitle = include_itinerary && selectedOption?.title ? String(selectedOption.title) : null
-    const firstName = String(requestData.client_name || '').trim().split(/\s+/)[0] || 'Guest'
-    const emailSubject = journeyTitle
-      ? `Your LankaLux Journey, ${firstName} — ${journeyTitle}`
-      : `Your LankaLux Journey, ${firstName}`
+    const premiumSubjects = [
+      'Your Sri Lanka Journey Is Ready',
+      'A Journey Designed Just For You',
+      'Your LankaLux Experience Awaits',
+      'Discover Your Personalized Sri Lanka Escape',
+      'Your Tailor-Made Sri Lanka Journey Is Ready',
+    ]
+    const subjectSeed = (requestData.id || requestId || '').split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0)
+    const emailSubject = journeyTitle ? `LankaLux Journey - ${journeyTitle}` : premiumSubjects[subjectSeed % premiumSubjects.length]
     const preheader = 'Your personalized Sri Lanka journey is ready.'
     const logoUrl = `${baseUrl}/favicon.png`
     const ctaText = 'View your complete journey'
