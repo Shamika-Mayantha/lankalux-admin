@@ -7,12 +7,32 @@ import { supabase } from '@/lib/supabase'
 function isCompleteIsoDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
   const [year, month, day] = value.split('-').map(Number)
+  if (year < 1900 || year > 2099) return false
   const date = new Date(year, month - 1, day)
   return (
     date.getFullYear() === year &&
     date.getMonth() === month - 1 &&
     date.getDate() === day
   )
+}
+
+const ALLOWED_DATE_KEYS = new Set([
+  'Tab',
+  'Escape',
+  'Enter',
+  'Backspace',
+  'Delete',
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowUp',
+  'ArrowDown',
+  'Home',
+  'End',
+])
+
+function preventManualDateTyping(e: { key: string; preventDefault: () => void }) {
+  if (ALLOWED_DATE_KEYS.has(e.key)) return
+  e.preventDefault()
 }
 
 export default function NewRequestPage() {
@@ -296,6 +316,8 @@ export default function NewRequestPage() {
                   }
                   setStartDate(selectedStartDate)
                 }}
+                onKeyDown={preventManualDateTyping}
+                onFocus={(e) => (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.()}
                 min={today}
                 max="2099-12-31"
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
@@ -316,6 +338,8 @@ export default function NewRequestPage() {
                   // Just update the value without validation
                   setEndDate(e.target.value)
                 }}
+                onKeyDown={preventManualDateTyping}
+                onFocus={(e) => (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.()}
                 onBlur={(e) => {
                   // Validate only when user finishes entering the date (on blur)
                   const selectedEndDate = e.target.value
