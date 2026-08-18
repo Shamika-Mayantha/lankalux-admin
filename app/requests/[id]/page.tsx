@@ -1500,6 +1500,12 @@ LankaLux Team`
   const lbl = 'label-theme'
   const btnPri = 'btn-primary-theme'
   const btnSec = 'btn-secondary-theme'
+  const sentItineraryCount =
+    Array.isArray(request.sent_options) && request.sent_options.length > 0
+      ? request.sent_options.length
+      : (request.sent_at ? 1 : 0)
+  const sentTemplateCount = request.follow_up_emails_sent?.length ?? 0
+  const linkOpenCount = request.link_opens?.length ?? 0
 
   return (
     <div className="min-h-screen bg-page text-primary antialiased transition-colors duration-300">
@@ -2048,7 +2054,7 @@ LankaLux Team`
 
         <div className="w-full flex flex-col gap-10">
         {/* Follow-up email */}
-        {request.email && (
+        {(
           <div className={card}>
             <h2 className="text-left text-2xl font-semibold text-accent-theme mb-2 flex items-center gap-4">
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[color:var(--accent-gold)]/15 text-accent-theme shrink-0">
@@ -2059,6 +2065,25 @@ LankaLux Team`
             <p className="text-secondary mb-8 max-w-2xl leading-relaxed text-sm text-left">
               Friendly templates with preview. Itinerary link is included when available.
             </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-left">
+              <div className="rounded-xl border border-accent bg-inner-theme p-4">
+                <p className="text-xs uppercase tracking-wide text-secondary">Sent itineraries</p>
+                <p className="text-2xl font-semibold text-primary mt-1">{sentItineraryCount}</p>
+              </div>
+              <div className="rounded-xl border border-accent bg-inner-theme p-4">
+                <p className="text-xs uppercase tracking-wide text-secondary">Sent templates</p>
+                <p className="text-2xl font-semibold text-primary mt-1">{sentTemplateCount}</p>
+              </div>
+              <div className="rounded-xl border border-accent bg-inner-theme p-4">
+                <p className="text-xs uppercase tracking-wide text-secondary">Link opens</p>
+                <p className="text-2xl font-semibold text-primary mt-1">{linkOpenCount}</p>
+              </div>
+            </div>
+            {!request.email && (
+              <div className="mb-6 rounded-xl border border-amber-700/40 bg-amber-950/30 px-4 py-3 text-sm text-amber-200">
+                Client email is missing. You can review activity below, but sending new template emails is disabled.
+              </div>
+            )}
             <div className="flex flex-wrap items-end gap-6">
               <div className="min-w-[280px] flex-1 max-w-md">
                 <Select
@@ -2072,7 +2097,8 @@ LankaLux Team`
               <button
                 type="button"
                 onClick={openTemplateEmailModal}
-                className={btnPri}
+                disabled={!request.email}
+                className={`${btnPri} disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -2087,30 +2113,30 @@ LankaLux Team`
               )}
             </div>
 
-            {request.follow_up_emails_sent && request.follow_up_emails_sent.length > 0 && (
-              <div className="mt-10 pt-10 border-t border-accent">
-                <button
-                  type="button"
-                  onClick={() => setFollowUpEmailsSentExpanded((v) => !v)}
-                  className="flex items-center justify-between w-full text-left gap-4"
+            <div className="mt-10 pt-10 border-t border-accent">
+              <button
+                type="button"
+                onClick={() => setFollowUpEmailsSentExpanded((v) => !v)}
+                className="flex items-center justify-between w-full text-left gap-4"
+              >
+                <h3 className="text-lg font-semibold text-accent-theme">
+                  Follow-up emails sent ({request.follow_up_emails_sent?.length ?? 0})
+                </h3>
+                <svg
+                  className={`w-5 h-5 text-secondary shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${followUpEmailsSentExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <h3 className="text-lg font-semibold text-accent-theme">
-                    Follow-up emails sent ({request.follow_up_emails_sent.length})
-                  </h3>
-                  <svg
-                    className={`w-5 h-5 text-secondary shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${followUpEmailsSentExpanded ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div
-                  className={`grid ${followUpEmailsSentExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
-                  style={{ transition: 'grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                >
-                  <div className="min-h-0 overflow-hidden">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div
+                className={`grid ${followUpEmailsSentExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                style={{ transition: 'grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}
+              >
+                <div className="min-h-0 overflow-hidden">
+                  {request.follow_up_emails_sent && request.follow_up_emails_sent.length > 0 ? (
                     <ul className="space-y-3 mt-4">
                       {[...request.follow_up_emails_sent]
                         .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
@@ -2129,36 +2155,38 @@ LankaLux Team`
                           </li>
                         ))}
                     </ul>
-                  </div>
+                  ) : (
+                    <p className="text-sm text-secondary mt-4">No follow-up templates have been sent yet.</p>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
 
-            {request.link_opens && request.link_opens.length > 0 && (
-              <div className="mt-10 pt-10 border-t border-accent">
-                <button
-                  type="button"
-                  onClick={() => setLinkOpensExpanded((v) => !v)}
-                  className="flex items-center justify-between w-full text-left gap-4"
+            <div className="mt-10 pt-10 border-t border-accent">
+              <button
+                type="button"
+                onClick={() => setLinkOpensExpanded((v) => !v)}
+                className="flex items-center justify-between w-full text-left gap-4"
+              >
+                <h3 className="text-lg font-semibold text-accent-theme">
+                  Link opens ({request.link_opens?.length ?? 0})
+                </h3>
+                <svg
+                  className={`w-5 h-5 text-secondary shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${linkOpensExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <h3 className="text-lg font-semibold text-accent-theme">
-                    Link opens ({request.link_opens.length})
-                  </h3>
-                  <svg
-                    className={`w-5 h-5 text-secondary shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${linkOpensExpanded ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div
-                  className={`grid ${linkOpensExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
-                  style={{ transition: 'grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}
-                >
-                  <div className="min-h-0 overflow-hidden">
-                    <p className="text-sm text-secondary mt-4 mb-4 text-left">When the client opened the itinerary link (most recent first).</p>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div
+                className={`grid ${linkOpensExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                style={{ transition: 'grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }}
+              >
+                <div className="min-h-0 overflow-hidden">
+                  <p className="text-sm text-secondary mt-4 mb-4 text-left">When the client opened the itinerary link (most recent first).</p>
+                  {request.link_opens && request.link_opens.length > 0 ? (
                     <ul className="space-y-1">
                       {[...request.link_opens]
                         .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
@@ -2179,10 +2207,12 @@ LankaLux Team`
                           </li>
                         ))}
                     </ul>
-                  </div>
+                  ) : (
+                    <p className="text-sm text-secondary">No link opens recorded yet.</p>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -2727,9 +2757,8 @@ LankaLux Team`
         {/* Sent Itinerary Section - Show if any options have been sent */}
         {(() => {
           const hasSentAt = !!request.sent_at
-          const hasOptions = !!request.itinerary_options?.options
           const hasSentOptions = request.sent_options && Array.isArray(request.sent_options) && request.sent_options.length > 0
-          const shouldShow = hasSentAt && hasOptions && (hasSentOptions || request.last_sent_option !== null)
+          const shouldShow = hasSentAt && (hasSentOptions || request.last_sent_option !== null)
           
           if (!shouldShow) return null
           
@@ -2791,7 +2820,13 @@ LankaLux Team`
                   }]
                 }
                 
-                if (sentOptionsList.length === 0) return null
+                if (sentOptionsList.length === 0) {
+                  return (
+                    <div className="mb-4 mt-10 pt-10 border-t border-accent text-left">
+                      <p className="text-sm text-secondary">No sent itinerary records yet.</p>
+                    </div>
+                  )
+                }
                 
                 // Show note if there are 10 or more entries (indicating we're showing the most recent 10)
                 const showLimitNote = sentOptionsList.length >= 10
@@ -2820,6 +2855,10 @@ LankaLux Team`
                         optionIndex !== null && optionIndex !== undefined
                           ? request.itinerary_options?.options?.[optionIndex]
                           : undefined
+                      const itinerarySnapshot =
+                        sentOption.itinerary_data && typeof sentOption.itinerary_data === 'object'
+                          ? sentOption.itinerary_data
+                          : null
                       let optionTitle =
                         optionIndex !== null && optionIndex !== undefined
                           ? `Option ${optionIndex + 1}`
@@ -2843,6 +2882,21 @@ LankaLux Team`
                           ).join('\n\n')
                         } else if (typeof option.days === 'string') {
                           optionDays = option.days
+                        }
+                      } else if (itinerarySnapshot && typeof itinerarySnapshot === 'object') {
+                        if (typeof (itinerarySnapshot as { title?: string }).title === 'string') {
+                          optionTitle = (itinerarySnapshot as { title: string }).title
+                        }
+                        if (typeof (itinerarySnapshot as { summary?: string }).summary === 'string') {
+                          optionSummary = (itinerarySnapshot as { summary: string }).summary
+                        }
+                        const snapshotDays = (itinerarySnapshot as { days?: unknown }).days
+                        if (Array.isArray(snapshotDays)) {
+                          optionDays = snapshotDays
+                            .map((day: any) => `Day ${day.day}: ${day.title} - ${day.location}\n${day.activities?.map((act: string) => `  • ${act}`).join('\n') || ''}`)
+                            .join('\n\n')
+                        } else if (typeof snapshotDays === 'string') {
+                          optionDays = snapshotDays
                         }
                       } else if (sentOption.option_title && typeof sentOption.option_title === 'string') {
                         optionTitle = sentOption.option_title
