@@ -67,6 +67,31 @@ function durationFromDates(startDate: string, endDate: string): number | null {
   return Math.floor((end.getTime() - start.getTime()) / 86400000) + 1
 }
 
+function detailObject(detail: ActivityEvent['detail']): Record<string, unknown> | null {
+  if (!detail || typeof detail !== 'object' || Array.isArray(detail)) return null
+  return detail
+}
+
+function activityItineraryUrl(entry: ActivityEvent): string | null {
+  const detail = detailObject(entry.detail)
+  if (!detail) return null
+  const direct =
+    (typeof detail.url === 'string' && detail.url.trim()) ||
+    (typeof detail.shareUrl === 'string' && detail.shareUrl.trim()) ||
+    (typeof detail.itinerary_url === 'string' && detail.itinerary_url.trim()) ||
+    (typeof detail.itineraryUrl === 'string' && detail.itineraryUrl.trim()) ||
+    (typeof detail.share_url === 'string' && detail.share_url.trim()) ||
+    null
+  if (direct) return direct
+  const token =
+    (typeof detail.shareToken === 'string' && detail.shareToken.trim()) ||
+    (typeof detail.share_token === 'string' && detail.share_token.trim()) ||
+    (typeof detail.token === 'string' && detail.token.trim()) ||
+    null
+  if (!token) return null
+  return `/journey/${encodeURIComponent(token)}`
+}
+
 export function RequestWorkspace() {
   const params = useParams<{ id: string }>()
   const id = params.id
@@ -591,17 +616,30 @@ export function RequestWorkspace() {
             <tr>
               <th>When</th>
               <th>Event</th>
+              <th>Itinerary link</th>
               <th>User</th>
             </tr>
           </thead>
           <tbody>
-            {activity.map((a, i) => (
-              <tr key={a.id || i}>
-                <td>{a.created_at ? new Date(a.created_at).toLocaleString() : ''}</td>
-                <td>{a.event_type}</td>
-                <td>{a.actor || '—'}</td>
-              </tr>
-            ))}
+            {activity.map((a, i) => {
+              const url = activityItineraryUrl(a)
+              return (
+                <tr key={a.id || i}>
+                  <td>{a.created_at ? new Date(a.created_at).toLocaleString() : ''}</td>
+                  <td>{a.event_type}</td>
+                  <td>
+                    {url ? (
+                      <a href={url} target="_blank" rel="noreferrer">
+                        Open link
+                      </a>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                  <td>{a.actor || '—'}</td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       )}

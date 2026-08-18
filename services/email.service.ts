@@ -169,7 +169,7 @@ export async function sendJourneyEmail(opts: {
     request_id: opts.requestId,
     actor: opts.actor,
     event_type: 'email_sent',
-    detail: { to, subject, shareToken },
+    detail: { to, subject, shareToken, shareUrl: shareUrl || null },
   })
 
   return { messageId, shareUrl, subject, to }
