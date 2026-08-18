@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 function isCompleteIsoDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
@@ -14,25 +15,6 @@ function isCompleteIsoDate(value: string): boolean {
     date.getMonth() === month - 1 &&
     date.getDate() === day
   )
-}
-
-const ALLOWED_DATE_KEYS = new Set([
-  'Tab',
-  'Escape',
-  'Enter',
-  'Backspace',
-  'Delete',
-  'ArrowLeft',
-  'ArrowRight',
-  'ArrowUp',
-  'ArrowDown',
-  'Home',
-  'End',
-])
-
-function preventManualDateTyping(e: { key: string; preventDefault: () => void }) {
-  if (ALLOWED_DATE_KEYS.has(e.key)) return
-  e.preventDefault()
 }
 
 export default function NewRequestPage() {
@@ -300,12 +282,10 @@ export default function NewRequestPage() {
               <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-2">
                 Start Date
               </label>
-              <input
+              <DatePicker
                 id="start_date"
-                type="date"
                 value={startDate}
-                onChange={(e) => {
-                  const selectedStartDate = e.target.value
+                onChange={(selectedStartDate) => {
                   // If end date is set and the new start date is after end date, clear end date
                   if (endDate && selectedStartDate) {
                     const isValidEndDate = isCompleteIsoDate(endDate)
@@ -316,12 +296,10 @@ export default function NewRequestPage() {
                   }
                   setStartDate(selectedStartDate)
                 }}
-                onKeyDown={preventManualDateTyping}
-                onFocus={(e) => (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.()}
                 min={today}
                 max="2099-12-31"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
                 disabled={loading}
+                theme="light"
               />
             </div>
 
@@ -330,37 +308,14 @@ export default function NewRequestPage() {
               <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-2">
                 End Date
               </label>
-              <input
+              <DatePicker
                 id="end_date"
-                type="date"
                 value={endDate}
-                onChange={(e) => {
-                  // Just update the value without validation
-                  setEndDate(e.target.value)
-                }}
-                onKeyDown={preventManualDateTyping}
-                onFocus={(e) => (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.()}
-                onBlur={(e) => {
-                  // Validate only when user finishes entering the date (on blur)
-                  const selectedEndDate = e.target.value
-                  if (selectedEndDate && startDate) {
-                    // Check if both dates are complete and valid
-                    const isValidDate = isCompleteIsoDate(selectedEndDate)
-                    const isStartDateValid = isCompleteIsoDate(startDate)
-                    
-                    if (isValidDate && isStartDateValid && selectedEndDate < startDate) {
-                      alert('End date cannot be before start date')
-                      // Clear the invalid end date
-                      setEndDate('')
-                      // Refocus the input
-                      e.target.focus()
-                    }
-                  }
-                }}
+                onChange={setEndDate}
                 min={startDate || today}
                 max="2099-12-31"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all [color-scheme:dark]"
                 disabled={loading}
+                theme="light"
               />
             </div>
 

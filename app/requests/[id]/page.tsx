@@ -14,6 +14,7 @@ import { parseHotelOptions } from '@/lib/hotel-types'
 import { formatItineraryDaysPlain, buildHotelSectionPlain } from '@/lib/email-itinerary-hotel'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ClientViewPreviewModal } from '@/components/ClientViewPreviewModal'
 import { ImageManager } from '@/components/ImageManager'
@@ -81,25 +82,6 @@ function isCompleteIsoDate(value: string): boolean {
     date.getMonth() === month - 1 &&
     date.getDate() === day
   )
-}
-
-const ALLOWED_DATE_KEYS = new Set([
-  'Tab',
-  'Escape',
-  'Enter',
-  'Backspace',
-  'Delete',
-  'ArrowLeft',
-  'ArrowRight',
-  'ArrowUp',
-  'ArrowDown',
-  'Home',
-  'End',
-])
-
-function preventManualDateTyping(e: { key: string; preventDefault: () => void }) {
-  if (ALLOWED_DATE_KEYS.has(e.key)) return
-  e.preventDefault()
 }
 
 export default function RequestDetailsPage() {
@@ -1874,27 +1856,28 @@ LankaLux Team`
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                     <div>
                       <label className={lbl}>Start date</label>
-                      <input
-                        type="date"
+                      <DatePicker
                         value={startDateValue}
-                        onChange={(e) => setStartDateValue(e.target.value)}
-                        onKeyDown={preventManualDateTyping}
-                        onFocus={(e) => (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.()}
+                        onChange={(selectedStartDate) => {
+                          if (endDateValue && selectedStartDate && selectedStartDate > endDateValue) {
+                            setEndDateValue('')
+                          }
+                          setStartDateValue(selectedStartDate)
+                        }}
                         max="2099-12-31"
-                        className={`${field} [color-scheme:dark]`}
+                        theme="dark"
+                        className="[color-scheme:dark]"
                       />
                     </div>
                     <div>
                       <label className={lbl}>End date</label>
-                      <input
-                        type="date"
+                      <DatePicker
                         value={endDateValue}
-                        onChange={(e) => setEndDateValue(e.target.value)}
-                        onKeyDown={preventManualDateTyping}
-                        onFocus={(e) => (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.()}
+                        onChange={setEndDateValue}
                         min={startDateValue || undefined}
                         max="2099-12-31"
-                        className={`${field} [color-scheme:dark]`}
+                        theme="dark"
+                        className="[color-scheme:dark]"
                       />
                     </div>
                     <div>
