@@ -610,7 +610,7 @@ export function RequestWorkspace() {
         <div className="ll-modal-back" onClick={() => setEmailOpen(false)}>
           <div className="ll-modal wide" onClick={(e) => e.stopPropagation()}>
             <h2>Send email</h2>
-            <p className="ll-muted">The saved selected itinerary is sent as-is. Preview it before it leaves.</p>
+            <p className="ll-muted">The preview below uses the same template that is sent to the client.</p>
             <div className="ll-form">
               <label>To<input readOnly value={row.email || ''} /></label>
               <label>
@@ -661,11 +661,8 @@ export function RequestWorkspace() {
                 <iframe title="Email preview" className="ll-preview-frame" srcDoc={emailHtml} />
               )}
               <div className="ll-row">
-                <button className="ll-btn secondary" disabled={!!busy} onClick={previewClientJourney}>
-                  Preview journey
-                </button>
                 <button className="ll-btn secondary" disabled={!!busy} onClick={previewEmail}>
-                  Preview email
+                  Preview
                 </button>
                 <button className="ll-btn" disabled={!!busy || missingVehicleSelection} onClick={sendEmail}>
                   {busy ? 'Sending…' : 'Send'}
