@@ -60,6 +60,7 @@ interface Request {
   last_sent_option: number | null
   email_sent_count: number | null
   sent_options: any[] | null
+  vehicle_preference?: string | null
   hotel_options?: string | null
   follow_up_emails_sent?: { sent_at: string; template_id: string; template_name: string; subject: string }[] | null
   link_opens?: { opened_at: string; option_index?: number | null }[] | null
@@ -82,6 +83,32 @@ function isCompleteIsoDate(value: string): boolean {
     date.getMonth() === month - 1 &&
     date.getDate() === day
   )
+}
+
+function normalizeFleetVehicleId(value: string | null | undefined): string {
+  if (!value) return ''
+  const raw = value.trim().toLowerCase()
+  const byId = getFleetVehicleById(raw)
+  if (byId) return byId.id
+  const byName = FLEET_VEHICLES.find((v) => v.name.trim().toLowerCase() === raw)
+  return byName?.id || ''
+}
+
+function preferredVehicleIdFromSentOptions(sentOptions: unknown): string {
+  if (!Array.isArray(sentOptions)) return ''
+  for (const item of sentOptions) {
+    if (!item || typeof item !== 'object') continue
+    const sendOptions = (item as { send_options?: unknown }).send_options
+    if (!sendOptions || typeof sendOptions !== 'object') continue
+    const so = sendOptions as {
+      include_vehicle?: boolean
+      vehicle_option?: { id?: string; name?: string } | null
+    }
+    if (!so.include_vehicle || !so.vehicle_option) continue
+    const id = normalizeFleetVehicleId(so.vehicle_option.id || so.vehicle_option.name || '')
+    if (id) return id
+  }
+  return ''
 }
 
 export default function RequestDetailsPage() {
@@ -155,6 +182,14 @@ export default function RequestDetailsPage() {
     setHotels(h)
     setSelectedHotelId(sid)
   }, [request?.id, request?.hotel_options])
+
+  useEffect(() => {
+    if (!request || sendVehicleId) return
+    const byPreference = normalizeFleetVehicleId(request.vehicle_preference)
+    const byHistory = preferredVehicleIdFromSentOptions(request.sent_options)
+    const next = byPreference || byHistory
+    if (next) setSendVehicleId(next)
+  }, [request?.id, request?.vehicle_preference, request?.sent_options, sendVehicleId])
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -1129,6 +1164,11 @@ LankaLux Team`
         : null
 
     const parts: string[] = ['*LankaLux*']
+    const vehicleOption = buildVehicleOptionForSend()
+    if (includeItinerarySend && includeVehicleInItinerary && !vehicleOption) {
+      alert('Select a vehicle to include in the itinerary before sending.')
+      return
+    }
     if (includeItinerarySend && opt) {
       parts.push(
         '',
@@ -1142,6 +1182,9 @@ LankaLux Team`
       )
       if (itinUrls.length) {
         parts.push('', 'Itinerary images:', ...itinUrls)
+      }
+      if (includeVehicleInItinerary && vehicleOption) {
+        parts.push('', '--- VEHICLE ---', `${vehicleOption.name}`, `${vehicleOption.description}`)
       }
     }
     if (includeHotelSend && selectedHotel) {
@@ -1235,6 +1278,23 @@ LankaLux Team`
 
   const selectedHotel = hotels.find((h) => h.id === selectedHotelId) ?? null
 
+  const buildVehicleOptionForSend = () => {
+    if (!request || !includeItinerarySend || !includeVehicleInItinerary) return null
+    const fallbackId =
+      normalizeFleetVehicleId(request.vehicle_preference) ||
+      preferredVehicleIdFromSentOptions(request.sent_options)
+    const resolvedVehicleId = sendVehicleId || fallbackId
+    const baseVehicle = resolvedVehicleId ? getFleetVehicleById(resolvedVehicleId) : null
+    if (!baseVehicle) return null
+    return {
+      ...baseVehicle,
+      images:
+        sendVehiclePhotos.length >= 3 && sendVehiclePhotos.length <= 4
+          ? sendVehiclePhotos
+          : baseVehicle.images,
+    }
+  }
+
   const hotelToApiPayload = (h: HotelRecord) => ({
     name: h.name,
     location: h.location,
@@ -1275,16 +1335,12 @@ LankaLux Team`
       setSendingItinerary(true)
       setSendSuccess(false)
 
-      const baseVehicle = includeVehicleInItinerary && sendVehicleId ? getFleetVehicleById(sendVehicleId) : null
-      const vehicleOption = baseVehicle
-        ? {
-            ...baseVehicle,
-            images:
-              sendVehiclePhotos.length >= 3 && sendVehiclePhotos.length <= 4
-                ? sendVehiclePhotos
-                : baseVehicle.images,
-          }
-        : null
+      const vehicleOption = buildVehicleOptionForSend()
+      if (includeItinerarySend && includeVehicleInItinerary && !vehicleOption) {
+        alert('Select a vehicle to include in the itinerary before sending.')
+        setSendingItinerary(false)
+        return
+      }
       const sendOptions = {
         include_vehicle: includeItinerarySend && includeVehicleInItinerary,
         include_price: includeItinerarySend && includePriceInItinerary,
@@ -2654,6 +2710,12 @@ LankaLux Team`
                       onChange={(e) => {
                         setIncludeVehicleInItinerary(e.target.checked)
                         if (!e.target.checked) setSendVehiclePhotos([])
+                        if (e.target.checked && !sendVehicleId) {
+                          const fallbackId =
+                            normalizeFleetVehicleId(request.vehicle_preference) ||
+                            preferredVehicleIdFromSentOptions(request.sent_options)
+                          if (fallbackId) setSendVehicleId(fallbackId)
+                        }
                       }}
                       className="rounded border-accent text-accent-theme"
                     />
@@ -2812,6 +2874,7 @@ LankaLux Team`
           requestId={request.id}
           savingImages={savingItineraryImages === (previewingOptionIndex ?? request.selected_option ?? 0)}
           hotel={includeHotelSend && selectedHotel ? selectedHotel : null}
+          vehicleOption={includeItinerarySend ? buildVehicleOptionForSend() : null}
           onSendEmail={() => void handleSendItinerary()}
           onSendWhatsApp={() => {
             handleWhatsAppShare()

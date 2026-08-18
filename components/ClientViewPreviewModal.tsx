@@ -43,6 +43,7 @@ export function ClientViewPreviewModal({
   includeItinerary,
   includeHotel,
   itineraryOption,
+  vehicleOption,
   hotel,
   defaultItineraryImages = [],
   onItineraryImagesChange,
@@ -59,6 +60,7 @@ export function ClientViewPreviewModal({
   includeItinerary: boolean
   includeHotel: boolean
   itineraryOption: ItineraryOption | null
+  vehicleOption: { name: string; description: string; images: string[] } | null
   hotel: HotelRecord | null
   defaultItineraryImages?: ManagedImageItem[]
   onItineraryImagesChange?: (items: ManagedImageItem[]) => void
@@ -82,6 +84,7 @@ export function ClientViewPreviewModal({
   const displayUrls = urls.length > 0 ? urls : defaultUrls
   const hotelImgs = hotel ? normalizeManagedImages(hotel.images) : []
   const hotelUrls = imageSrcs(hotelImgs)
+  const vehicleUrls = vehicleOption?.images || []
 
   const daysArr = opt && Array.isArray(opt.days) ? opt.days : null
   const daysPlain =
@@ -211,6 +214,27 @@ export function ClientViewPreviewModal({
                 {hotelUrls.length > 0 && (
                   <div className="grid gap-3 mt-6">
                     {hotelUrls.map((src, i) => (
+                      <div
+                        key={i}
+                        className="rounded-2xl overflow-hidden shadow-lg ring-1 ring-stone-200 hover:shadow-xl transition-shadow duration-300"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" className="w-full max-h-56 object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {includeItinerary && vehicleOption && (
+              <div className={`${includeHotel && hotel ? 'mt-12 pt-10 border-t-2 border-[#c8a45d]' : includeItinerary && opt ? 'mt-12 pt-10 border-t-2 border-[#c8a45d]' : ''}`}>
+                <h3 className="text-[#b8860b] font-bold text-sm uppercase tracking-wider mb-4">Vehicle</h3>
+                <h4 className="text-xl font-bold text-stone-900">{vehicleOption.name}</h4>
+                <p className="text-stone-600 text-sm mt-3 leading-relaxed">{vehicleOption.description}</p>
+                {vehicleUrls.length > 0 && (
+                  <div className="grid gap-3 mt-6">
+                    {vehicleUrls.map((src, i) => (
                       <div
                         key={i}
                         className="rounded-2xl overflow-hidden shadow-lg ring-1 ring-stone-200 hover:shadow-xl transition-shadow duration-300"
