@@ -4,6 +4,17 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+function isCompleteIsoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  )
+}
+
 export default function NewRequestPage() {
   const [clientName, setClientName] = useState('')
   const [email, setEmail] = useState('')
@@ -21,7 +32,7 @@ export default function NewRequestPage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (startDate && endDate) {
+    if (isCompleteIsoDate(startDate) && isCompleteIsoDate(endDate)) {
       const start = new Date(startDate)
       const end = new Date(endDate)
       if (end >= start) {
@@ -98,6 +109,21 @@ export default function NewRequestPage() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       setError('Please enter a valid email address')
+      return
+    }
+
+    if (startDate && !isCompleteIsoDate(startDate)) {
+      setError('Please enter a complete start date (YYYY-MM-DD)')
+      return
+    }
+
+    if (endDate && !isCompleteIsoDate(endDate)) {
+      setError('Please enter a complete end date (YYYY-MM-DD)')
+      return
+    }
+
+    if (startDate && endDate && startDate > endDate) {
+      setError('End date cannot be before start date')
       return
     }
 
@@ -262,8 +288,8 @@ export default function NewRequestPage() {
                   const selectedStartDate = e.target.value
                   // If end date is set and the new start date is after end date, clear end date
                   if (endDate && selectedStartDate) {
-                    const isValidEndDate = /^\d{4}-\d{2}-\d{2}$/.test(endDate)
-                    const isValidStartDate = /^\d{4}-\d{2}-\d{2}$/.test(selectedStartDate)
+                    const isValidEndDate = isCompleteIsoDate(endDate)
+                    const isValidStartDate = isCompleteIsoDate(selectedStartDate)
                     if (isValidEndDate && isValidStartDate && selectedStartDate > endDate) {
                       setEndDate('')
                     }
@@ -294,9 +320,9 @@ export default function NewRequestPage() {
                   // Validate only when user finishes entering the date (on blur)
                   const selectedEndDate = e.target.value
                   if (selectedEndDate && startDate) {
-                    // Check if both dates are complete (valid date format: YYYY-MM-DD)
-                    const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(selectedEndDate)
-                    const isStartDateValid = /^\d{4}-\d{2}-\d{2}$/.test(startDate)
+                    // Check if both dates are complete and valid
+                    const isValidDate = isCompleteIsoDate(selectedEndDate)
+                    const isStartDateValid = isCompleteIsoDate(startDate)
                     
                     if (isValidDate && isStartDateValid && selectedEndDate < startDate) {
                       alert('End date cannot be before start date')

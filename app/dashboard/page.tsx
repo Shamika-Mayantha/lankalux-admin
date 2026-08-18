@@ -183,12 +183,12 @@ export default function DashboardPage() {
   const { nextArrival, nextDeparture } = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const nonCancelled = requests.filter((r) => r.status?.toLowerCase() !== 'cancelled')
+    const soldOnly = requests.filter((r) => r.status?.toLowerCase() === 'sold')
 
     let arrival: { request: Request; date: Date } | null = null
     let departure: { request: Request; date: Date } | null = null
 
-    for (const req of nonCancelled) {
+    for (const req of soldOnly) {
       const start = parseDateOnly(req.start_date)
       if (start && start >= today) {
         if (!arrival || start < arrival.date) {

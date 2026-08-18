@@ -71,6 +71,17 @@ function inclusiveDaysFromMs(ms: number) {
   return Math.floor(ms / MS_PER_DAY) + 1
 }
 
+function isCompleteIsoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  )
+}
+
 export default function RequestDetailsPage() {
   const params = useParams()
   const router = useRouter()
@@ -463,9 +474,25 @@ export default function RequestDetailsPage() {
     try {
       setSaving(true)
 
+      const hasStartDate = startDateValue.trim().length > 0
+      const hasEndDate = endDateValue.trim().length > 0
+      const startDateIsValid = !hasStartDate || isCompleteIsoDate(startDateValue)
+      const endDateIsValid = !hasEndDate || isCompleteIsoDate(endDateValue)
+
+      if (!startDateIsValid || !endDateIsValid) {
+        alert('Please complete dates in YYYY-MM-DD format before saving.')
+        setSaving(false)
+        return
+      }
+      if (hasStartDate && hasEndDate && endDateValue < startDateValue) {
+        alert('End date cannot be before start date.')
+        setSaving(false)
+        return
+      }
+
       // Calculate duration if dates changed
       let duration = request.duration
-      if (startDateValue && endDateValue) {
+      if (hasStartDate && hasEndDate) {
         const start = new Date(startDateValue)
         const end = new Date(endDateValue)
         if (end >= start) {
@@ -479,8 +506,8 @@ export default function RequestDetailsPage() {
           client_name: clientNameValue.trim() || null,
           email: emailValue.trim() || null,
           whatsapp: whatsappValue.trim() || null,
-          start_date: startDateValue || null,
-          end_date: endDateValue || null,
+          start_date: hasStartDate ? startDateValue : null,
+          end_date: hasEndDate ? endDateValue : null,
           duration: duration || null,
           number_of_adults: numberOfAdultsValue ? parseInt(numberOfAdultsValue) : null,
           number_of_children: numberOfChildrenValue ? parseInt(numberOfChildrenValue) : null,
@@ -1847,7 +1874,7 @@ LankaLux Team`
                     <div>
                       <p className={lbl}>Duration</p>
                       <p className="text-secondary py-3">
-                        {startDateValue && endDateValue
+                        {isCompleteIsoDate(startDateValue) && isCompleteIsoDate(endDateValue)
                           ? (() => {
                               const start = new Date(startDateValue)
                               const end = new Date(endDateValue)
