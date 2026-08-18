@@ -107,7 +107,6 @@ export default function RequestDetailsPage() {
   const [numberOfChildrenValue, setNumberOfChildrenValue] = useState('')
   const [childrenAgesValue, setChildrenAgesValue] = useState<string[]>([])
   const [additionalPreferencesValue, setAdditionalPreferencesValue] = useState('')
-  const [editingAdditionalPreferences, setEditingAdditionalPreferences] = useState(false)
   const [savingAdditionalPreferences, setSavingAdditionalPreferences] = useState(false)
   const [saving, setSaving] = useState(false)
   const [cancelling, setCancelling] = useState(false)
@@ -554,7 +553,6 @@ export default function RequestDetailsPage() {
         return { ...prev, additional_preferences: normalizedPreferences }
       })
       setAdditionalPreferencesValue(normalizedPreferences || '')
-      setEditingAdditionalPreferences(false)
       setSavingAdditionalPreferences(false)
     } catch (err) {
       console.error('Unexpected error saving additional preferences:', err)
@@ -565,7 +563,8 @@ export default function RequestDetailsPage() {
 
   const handleGenerateSingleOption = async (optionIndex: number) => {
     if (!request) return
-    if (editingAdditionalPreferences) {
+    const hasUnsavedInterests = additionalPreferencesValue !== (request.additional_preferences || '')
+    if (hasUnsavedInterests) {
       alert('Please save or cancel interests before generating itineraries.')
       return
     }
@@ -2045,66 +2044,41 @@ LankaLux Team`
 
         {/* Additional preferences */}
         <div className={card}>
-              <div className="flex items-center justify-between gap-4 mb-8">
+              <div className="flex items-center justify-between gap-4 mb-6">
                 <h2 className="text-left text-2xl font-semibold text-accent-theme">Interests / additional preferences</h2>
-                {!editingAdditionalPreferences && (
+              </div>
+              <div className="space-y-6">
+                <textarea
+                  value={additionalPreferencesValue}
+                  onChange={(e) => setAdditionalPreferencesValue(e.target.value)}
+                  rows={20}
+                  className={`${field} resize-y min-h-[520px] h-[58vh] max-h-[76vh]`}
+                  placeholder="e.g., honeymoon, wildlife safari, luxury focus, train journeys, ayurveda retreat, family friendly, adventure"
+                />
+                <p className="text-xs text-secondary text-left">
+                  This text is used by AI when generating itineraries. Click Save interests to apply your changes.
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  <button
+                    type="button"
+                    onClick={handleSaveAdditionalPreferences}
+                    disabled={savingAdditionalPreferences || additionalPreferencesValue === (request.additional_preferences || '')}
+                    className={`${btnPri} disabled:opacity-50`}
+                  >
+                    {savingAdditionalPreferences ? 'Saving...' : 'Save interests'}
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
                       setAdditionalPreferencesValue(request.additional_preferences || '')
-                      setEditingAdditionalPreferences(true)
                     }}
-                    className={`${btnPri} shrink-0`}
+                    disabled={savingAdditionalPreferences || additionalPreferencesValue === (request.additional_preferences || '')}
+                    className={`${btnSec} disabled:opacity-50`}
                   >
-                    Edit interests
+                    Cancel changes
                   </button>
-                )}
+                </div>
               </div>
-              {editingAdditionalPreferences ? (
-                <div className="space-y-6">
-                  <textarea
-                    value={additionalPreferencesValue}
-                    onChange={(e) => setAdditionalPreferencesValue(e.target.value)}
-                    rows={18}
-                    className={`${field} resize-y min-h-[460px] h-[52vh] max-h-[72vh]`}
-                    placeholder="e.g., honeymoon, wildlife safari, luxury focus, train journeys, ayurveda retreat, family friendly, adventure"
-                  />
-                  <p className="text-xs text-secondary text-left">
-                    Save these interests before generating itineraries so AI uses the latest details.
-                  </p>
-                  <div className="flex flex-wrap gap-4">
-                    <button
-                      type="button"
-                      onClick={handleSaveAdditionalPreferences}
-                      disabled={savingAdditionalPreferences}
-                      className={`${btnPri} disabled:opacity-50`}
-                    >
-                      {savingAdditionalPreferences ? 'Saving...' : 'Save interests'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAdditionalPreferencesValue(request.additional_preferences || '')
-                        setEditingAdditionalPreferences(false)
-                      }}
-                      disabled={savingAdditionalPreferences}
-                      className={`${btnSec} disabled:opacity-50`}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-xl border border-accent bg-inner-theme p-6 md:p-8 min-h-[340px]">
-                  {request.additional_preferences ? (
-                    <p className="text-secondary whitespace-pre-wrap leading-relaxed">
-                      {request.additional_preferences}
-                    </p>
-                  ) : (
-                    <p className="text-secondary italic">No interests/preferences specified yet.</p>
-                  )}
-                </div>
-              )}
         </div>
 
         {/* Notes */}

@@ -176,12 +176,6 @@ export default function NewRequestPage() {
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && e.ctrlKey && !loading) {
-      handleSubmit()
-    }
-  }
-
   // Get today's date in YYYY-MM-DD format for min attribute
   const today = new Date().toISOString().split('T')[0]
 
@@ -440,15 +434,11 @@ export default function NewRequestPage() {
                 id="additional_preferences"
                 value={additionalPreferences}
                 onChange={(e) => setAdditionalPreferences(e.target.value)}
-                onKeyPress={handleKeyPress}
                 placeholder="e.g., honeymoon, wildlife safari, luxury focus, train journeys, ayurveda retreat, family friendly, adventure"
-                rows={6}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y"
+                rows={14}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#d4af37] focus:border-transparent transition-all resize-y min-h-[340px]"
                 disabled={loading}
               />
-              <p className="mt-2 text-xs text-gray-500">
-                Press Ctrl+Enter to submit
-              </p>
             </div>
 
             {/* Error Message */}
