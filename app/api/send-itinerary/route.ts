@@ -297,6 +297,7 @@ export async function POST(request: Request) {
       hotelPayload && Array.isArray(hotelPayload.images)
         ? {
             ...hotelPayload,
+            showPrice: false,
             images: hotelPayload.images.map((s) => absoluteImageSrc(String(s), baseUrl)),
           }
         : hotelPayload
@@ -315,7 +316,6 @@ export async function POST(request: Request) {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <!-- Preheader text for email preview -->
           <style type="text/css">
             .preheader {
               display: none !important;
@@ -331,309 +331,133 @@ export async function POST(request: Request) {
             }
           </style>
           <style>
-            * {
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-            }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
-              font-family: 'Georgia', 'Times New Roman', serif;
-              line-height: 1.8;
-              color: #2c2c2c;
-              background-color: #f5f5f5;
-              padding: 0;
+              font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+              line-height: 1.75;
+              color: #252523;
+              background: #f9f4eb;
               margin: 0;
+              padding: 18px 10px;
             }
             .email-container {
-              max-width: 600px;
+              max-width: 620px;
               margin: 0 auto;
-              background-color: #ffffff;
-              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+              background: #ffffff;
+              border: 1px solid rgba(26, 42, 29, 0.12);
             }
             .header {
-              background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
-              padding: 40px 20px;
+              background: #f9f4eb;
+              padding: 28px 20px 24px;
               text-align: center;
-              border-bottom: 4px solid #c8a45d;
+              border-bottom: 1px solid #b18544;
             }
             .logo {
-              width: 80px;
-              height: 80px;
-              margin: 0 auto 20px;
+              width: 220px;
+              max-width: 80%;
+              height: auto;
               display: block;
-              border-radius: 50%;
-              object-fit: cover;
+              margin: 0 auto;
             }
-            .header h1 {
-              color: #c8a45d;
-              font-size: 32px;
-              font-weight: 300;
-              letter-spacing: 2px;
-              margin: 0;
-              font-family: 'Georgia', serif;
-            }
-            .header .subtitle {
-              color: #ffffff;
-              font-size: 14px;
-              margin-top: 8px;
-              letter-spacing: 1px;
-              text-transform: uppercase;
-            }
-            .content {
-              padding: 40px 30px;
-              background-color: #ffffff;
-            }
+            .content { padding: 30px 28px; }
             .greeting {
-              font-size: 18px;
-              color: #2c2c2c;
-              margin-bottom: 20px;
-              font-weight: 400;
+              font-size: 16px;
+              margin-bottom: 14px;
+              color: #1a2a1d;
             }
             .intro-text {
-              font-size: 16px;
-              color: #555;
-              margin-bottom: 30px;
-              line-height: 1.8;
+              font-size: 15px;
+              color: #55544f;
+              margin-bottom: 22px;
             }
             .info-box {
-              background-color: #fafafa;
-              border-left: 4px solid #c8a45d;
-              padding: 20px;
-              margin: 25px 0;
-              border-radius: 4px;
+              background: #f1e9da;
+              border-left: 3px solid #b18544;
+              padding: 14px 16px;
+              margin: 0 0 22px;
             }
-            .info-row {
-              margin-bottom: 12px;
-              font-size: 15px;
-            }
-            .info-row:last-child {
-              margin-bottom: 0;
-            }
+            .info-row { margin-bottom: 10px; font-size: 13px; color: #55544f; }
+            .info-row:last-child { margin-bottom: 0; }
             .info-label {
-              color: #666;
+              color: #6b6b66;
               font-weight: 600;
-              display: inline-block;
-              min-width: 140px;
               text-transform: uppercase;
-              font-size: 12px;
-              letter-spacing: 0.5px;
-            }
-            .info-value {
-              color: #2c2c2c;
-              font-weight: 400;
+              letter-spacing: .1em;
+              font-size: 11px;
+              display: block;
+              margin-bottom: 4px;
             }
             .journey-title {
-              color: #c8a45d;
+              color: #1a2a1d;
               font-size: 20px;
+              font-family: 'Be Vietnam Pro', 'Open Sans', Arial, sans-serif;
               font-weight: 600;
-              margin-top: 8px;
-            }
-            .journey-overview {
-              background-color: #fafafa;
-              border: 1px solid #e0e0e0;
-              border-radius: 8px;
-              padding: 25px;
-              margin: 30px 0;
-            }
-            .journey-overview h3 {
-              color: #c8a45d;
-              font-size: 18px;
-              font-weight: 600;
-              margin-bottom: 15px;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-              border-bottom: 2px solid #c8a45d;
-              padding-bottom: 10px;
-            }
-            .day-section {
-              margin-bottom: 20px;
-              padding-bottom: 20px;
-              border-bottom: 1px solid #e0e0e0;
-            }
-            .day-section:last-child {
-              border-bottom: none;
-              margin-bottom: 0;
-              padding-bottom: 0;
-            }
-            .day-header {
-              display: flex;
-              align-items: center;
-              margin-bottom: 12px;
-            }
-            .day-number {
-              background-color: #c8a45d;
-              color: #ffffff;
-              width: 35px;
-              height: 35px;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: 600;
-              font-size: 16px;
-              margin-right: 12px;
-            }
-            .day-title {
-              font-size: 16px;
-              font-weight: 600;
-              color: #2c2c2c;
-            }
-            .day-location {
-              font-size: 14px;
-              color: #666;
-              margin-left: 47px;
-              margin-top: -5px;
-              margin-bottom: 10px;
-            }
-            .activities-list {
-              margin-left: 47px;
-              margin-top: 10px;
-            }
-            .activity-item {
-              font-size: 14px;
-              color: #555;
-              margin-bottom: 8px;
-              padding-left: 20px;
-              position: relative;
-            }
-            .activity-item:before {
-              content: "•";
-              color: #c8a45d;
-              font-weight: bold;
-              position: absolute;
-              left: 0;
-            }
-            .what-to-expect {
-              background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
-              border-left: 4px solid #c8a45d;
-              padding: 20px;
-              margin: 30px 0;
-              border-radius: 4px;
-            }
-            .what-to-expect h3 {
-              color: #c8a45d;
-              font-size: 16px;
-              font-weight: 600;
-              margin-bottom: 12px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-            }
-            .expect-item {
-              font-size: 14px;
-              color: #555;
-              margin-bottom: 8px;
-              padding-left: 20px;
-              position: relative;
-            }
-            .expect-item:before {
-              content: "✓";
-              color: #c8a45d;
-              font-weight: bold;
-              position: absolute;
-              left: 0;
+              line-height: 1.3;
             }
             .cta-section {
               text-align: center;
-              margin: 40px 0;
-              padding: 30px 0;
-              border-top: 1px solid #e0e0e0;
-              border-bottom: 1px solid #e0e0e0;
+              margin: 24px 0 26px;
             }
             .journey-link {
               display: inline-block;
-              background: linear-gradient(135deg, #c8a45d 0%, #b8944d 100%);
-              color: #ffffff;
-              padding: 16px 40px;
+              background: #1a2a1d;
+              color: #f9f4eb !important;
               text-decoration: none;
-              border-radius: 6px;
+              padding: 14px 28px;
+              font-size: 14px;
               font-weight: 600;
-              font-size: 16px;
-              letter-spacing: 0.5px;
-              box-shadow: 0 4px 12px rgba(200, 164, 93, 0.3);
-              transition: all 0.3s ease;
-              text-transform: uppercase;
-            }
-            .journey-link:hover {
-              background: linear-gradient(135deg, #b8944d 0%, #a8843d 100%);
-              box-shadow: 0 6px 16px rgba(200, 164, 93, 0.4);
-              transform: translateY(-2px);
+              letter-spacing: .02em;
             }
             .closing-text {
-              font-size: 15px;
-              color: #555;
-              margin: 30px 0 20px;
-              line-height: 1.8;
+              font-size: 14px;
+              color: #55544f;
+              margin: 0 0 14px;
             }
             .signature {
-              margin-top: 30px;
-              font-size: 15px;
-              color: #2c2c2c;
+              margin-top: 14px;
+              font-size: 14px;
+              color: #1a2a1d;
             }
             .signature-name {
+              color: #b18544;
               font-weight: 600;
-              color: #c8a45d;
-              margin-top: 5px;
             }
             .footer {
-              background-color: #1a1a1a;
-              padding: 25px 20px;
+              background: #1a2a1d;
               text-align: center;
-              color: #999;
+              color: #f9f4eb;
+              padding: 18px 16px;
               font-size: 12px;
-            }
-            .footer p {
-              margin: 5px 0;
-            }
-            .footer a {
-              color: #c8a45d;
-              text-decoration: none;
-            }
-            @media only screen and (max-width: 600px) {
-              .content {
-                padding: 30px 20px;
-              }
-              .header {
-                padding: 30px 15px;
-              }
-              .info-label {
-                display: block;
-                margin-bottom: 5px;
-              }
             }
           </style>
         </head>
         <body>
-          <!-- Preheader text - shown in email preview instead of first line -->
           <div class="preheader">${preheader}</div>
           <div class="email-container">
             <div class="header">
               <a href="https://lankalux.com" style="text-decoration: none; display: block;">
-                <img src="${logoUrl}" alt="LankaLux Logo" class="logo" />
+                <img src="${logoUrl}" alt="LankaLux" class="logo" />
               </a>
-              <h1>LankaLux</h1>
-              <div class="subtitle">Journey</div>
             </div>
             <div class="content">
               <div class="greeting">Dear ${requestData.client_name || 'Valued Client'},</div>
-              
-              <p class="intro-text">
-                ${introMain}
-              </p>
-              
+
+              <p class="intro-text">${introMain}</p>
+
               ${infoBoxHtml}
-              
+
               ${itineraryLinkHtml}
-              
+
               ${hotelHtml}
-              
+
               <p class="closing-text">
-                ${include_itinerary ? `This link provides access to your complete journey details. ` : ''}If you have any questions or would like adjustments, please reach out—we're here to make your journey perfect.
+                ${include_itinerary ? 'Your complete journey details, including any shared pricing, are available only on the secure link above. ' : ''}If you have any questions or would like adjustments, please reply to this email.
               </p>
-              
+
               <p class="closing-text">
-                We look forward to creating an extraordinary and unforgettable experience for you in the Pearl of the Indian Ocean.
+                We look forward to crafting an unforgettable Sri Lanka experience for you.
               </p>
-              
+
               <div class="signature">
                 <p>Warm regards,</p>
                 <p class="signature-name">The LankaLux Team</p>
@@ -641,7 +465,6 @@ export async function POST(request: Request) {
             </div>
             <div class="footer">
               <p>© ${new Date().getFullYear()} LankaLux. All rights reserved.</p>
-              <p>Your journey to Sri Lanka begins here.</p>
             </div>
           </div>
         </body>
