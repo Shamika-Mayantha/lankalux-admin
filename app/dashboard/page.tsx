@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -13,6 +13,12 @@ interface Request {
   status: string | null
   cancellation_reason?: string | null
   created_at: string
+}
+
+function parseDateOnly(dateString: string | null) {
+  if (!dateString) return null
+  const date = new Date(`${dateString}T12:00:00`)
+  return Number.isNaN(date.getTime()) ? null : date
 }
 
 export default function DashboardPage() {
@@ -174,6 +180,33 @@ export default function DashboardPage() {
   const soldRequests = requests.filter((r) => r.status?.toLowerCase() === 'sold')
   const cancelledRequests = requests.filter((r) => r.status?.toLowerCase() === 'cancelled')
 
+  const { nextArrival, nextDeparture } = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const nonCancelled = requests.filter((r) => r.status?.toLowerCase() !== 'cancelled')
+
+    let arrival: { request: Request; date: Date } | null = null
+    let departure: { request: Request; date: Date } | null = null
+
+    for (const req of nonCancelled) {
+      const start = parseDateOnly(req.start_date)
+      if (start && start >= today) {
+        if (!arrival || start < arrival.date) {
+          arrival = { request: req, date: start }
+        }
+      }
+
+      const end = parseDateOnly(req.end_date)
+      if (end && end >= today) {
+        if (!departure || end < departure.date) {
+          departure = { request: req, date: end }
+        }
+      }
+    }
+
+    return { nextArrival: arrival, nextDeparture: departure }
+  }, [requests])
+
   return (
     <div className="min-h-screen bg-page text-primary transition-colors duration-300">
       <div className="w-full mx-auto px-6 sm:px-10 lg:px-14 xl:px-20 py-10">
@@ -239,6 +272,57 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {/* Upcoming Arrivals & Departures */}
+        <section className="mb-12 animate-slide-in">
+          <h2 className="text-xl font-semibold text-primary mb-6 flex items-center gap-3">
+            <span className="w-1 h-6 bg-[var(--accent-gold)] rounded-full" />
+            Upcoming arrivals & departures
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div
+              className={`bg-card border border-theme rounded-2xl p-6 shadow-card transition-all duration-300 ${
+                nextArrival ? 'hover:border-amber-400 cursor-pointer' : ''
+              }`}
+              onClick={() => {
+                if (nextArrival) router.push(`/requests/${nextArrival.request.id}`)
+              }}
+            >
+              <p className="text-xs text-secondary uppercase tracking-wide mb-2">Next arrival</p>
+              {nextArrival ? (
+                <>
+                  <p className="text-primary text-lg font-semibold mb-1">
+                    {nextArrival.request.client_name || 'Unnamed Client'}
+                  </p>
+                  <p className="text-secondary">{formatDate(nextArrival.request.start_date)}</p>
+                </>
+              ) : (
+                <p className="text-secondary">No upcoming arrivals</p>
+              )}
+            </div>
+
+            <div
+              className={`bg-card border border-theme rounded-2xl p-6 shadow-card transition-all duration-300 ${
+                nextDeparture ? 'hover:border-amber-400 cursor-pointer' : ''
+              }`}
+              onClick={() => {
+                if (nextDeparture) router.push(`/requests/${nextDeparture.request.id}`)
+              }}
+            >
+              <p className="text-xs text-secondary uppercase tracking-wide mb-2">Next departure</p>
+              {nextDeparture ? (
+                <>
+                  <p className="text-primary text-lg font-semibold mb-1">
+                    {nextDeparture.request.client_name || 'Unnamed Client'}
+                  </p>
+                  <p className="text-secondary">{formatDate(nextDeparture.request.end_date)}</p>
+                </>
+              ) : (
+                <p className="text-secondary">No upcoming departures</p>
+              )}
+            </div>
+          </div>
+        </section>
 
         {/* Active Requests Section */}
         <section className="mb-12 animate-slide-in">
