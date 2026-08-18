@@ -106,7 +106,8 @@ export async function sendJourneyEmail(opts: {
   let messageId = ''
   try {
     const result = await transporter.sendMail({
-      from: `"LankaLux" <${smtp.from}>`,
+      from: `"LankaLux" <hello@lankalux.com>`,
+      replyTo: 'hello@lankalux.com',
       to,
       subject,
       text: compiled.text,

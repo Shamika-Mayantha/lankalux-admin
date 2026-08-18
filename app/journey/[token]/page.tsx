@@ -40,5 +40,5 @@ export default async function PublicJourneyPage({ params }: Props) {
     )
   }
 
-  return <JourneyView journey={journey} />
+  return <JourneyView journey={journey} showDistance={false} />
 }

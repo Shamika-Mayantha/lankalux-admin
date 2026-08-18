@@ -19,7 +19,13 @@ function formatIso(iso: string | null) {
   return d.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export function JourneyView({ journey }: { journey: CanonicalJourney }) {
+export function JourneyView({
+  journey,
+  showDistance = true,
+}: {
+  journey: CanonicalJourney
+  showDistance?: boolean
+}) {
   const start = formatIso(journey.startDate)
   const end = formatIso(journey.endDate)
   const kilometers = journey.totalKilometers || totalKilometersFor(journey.days)
@@ -35,7 +41,7 @@ export function JourneyView({ journey }: { journey: CanonicalJourney }) {
           {[
             start && end ? `${start} — ${end}` : start || end,
             journey.durationLabel,
-            formatKilometers(kilometers),
+            showDistance ? formatKilometers(kilometers) : null,
             partyLabel(journey),
           ]
             .filter(Boolean)
@@ -75,7 +81,7 @@ export function JourneyView({ journey }: { journey: CanonicalJourney }) {
               {(day.travel.from || day.travel.to || day.travel.estimated_duration) && (
                 <p className="journey-travel">
                   Travel{day.travel.from && day.travel.to ? ` ${day.travel.from} → ${day.travel.to}` : ''}
-                  {day.travel.estimated_distance ? ` · ${day.travel.estimated_distance}` : ''}
+                  {showDistance && day.travel.estimated_distance ? ` · ${day.travel.estimated_distance}` : ''}
                   {day.travel.estimated_duration ? ` · ${day.travel.estimated_duration}` : ''}
                 </p>
               )}
@@ -133,7 +139,7 @@ export function JourneyView({ journey }: { journey: CanonicalJourney }) {
           <p className="journey-brand">LankaLux</p>
           <p>{BRAND.tagline}</p>
           <p>
-            <a href="mailto:info@lankalux.com">info@lankalux.com</a>
+            <a href="mailto:hello@lankalux.com">hello@lankalux.com</a>
           </p>
         </section>
       </footer>

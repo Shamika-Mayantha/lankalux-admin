@@ -29,6 +29,44 @@ function emptyDay(n: number): ItineraryDay {
   }
 }
 
+type OverviewDraft = {
+  status: string
+  start_date: string
+  end_date: string
+  email: string
+  whatsapp: string
+  origin_country: string
+  assigned_employee: string
+  lead_source: string
+  requested_destinations: string
+  interests: string
+  notes: string
+}
+
+function toOverviewDraft(row: ClientRequestRow): OverviewDraft {
+  return {
+    status: normalizeStatus(row.status) || 'new',
+    start_date: row.start_date || '',
+    end_date: row.end_date || '',
+    email: row.email || '',
+    whatsapp: row.whatsapp || '',
+    origin_country: row.origin_country || '',
+    assigned_employee: row.assigned_employee || '',
+    lead_source: row.lead_source || '',
+    requested_destinations: row.requested_destinations || '',
+    interests: row.interests || row.additional_preferences || '',
+    notes: row.notes || '',
+  }
+}
+
+function durationFromDates(startDate: string, endDate: string): number | null {
+  if (!startDate || !endDate) return null
+  const start = new Date(`${startDate}T00:00:00`)
+  const end = new Date(`${endDate}T00:00:00`)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return null
+  return Math.floor((end.getTime() - start.getTime()) / 86400000) + 1
+}
+
 export function RequestWorkspace() {
   const params = useParams<{ id: string }>()
   const id = params.id
@@ -54,6 +92,7 @@ export function RequestWorkspace() {
   const [waHref, setWaHref] = useState('')
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([])
   const [notice, setNotice] = useState<string | null>(null)
+  const [overviewDraft, setOverviewDraft] = useState<OverviewDraft | null>(null)
 
   async function reload() {
     const json = await consoleFetch(`/api/v2/requests/${id}`)
@@ -74,6 +113,11 @@ export function RequestWorkspace() {
     const current = itineraries.find((i) => i.option_number === editOption)
     if (current?.payload) setDraft(JSON.parse(JSON.stringify(current.payload)))
   }, [editOption, itineraries])
+
+  useEffect(() => {
+    if (!row) return
+    setOverviewDraft(toOverviewDraft(row))
+  }, [row])
 
   const selected = itineraries.find((i) => i.is_selected)
 
@@ -136,16 +180,39 @@ export function RequestWorkspace() {
     }
   }
 
-  async function saveField(patch: Record<string, unknown>) {
+  async function patchRequest(patch: Record<string, unknown>) {
     setBusy('Saving…')
+    setError(null)
     try {
       const json = await consoleFetch(`/api/v2/requests/${id}`, { method: 'PATCH', body: JSON.stringify(patch) })
       setRow(json.request)
+      return json.request as ClientRequestRow
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed')
+      return null
     } finally {
       setBusy(null)
     }
+  }
+
+  async function saveOverview() {
+    if (!overviewDraft) return
+    const patch = {
+      status: overviewDraft.status,
+      start_date: overviewDraft.start_date || null,
+      end_date: overviewDraft.end_date || null,
+      email: overviewDraft.email || null,
+      whatsapp: overviewDraft.whatsapp || null,
+      origin_country: overviewDraft.origin_country || null,
+      assigned_employee: overviewDraft.assigned_employee || null,
+      lead_source: overviewDraft.lead_source || null,
+      requested_destinations: overviewDraft.requested_destinations || null,
+      interests: overviewDraft.interests || null,
+      additional_preferences: overviewDraft.interests || null,
+      notes: overviewDraft.notes || null,
+    }
+    const updated = await patchRequest(patch)
+    if (updated) setNotice('Overview saved.')
   }
 
   async function openEmail() {
@@ -285,6 +352,11 @@ export function RequestWorkspace() {
   if (!row) return <p>Loading request…</p>
 
   const status = normalizeStatus(row.status) || 'new'
+  const baselineOverview = toOverviewDraft(row)
+  const overviewDirty =
+    !!overviewDraft && JSON.stringify(overviewDraft) !== JSON.stringify(baselineOverview)
+  const durationPreview =
+    overviewDraft ? durationFromDates(overviewDraft.start_date, overviewDraft.end_date) : null
 
   return (
     <div>
@@ -330,12 +402,15 @@ export function RequestWorkspace() {
         ))}
       </div>
 
-      {tab === 'overview' && (
+      {tab === 'overview' && overviewDraft && (
         <div className="ll-form">
           <div className="ll-row">
             <label>
               Status
-              <select value={status} onChange={(e) => saveField({ status: e.target.value })}>
+              <select
+                value={overviewDraft.status}
+                onChange={(e) => setOverviewDraft({ ...overviewDraft, status: e.target.value })}
+              >
                 {REQUEST_STATUSES.map((s) => (
                   <option key={s} value={s}>
                     {STATUS_LABEL[s]}
@@ -343,8 +418,8 @@ export function RequestWorkspace() {
                 ))}
               </select>
             </label>
-            {status === 'cancelled' || status === 'expired' ? (
-              <button className="ll-btn secondary" onClick={() => saveField({ restore: true })}>
+            {overviewDraft.status === 'cancelled' || overviewDraft.status === 'expired' ? (
+              <button className="ll-btn secondary" onClick={() => patchRequest({ restore: true })}>
                 Restore
               </button>
             ) : null}
@@ -354,31 +429,60 @@ export function RequestWorkspace() {
               Arrival
               <input
                 type="date"
-                value={row.start_date || ''}
-                onChange={(e) => saveField({ start_date: e.target.value || null })}
+                value={overviewDraft.start_date}
+                onChange={(e) => setOverviewDraft({ ...overviewDraft, start_date: e.target.value })}
               />
             </label>
             <label>
               Departure
               <input
                 type="date"
-                value={row.end_date || ''}
-                onChange={(e) => saveField({ end_date: e.target.value || null })}
+                value={overviewDraft.end_date}
+                onChange={(e) => setOverviewDraft({ ...overviewDraft, end_date: e.target.value })}
               />
             </label>
           </div>
           <label>
             Duration
-            <input readOnly value={row.duration ? `${row.duration} days` : 'Set arrival and departure'} />
+            <input
+              readOnly
+              value={
+                durationPreview
+                  ? `${durationPreview} days`
+                  : row.duration
+                  ? `${row.duration} days`
+                  : 'Set arrival and departure'
+              }
+            />
           </label>
-          <label>Email<input defaultValue={row.email || ''} onBlur={(e) => saveField({ email: e.target.value })} /></label>
-          <label>WhatsApp<input defaultValue={row.whatsapp || ''} onBlur={(e) => saveField({ whatsapp: e.target.value })} /></label>
-          <label>Country<input defaultValue={row.origin_country || ''} onBlur={(e) => saveField({ origin_country: e.target.value })} /></label>
-          <label>Assigned employee<input defaultValue={row.assigned_employee || ''} onBlur={(e) => saveField({ assigned_employee: e.target.value })} /></label>
-          <label>Lead source<input defaultValue={row.lead_source || ''} onBlur={(e) => saveField({ lead_source: e.target.value })} /></label>
-          <label>Destinations<input defaultValue={row.requested_destinations || ''} onBlur={(e) => saveField({ requested_destinations: e.target.value })} /></label>
-          <label>Interests<textarea defaultValue={row.interests || row.additional_preferences || ''} onBlur={(e) => saveField({ interests: e.target.value })} /></label>
-          <label>Internal notes<textarea defaultValue={row.notes || ''} onBlur={(e) => saveField({ notes: e.target.value })} /></label>
+          <label>Email<input value={overviewDraft.email} onChange={(e) => setOverviewDraft({ ...overviewDraft, email: e.target.value })} /></label>
+          <label>WhatsApp<input value={overviewDraft.whatsapp} onChange={(e) => setOverviewDraft({ ...overviewDraft, whatsapp: e.target.value })} /></label>
+          <label>Country<input value={overviewDraft.origin_country} onChange={(e) => setOverviewDraft({ ...overviewDraft, origin_country: e.target.value })} /></label>
+          <label>Assigned employee<input value={overviewDraft.assigned_employee} onChange={(e) => setOverviewDraft({ ...overviewDraft, assigned_employee: e.target.value })} /></label>
+          <label>Lead source<input value={overviewDraft.lead_source} onChange={(e) => setOverviewDraft({ ...overviewDraft, lead_source: e.target.value })} /></label>
+          <label>Destinations<input value={overviewDraft.requested_destinations} onChange={(e) => setOverviewDraft({ ...overviewDraft, requested_destinations: e.target.value })} /></label>
+          <label>
+            Interests
+            <textarea
+              rows={14}
+              style={{ minHeight: 360 }}
+              value={overviewDraft.interests}
+              onChange={(e) => setOverviewDraft({ ...overviewDraft, interests: e.target.value })}
+            />
+          </label>
+          <label>Internal notes<textarea value={overviewDraft.notes} onChange={(e) => setOverviewDraft({ ...overviewDraft, notes: e.target.value })} /></label>
+          <div className="ll-row" style={{ justifyContent: 'flex-end' }}>
+            <button
+              className="ll-btn secondary"
+              disabled={!overviewDirty || !!busy}
+              onClick={() => setOverviewDraft(baselineOverview)}
+            >
+              Cancel changes
+            </button>
+            <button className="ll-btn" disabled={!overviewDirty || !!busy} onClick={saveOverview}>
+              Save overview
+            </button>
+          </div>
         </div>
       )}
 

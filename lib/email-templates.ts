@@ -48,7 +48,7 @@ const logoUrl = `${BASE_URL}/favicon.png`
 
 /** Pre-filled feedback mailto; client can also reply to the message they received. Update the address if your team uses a different inbox. */
 const FEEDBACK_MAILTO_PLAIN =
-  'mailto:info@lankalux.com?subject=' +
+  'mailto:hello@lankalux.com?subject=' +
   encodeURIComponent('Feedback on my Sri Lanka trip with LankaLux') +
   '&body=' +
   encodeURIComponent(

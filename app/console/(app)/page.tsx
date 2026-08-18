@@ -36,14 +36,16 @@ export default function DashboardPage() {
       .catch((e) => setError(e.message))
   }, [])
 
+  const soldRows = useMemo(() => rows.filter((r) => (normalizeStatus(r.status) || 'new') === 'sold'), [rows])
+
   const filtered = useMemo(() => {
     const from = startOfRange(range)
-    return rows.filter((r) => {
+    return soldRows.filter((r) => {
       if (!from) return true
       const created = new Date(r.created_at)
       return created >= from
     })
-  }, [rows, range])
+  }, [soldRows, range])
 
   const counts = useMemo(() => {
     const c: Record<RequestStatus, number> = { new: 0, follow_up: 0, sold: 0, after_sales: 0, cancelled: 0, expired: 0 }
@@ -101,7 +103,7 @@ export default function DashboardPage() {
           ))}
         </div>
       </div>
-      <h2 style={{ marginTop: 32 }}>Recent requests</h2>
+      <h2 style={{ marginTop: 32 }}>Recent sold requests</h2>
       <table className="ll-table">
         <thead>
           <tr>
