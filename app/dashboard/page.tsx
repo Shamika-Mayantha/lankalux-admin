@@ -72,7 +72,9 @@ export default function DashboardPage() {
         return
       }
 
-      setRequests(data || [])
+      const rows = (data ?? []) as Request[]
+      const soldOnly = rows.filter((request) => request.status?.toLowerCase() === 'sold')
+      setRequests(soldOnly)
       setRequestsLoading(false)
     } catch (err) {
       console.error('Unexpected error fetching requests:', err)
@@ -324,26 +326,13 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Active Requests Section */}
-        <section className="mb-12 animate-slide-in">
-          <h2 className="text-xl font-semibold text-primary mb-6 flex items-center gap-3">
-            <span className="w-1 h-6 bg-amber-500 rounded-full" />
-            Active Requests
-            <span className="text-sm text-secondary font-normal">({activeRequests.length})</span>
-          </h2>
-          
-          {requestsLoading ? (
-            <div className="bg-card border border-theme rounded-2xl py-16 px-8 shadow-card transition-colors duration-300">
-              <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-[var(--border-color)] border-t-[var(--accent-gold)] mb-5" />
-                <p className="text-secondary">Loading requests...</p>
-              </div>
-            </div>
-          ) : activeRequests.length === 0 ? (
-            <div className="bg-card border border-theme rounded-2xl py-16 px-8 shadow-card transition-colors duration-300">
-              <p className="text-secondary text-center">No active requests</p>
-            </div>
-          ) : (
+        {activeRequests.length > 0 && (
+          <section className="mb-12 animate-slide-in">
+            <h2 className="text-xl font-semibold text-primary mb-6 flex items-center gap-3">
+              <span className="w-1 h-6 bg-amber-500 rounded-full" />
+              Active Requests
+              <span className="text-sm text-secondary font-normal">({activeRequests.length})</span>
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {activeRequests.map((request, index) => (
                 <div
@@ -393,8 +382,8 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          )}
-        </section>
+          </section>
+        )}
 
         {/* Deposit Collected Section */}
         {depositRequests.length > 0 && (
