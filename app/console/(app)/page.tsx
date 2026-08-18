@@ -28,7 +28,7 @@ function greeting() {
 export default function DashboardPage() {
   const [rows, setRows] = useState<ClientRequestRow[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [range, setRange] = useState<Range>('month')
+  const [range, setRange] = useState<Range>('all')
 
   useEffect(() => {
     consoleFetch('/api/v2/requests')
@@ -56,9 +56,25 @@ export default function DashboardPage() {
     return c
   }, [filtered])
 
+  const recentRequests = useMemo(() => soldRows.slice(0, 12), [soldRows])
+
   const today = new Date().toISOString().slice(0, 10)
-  const upcomingArrivals = filtered.filter((r) => r.start_date && r.start_date >= today && !['cancelled', 'expired'].includes(normalizeStatus(r.status) || '')).slice(0, 6)
-  const upcomingDepartures = filtered.filter((r) => r.end_date && r.end_date >= today && !['cancelled', 'expired'].includes(normalizeStatus(r.status) || '')).slice(0, 6)
+  const upcomingArrivals = useMemo(
+    () =>
+      soldRows
+        .filter((r) => r.start_date && r.start_date >= today)
+        .sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''))
+        .slice(0, 6),
+    [soldRows, today]
+  )
+  const upcomingDepartures = useMemo(
+    () =>
+      soldRows
+        .filter((r) => r.end_date && r.end_date >= today)
+        .sort((a, b) => (a.end_date || '').localeCompare(b.end_date || ''))
+        .slice(0, 6),
+    [soldRows, today]
+  )
 
   return (
     <div>
@@ -86,7 +102,7 @@ export default function DashboardPage() {
       <div className="ll-grid-2" style={{ marginTop: 18 }}>
         <div className="ll-card">
           <h3>Upcoming arrivals</h3>
-          {upcomingArrivals.length === 0 && <p className="ll-muted">None in this range.</p>}
+          {upcomingArrivals.length === 0 && <p className="ll-muted">None found.</p>}
           {upcomingArrivals.map((r) => (
             <p key={r.id}>
               <Link href={`/console/requests/${r.id}`}>{r.client_name}</Link> · {r.start_date}
@@ -95,7 +111,7 @@ export default function DashboardPage() {
         </div>
         <div className="ll-card">
           <h3>Upcoming departures</h3>
-          {upcomingDepartures.length === 0 && <p className="ll-muted">None in this range.</p>}
+          {upcomingDepartures.length === 0 && <p className="ll-muted">None found.</p>}
           {upcomingDepartures.map((r) => (
             <p key={r.id}>
               <Link href={`/console/requests/${r.id}`}>{r.client_name}</Link> · {r.end_date}
@@ -103,7 +119,7 @@ export default function DashboardPage() {
           ))}
         </div>
       </div>
-      <h2 style={{ marginTop: 32 }}>Recent sold requests</h2>
+      <h2 style={{ marginTop: 32 }}>Recent requests</h2>
       <table className="ll-table">
         <thead>
           <tr>
@@ -114,7 +130,7 @@ export default function DashboardPage() {
           </tr>
         </thead>
         <tbody>
-          {filtered.slice(0, 12).map((r) => {
+          {recentRequests.map((r) => {
             const s = normalizeStatus(r.status) || 'new'
             return (
               <tr key={r.id}>
@@ -131,6 +147,13 @@ export default function DashboardPage() {
               </tr>
             )
           })}
+          {recentRequests.length === 0 ? (
+            <tr>
+              <td colSpan={4} className="ll-muted" style={{ textAlign: 'center' }}>
+                No recent requests yet.
+              </td>
+            </tr>
+          ) : null}
         </tbody>
       </table>
     </div>
