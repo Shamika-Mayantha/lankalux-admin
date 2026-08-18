@@ -56,7 +56,13 @@ export default function DashboardPage() {
     return c
   }, [filtered])
 
-  const recentRequests = useMemo(() => soldRows.slice(0, 12), [soldRows])
+  const recentRequests = useMemo(
+    () =>
+      [...rows]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 12),
+    [rows]
+  )
 
   const today = new Date().toISOString().slice(0, 10)
   const upcomingArrivals = useMemo(
