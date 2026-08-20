@@ -149,6 +149,11 @@ export function InvoicePreview({ model, className = '' }: { model: InvoicePrevie
           <p className="ll-invoice-body">{model.journey.destinations.join(' · ')}</p>
         ) : null}
         {model.journey.summary ? <p className="ll-invoice-muted">{model.journey.summary}</p> : null}
+        {model.journey.secureLink ? (
+          <a className="ll-invoice-link" href={model.journey.secureLink} target="_blank" rel="noreferrer">
+            View Full Journey
+          </a>
+        ) : null}
       </section>
 
       <section className="ll-invoice-split">
@@ -231,15 +236,6 @@ export function InvoicePreview({ model, className = '' }: { model: InvoicePrevie
       ) : null}
 
       {model.clientNote ? <p className="ll-invoice-muted">{model.clientNote}</p> : null}
-
-      {model.journey.secureLink ? (
-        <section>
-          <p className="ll-invoice-label">View your complete LankaLux journey</p>
-          <a className="ll-invoice-link" href={model.journey.secureLink} target="_blank" rel="noreferrer">
-            View Full Journey
-          </a>
-        </section>
-      ) : null}
 
       <footer className="ll-invoice-foot">
         <p>Thank you for choosing LankaLux.</p>

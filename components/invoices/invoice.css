@@ -125,10 +125,17 @@
 }
 
 .ll-invoice-link {
-  color: var(--forest);
+  display: inline-block;
+  margin-top: 14px;
+  background: #1a2a1d;
+  color: #f9f4eb !important;
   font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   text-decoration: none;
-  border-bottom: 1px solid var(--gold);
+  border: 1px solid #b18544;
+  padding: 12px 22px;
 }
 
 .ll-invoice-thumb {
