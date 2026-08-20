@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-const nodemailer = require('nodemailer')
-import { getTemplate, bodyTextToHtml, buildHtmlFromBody, normalizeEditableBody, type TemplateId } from '@/lib/email-templates'
+import nodemailer from 'nodemailer'
+import { BRAND } from '@/config/brand'
+import { appUrl } from '@/config/env'
+import { followUpCta, getTemplate, normalizeEditableBody, type TemplateId } from '@/lib/email-templates'
+import { renderFollowUpEmail } from '@/services/journey-copy'
 
 export async function POST(request: Request) {
   try {
@@ -50,7 +53,6 @@ export async function POST(request: Request) {
     const emailPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587
     const emailUser = process.env.SMTP_USER
     const emailPass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD
-    const emailFrom = process.env.SMTP_FROM || emailUser
 
     if (!emailHost || !emailUser || !emailPass) {
       return NextResponse.json(
@@ -93,22 +95,22 @@ export async function POST(request: Request) {
     }
 
     const clientName = requestData.client_name || 'Valued Client'
-    // Follow-up emails should never include an itinerary link/button.
-    const itineraryUrl: string | null = null
-
     const subject = (customSubject && customSubject.trim()) ? customSubject.trim() : template.subject
-    let emailHtml: string
-    let emailText: string
-    if (customBody != null && String(customBody).trim() !== '') {
-      const normalizedBody = normalizeEditableBody(String(customBody))
-      const bodyHtml = bodyTextToHtml(normalizedBody)
-      emailHtml = buildHtmlFromBody({ clientName, bodyHtml, itineraryUrl })
-      emailText = normalizedBody + '\n\nWarm regards,\nThe LankaLux Team'
-    } else {
-      emailHtml = template.getHtml({ clientName, itineraryUrl })
-      const bodyOnly = normalizeEditableBody(template.getText({ clientName, itineraryUrl }))
-      emailText = bodyOnly + '\n\nWarm regards,\nThe LankaLux Team'
-    }
+    const bodySource =
+      customBody != null && String(customBody).trim() !== ''
+        ? String(customBody)
+        : template.getText({ clientName })
+    const normalizedBody = normalizeEditableBody(bodySource)
+    const cta = followUpCta(templateId)
+    const compiled = renderFollowUpEmail({
+      clientName,
+      bodyText: normalizedBody,
+      logoUrl: `${appUrl()}${BRAND.logoSrc}`,
+      ctaUrl: cta?.ctaUrl,
+      ctaLabel: cta?.ctaLabel,
+    })
+    const emailHtml = compiled.html
+    const emailText = compiled.text
 
     const transporter = nodemailer.createTransport({
       host: emailHost,

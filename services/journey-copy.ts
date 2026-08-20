@@ -60,9 +60,10 @@ function firstName(fullName: string) {
 
 function renderBrandedClientEmail(opts: {
   firstName: string
-  introduction: string
-  highlightTitle: string
-  highlightBodyHtml: string
+  introduction?: string
+  bodyHtml?: string
+  highlightTitle?: string
+  highlightBodyHtml?: string
   extraHtml?: string
   ctaUrl?: string
   ctaLabel?: string
@@ -76,6 +77,20 @@ function renderBrandedClientEmail(opts: {
       </p>`
       : ''
 
+  const body = opts.bodyHtml
+    ? opts.bodyHtml
+    : opts.introduction
+      ? `<p style="color:#6b6b66;line-height:1.75;">${esc(opts.introduction).replace(/\n/g, '<br/>')}</p>`
+      : ''
+
+  const highlight =
+    opts.highlightTitle && opts.highlightBodyHtml
+      ? `<div style="background:#F1E9DA;border-left:3px solid #B18544;padding:12px 14px;margin:20px 0;">
+        <p style="margin:0 0 8px;color:#1A2A1D;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(opts.highlightTitle)}</p>
+        <p style="margin:0;font-size:13px;color:#6b6b66;">${opts.highlightBodyHtml}</p>
+      </div>`
+      : ''
+
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
 <body style="margin:0;background:#FFFFFF;font-family:'Open Sans',Segoe UI,Arial,sans-serif;color:#252523;">
@@ -86,11 +101,8 @@ function renderBrandedClientEmail(opts: {
     <div style="height:1px;background:#B18544;"></div>
     <div style="padding:28px;">
       <p>Dear ${esc(opts.firstName)},</p>
-      <p style="color:#6b6b66;line-height:1.75;">${esc(opts.introduction).replace(/\n/g, '<br/>')}</p>
-      <div style="background:#F1E9DA;border-left:3px solid #B18544;padding:12px 14px;margin:20px 0;">
-        <p style="margin:0 0 8px;color:#1A2A1D;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(opts.highlightTitle)}</p>
-        <p style="margin:0;font-size:13px;color:#6b6b66;">${opts.highlightBodyHtml}</p>
-      </div>
+      ${body}
+      ${highlight}
       ${opts.extraHtml || ''}
       ${cta}
       <p style="font-size:13px;color:#6b6b66;">If you would like any changes, simply reply to this email.</p>
@@ -100,6 +112,45 @@ function renderBrandedClientEmail(opts: {
 </body></html>`
 
   return { html, text: opts.textLines.join('\n') }
+}
+
+export function renderFollowUpEmail(opts: {
+  clientName: string
+  bodyText: string
+  logoUrl: string
+  ctaUrl?: string | null
+  ctaLabel?: string | null
+}): { html: string; text: string } {
+  const name = firstName(opts.clientName)
+  const paragraphs = opts.bodyText
+    .trim()
+    .split(/\n\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+  const bodyHtml = paragraphs
+    .map((p) => `<p style="color:#6b6b66;line-height:1.75;">${esc(p).replace(/\n/g, '<br/>')}</p>`)
+    .join('')
+  const ctaUrl = opts.ctaUrl?.trim() || undefined
+  const ctaLabel = opts.ctaLabel?.trim() || undefined
+  return renderBrandedClientEmail({
+    firstName: name,
+    bodyHtml,
+    ctaUrl,
+    ctaLabel,
+    logoUrl: opts.logoUrl,
+    textLines: [
+      `Dear ${name},`,
+      '',
+      opts.bodyText.trim(),
+      '',
+      ...(ctaUrl && ctaLabel ? [ctaLabel, ctaUrl, ''] : []),
+      'If you would like any changes, simply reply to this email.',
+      '',
+      'Warm regards,',
+      BRAND.name,
+      BRAND.tagline,
+    ],
+  })
 }
 
 export function renderJourneyEmail(opts: {
