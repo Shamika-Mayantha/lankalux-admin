@@ -142,6 +142,8 @@ html:has(.ll-root) body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .ll-side nav {
@@ -566,7 +568,7 @@ html:has(.ll-root) body {
   padding: 24px;
 }
 
-.ll-tabs { display: flex; gap: 16px; margin: 18px 0; border-bottom: 1px solid var(--line); }
+.ll-tabs { display: flex; flex-wrap: wrap; gap: 16px; margin: 18px 0; border-bottom: 1px solid var(--line); }
 .ll-tabs button {
   background: transparent;
   border: 0;
@@ -575,7 +577,7 @@ html:has(.ll-root) body {
   cursor: pointer;
   color: var(--muted);
   font-family: inherit;
-  text-transform: capitalize;
+  text-transform: none;
   transition: color 0.28s var(--ease), border-color 0.28s var(--ease);
 }
 .ll-tabs button.on {

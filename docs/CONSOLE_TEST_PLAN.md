@@ -41,6 +41,30 @@ Then verify:
 19. A guessed `/console/requests/{id}` without a session cannot load data (API returns 401).
 20. `"Client Requests"` row count is unchanged except for the new Test Client row. No production columns were dropped.
 
+## Invoices test case
+
+Create a request:
+
+- Client: Sergey & Tatyana
+- Travel dates: 12 September – 20 September 2026
+- Select itinerary titled **Sri Lanka Discovery Journey**
+- Route: Sigiriya → Kandy → Ella → Yala → Mirissa
+- Selected vehicle: Toyota KDH High Roof
+- Chauffeur-Guide: Sameera Prabath
+- Invoice total: USD 1,850
+- Payment 1: USD 500 — Bank Transfer
+
+Expected:
+
+- Total USD 1,850 · Paid USD 500 · Balance USD 1,350
+- Client, selected itinerary, vehicle and chauffeur-guide auto-populate
+- Invoice number is `LL-INV-00N`
+- Preview matches the downloaded A4 PDF and uses current LankaLux branding (`#F9F4EB`, `#1A2A1D`, `#B18544`, `/brand/lankalux-logo.png`)
+- Full day-by-day itinerary is not on the invoice
+- View Full Journey uses `/journey/{token}`
+- After finalize, editing the itinerary does not change the issued invoice
+- Internal notes, vehicle cost and hotel supplier rates do not appear
+
 ## Rollback
 
 Leave Vercel serving the existing app. `/dashboard` remains the production UI until domain cutover.

@@ -2,6 +2,13 @@ import { parseItineraryJson } from '../validation/itinerary.schema'
 import { assignDayImages, matchDestination } from '../services/image-map.service'
 import { calculateTotalKilometers, LOCAL_DAY_KM } from '../services/kilometers.service'
 import { shouldExpireRequest } from '../config/status'
+import {
+  calculateTotals,
+  invoiceStatus,
+  parseClientFacingPrice,
+  paymentStatus,
+  uniqueInOrder,
+} from '../services/invoice-math'
 
 function assert(cond: unknown, msg: string) {
   if (!cond) throw new Error(msg)
@@ -73,5 +80,20 @@ assert(
   !endsInColombo.legs.some((leg) => leg.kind === 'return'),
   'no extra return leg when the last overnight is Colombo'
 )
+
+const sergeyTotals = calculateTotals(1850, [{ amount: 500, currency: 'USD', status: 'successful' }], 'USD')
+assert(sergeyTotals.total === 1850, 'invoice total 1850')
+assert(sergeyTotals.paid === 500, 'paid 500')
+assert(sergeyTotals.balance === 1350, 'balance 1350')
+assert(paymentStatus(1850, 0, null) === 'unpaid', 'unpaid when paid is 0')
+assert(paymentStatus(1850, 500, null) === 'partially_paid', 'partially paid')
+assert(paymentStatus(1850, 1850, null) === 'paid', 'paid in full')
+assert(paymentStatus(1850, 500, '2026-08-01', Date.parse('2026-08-20T12:00:00Z')) === 'overdue', 'overdue after due date')
+assert(invoiceStatus('draft', 'paid') === 'draft', 'draft stays draft until finalized')
+assert(invoiceStatus('finalized', 'paid') === 'paid', 'finalized becomes paid')
+assert(invoiceStatus('sent', 'partially_paid') === 'partially_paid', 'sent becomes partially paid')
+assert(parseClientFacingPrice('USD 1,850').amount === 1850, 'parse package quote')
+assert(parseClientFacingPrice('USD 1,850').currency === 'USD', 'parse currency')
+assert(uniqueInOrder(['Sigiriya', 'Kandy', 'Ella', 'Yala', 'Mirissa', 'Sigiriya']).join(',') === 'Sigiriya,Kandy,Ella,Yala,Mirissa', 'route unique in order')
 
 console.log('console core checks passed')

@@ -1,0 +1,175 @@
+.ll-invoice {
+  --ivory: #f9f4eb;
+  --forest: #1a2a1d;
+  --gold: #b18544;
+  --charcoal: #252523;
+  --muted: #6b6b66;
+  --ivory-deep: #f1e9da;
+  width: min(210mm, 100%);
+  min-height: 297mm;
+  margin: 0 auto;
+  background: var(--ivory);
+  color: var(--charcoal);
+  padding: 28px 32px 36px;
+  box-sizing: border-box;
+  font-family: "Open Sans", var(--ll-font-body), sans-serif;
+  border: 1px solid rgba(26, 42, 29, 0.12);
+}
+
+.ll-invoice-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(177, 133, 68, 0.45);
+  margin-bottom: 22px;
+}
+
+.ll-invoice-logo {
+  height: 46px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.ll-invoice-meta {
+  text-align: right;
+}
+
+.ll-invoice-kicker,
+.ll-invoice-label {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+  font-family: "Be Vietnam Pro", var(--ll-font-display), sans-serif;
+}
+
+.ll-invoice-number,
+.ll-invoice-title {
+  margin: 0;
+  font-family: "Be Vietnam Pro", var(--ll-font-display), sans-serif;
+  color: var(--forest);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.ll-invoice-number { font-size: 18px; }
+.ll-invoice-title { font-size: 20px; margin-bottom: 4px; }
+
+.ll-invoice-muted {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.ll-invoice-body {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--charcoal);
+}
+
+.ll-invoice section {
+  padding: 18px 0;
+  border-bottom: 1px solid rgba(26, 42, 29, 0.12);
+}
+
+.ll-invoice-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.ll-invoice-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14px;
+  margin: 8px 0;
+  color: var(--charcoal);
+}
+
+.ll-invoice-row.muted { color: var(--muted); font-size: 13px; }
+.ll-invoice-row.strong { font-weight: 600; color: var(--forest); }
+
+.ll-invoice-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ll-invoice-list li {
+  position: relative;
+  padding-left: 14px;
+  margin: 6px 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ll-invoice-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.ll-invoice-link {
+  color: var(--forest);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid var(--gold);
+}
+
+.ll-invoice-thumb {
+  width: 88px;
+  height: 58px;
+  object-fit: cover;
+  margin: 0 0 10px;
+  border: 1px solid rgba(26, 42, 29, 0.12);
+}
+
+.ll-invoice-thumb.round {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+}
+
+.ll-invoice-foot {
+  padding-top: 22px;
+  color: var(--forest);
+  font-size: 13px;
+}
+
+.ll-invoice-foot p { margin: 0 0 4px; }
+.ll-invoice-foot p + p { color: var(--muted); font-size: 12px; }
+
+.ll-invoice-stage {
+  overflow: auto;
+  background: var(--ivory-deep, #f1e9da);
+  padding: 18px;
+  border: 1px solid rgba(26, 42, 29, 0.12);
+}
+
+.ll-invoice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 800px) {
+  .ll-invoice { padding: 22px 18px; min-height: 0; }
+  .ll-invoice-split { grid-template-columns: 1fr; }
+  .ll-invoice-top { flex-direction: column; }
+  .ll-invoice-meta { text-align: left; }
+}

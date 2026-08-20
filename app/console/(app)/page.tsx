@@ -96,6 +96,12 @@ export default function DashboardPage() {
         <Link href="/console/requests/new" className="ll-btn">
           New request
         </Link>
+        <Link href="/console/invoices" className="ll-btn secondary">
+          Invoices
+        </Link>
+        <Link href="/console/payments" className="ll-btn secondary">
+          Payments
+        </Link>
       </div>
       <div className="ll-grid">
         {(Object.keys(STATUS_LABEL) as RequestStatus[]).map((s) => (

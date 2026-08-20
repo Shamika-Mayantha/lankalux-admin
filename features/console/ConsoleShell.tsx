@@ -11,6 +11,8 @@ const NAV = [
   { href: '/console', label: 'Dashboard' },
   { href: '/console/requests', label: 'Requests' },
   { href: '/console/itineraries', label: 'Itineraries' },
+  { href: '/console/invoices', label: 'Invoices' },
+  { href: '/console/payments', label: 'Payments' },
   { href: '/console/hotels', label: 'Hotels' },
   { href: '/console/vehicles', label: 'Vehicles' },
   { href: '/console/clients', label: 'Clients' },

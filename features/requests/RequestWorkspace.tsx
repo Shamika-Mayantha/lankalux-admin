@@ -9,6 +9,7 @@ import { allLibraryImages } from '@/services/image-map.service'
 import { formatKilometers, totalKilometersFor } from '@/services/kilometers.service'
 import { JourneyView } from '@/features/journey/JourneyView'
 import { PhotoPicker } from '@/features/console/PhotoPicker'
+import { InvoiceWorkspace } from '@/features/invoices/InvoiceWorkspace'
 import '@/features/journey/journey.css'
 import type { ActivityEvent, CanonicalJourney, ClientRequestRow, ItineraryDay, ItineraryRecord, StructuredItinerary, VehicleRecord } from '@/types/domain'
 
@@ -93,10 +94,22 @@ function activityItineraryUrl(entry: ActivityEvent): string | null {
 }
 
 function activityLabel(eventType: string) {
-  if (eventType === 'itinerary_link_opened') return 'Client opened itinerary link'
-  if (eventType === 'email_sent') return 'Itinerary email sent'
-  if (eventType === 'whatsapp_shared') return 'Itinerary shared on WhatsApp'
-  return eventType.replace(/_/g, ' ')
+  const labels: Record<string, string> = {
+    itinerary_link_opened: 'Client opened itinerary link',
+    email_sent: 'Itinerary email sent',
+    whatsapp_shared: 'Itinerary shared on WhatsApp',
+    invoice_created: 'Invoice created',
+    invoice_edited: 'Invoice edited',
+    invoice_finalized: 'Invoice finalized',
+    invoice_downloaded: 'Invoice downloaded',
+    invoice_sent: 'Invoice sent',
+    payment_recorded: 'Payment recorded',
+    payment_edited: 'Payment edited',
+    payment_deleted: 'Payment deleted',
+    invoice_marked_paid: 'Invoice marked paid',
+    invoice_revised: 'Revised invoice created',
+  }
+  return labels[eventType] || eventType.replace(/_/g, ' ')
 }
 
 export function RequestWorkspace() {
@@ -106,7 +119,7 @@ export function RequestWorkspace() {
   const [itineraries, setItineraries] = useState<ItineraryRecord[]>([])
   const [activity, setActivity] = useState<ActivityEvent[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<'overview' | 'itineraries' | 'editor' | 'activity'>('overview')
+  const [tab, setTab] = useState<'overview' | 'itineraries' | 'editor' | 'invoices' | 'activity'>('overview')
   const [generating, setGenerating] = useState<Record<number, boolean>>({})
   const [genError, setGenError] = useState<Record<number, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
@@ -451,6 +464,9 @@ export function RequestWorkspace() {
           >
             Preview
           </button>
+          <button className="ll-btn secondary" disabled={!selected} onClick={() => setTab('invoices')}>
+            Create invoice
+          </button>
         </div>
       </div>
       {status === 'expired' && (
@@ -463,15 +479,69 @@ export function RequestWorkspace() {
       {error && <div className="ll-error">{error}</div>}
 
       <div className="ll-tabs">
-        {(['overview', 'itineraries', 'editor', 'activity'] as const).map((t) => (
-          <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
-            {t}
+        {(
+          [
+            ['overview', 'Overview'],
+            ['itineraries', 'Itineraries'],
+            ['editor', 'Editor'],
+            ['invoices', 'Invoices & Payments'],
+            ['activity', 'Activity'],
+          ] as const
+        ).map(([id, label]) => (
+          <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
+            {label}
           </button>
         ))}
       </div>
 
       {tab === 'overview' && overviewDraft && (
         <div className="ll-form">
+          <div className="ll-card" style={{ maxWidth: 'none' }}>
+            <h3>Invoice source</h3>
+            <p className="ll-muted">The invoice uses this request. Nothing here is typed again on a separate form.</p>
+            <div className="ll-grid-2" style={{ marginTop: 12 }}>
+              <div>
+                <p className="ll-muted" style={{ margin: 0 }}>Client</p>
+                <p className="ll-card-title">{row.client_name || '—'}</p>
+                <p className="ll-muted">{[row.email, row.whatsapp, row.origin_country].filter(Boolean).join(' · ') || '—'}</p>
+                <p className="ll-muted">
+                  {row.number_of_adults || 0} adults
+                  {row.number_of_children ? ` · ${row.number_of_children} children` : ''}
+                </p>
+              </div>
+              <div>
+                <p className="ll-muted" style={{ margin: 0 }}>Travel dates</p>
+                <p className="ll-card-title">
+                  {row.start_date || '—'} → {row.end_date || '—'}
+                </p>
+              </div>
+              <div>
+                <p className="ll-muted" style={{ margin: 0 }}>Selected itinerary</p>
+                <p className="ll-card-title">{selected?.title || 'Not selected yet'}</p>
+                <p className="ll-muted">
+                  {selected?.payload?.days?.map((d) => d.location).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · ') || 'Select an itinerary tab first'}
+                </p>
+              </div>
+              <div>
+                <p className="ll-muted" style={{ margin: 0 }}>Selected vehicle</p>
+                <p className="ll-card-title">{selectedVehicle?.name || 'Not selected yet'}</p>
+                <p className="ll-muted">{selectedVehicle?.description || 'Attach a vehicle on the selected itinerary.'}</p>
+              </div>
+              <div>
+                <p className="ll-muted" style={{ margin: 0 }}>Chauffeur-Guide</p>
+                <p className="ll-card-title">{overviewDraft.assigned_employee || 'Not assigned yet'}</p>
+                <p className="ll-muted">LankaLux Chauffeur-Guide</p>
+              </div>
+            </div>
+            <div className="ll-row" style={{ marginTop: 16 }}>
+              <button className="ll-btn" disabled={!selected} onClick={() => setTab('invoices')}>
+                Create invoice
+              </button>
+              <button className="ll-btn secondary" onClick={() => setTab('invoices')}>
+                Open Invoices & Payments
+              </button>
+            </div>
+          </div>
           <div className="ll-row">
             <label>
               Status
@@ -526,7 +596,7 @@ export function RequestWorkspace() {
           <label>Email<input value={overviewDraft.email} onChange={(e) => setOverviewDraft({ ...overviewDraft, email: e.target.value })} /></label>
           <label>WhatsApp<input value={overviewDraft.whatsapp} onChange={(e) => setOverviewDraft({ ...overviewDraft, whatsapp: e.target.value })} /></label>
           <label>Country<input value={overviewDraft.origin_country} onChange={(e) => setOverviewDraft({ ...overviewDraft, origin_country: e.target.value })} /></label>
-          <label>Assigned employee<input value={overviewDraft.assigned_employee} onChange={(e) => setOverviewDraft({ ...overviewDraft, assigned_employee: e.target.value })} /></label>
+          <label>Chauffeur-Guide<input value={overviewDraft.assigned_employee} onChange={(e) => setOverviewDraft({ ...overviewDraft, assigned_employee: e.target.value })} /></label>
           <label>Lead source<input value={overviewDraft.lead_source} onChange={(e) => setOverviewDraft({ ...overviewDraft, lead_source: e.target.value })} /></label>
           <label>Destinations<input value={overviewDraft.requested_destinations} onChange={(e) => setOverviewDraft({ ...overviewDraft, requested_destinations: e.target.value })} /></label>
           <label>
@@ -615,6 +685,10 @@ export function RequestWorkspace() {
           busy={!!busy}
           onPreview={() => previewJourney && setPreview(previewJourney)}
         />
+      )}
+
+      {tab === 'invoices' && (
+        <InvoiceWorkspace requestId={id} requestEmail={row.email} compact />
       )}
 
       {tab === 'activity' && (

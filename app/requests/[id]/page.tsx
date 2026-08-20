@@ -1720,6 +1720,20 @@ LankaLux Team`
               </svg>
               Back to Dashboard
             </button>
+              <button
+                type="button"
+                onClick={() => router.push('/console/invoices')}
+                className={`${btnSec} w-fit shrink-0`}
+              >
+                Invoices
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/console/payments')}
+                className={`${btnSec} w-fit shrink-0`}
+              >
+                Payments
+              </button>
               <ThemeToggle />
             </div>
           </div>

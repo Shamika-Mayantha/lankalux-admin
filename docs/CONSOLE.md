@@ -39,3 +39,16 @@ Visual identity is copied from the public LankaLux website (`lankalux-design.css
 
 Gold is never used as a large fill. Primary buttons are forest on ivory, matching lankalux.com.
 
+## Invoices & payments
+
+Invoices live on `/console/invoices` and as the **Invoices & Payments** tab on each request.
+
+1. Apply `supabase/migrations/20260820000000_invoices_and_payments.sql` and `20260820001000_invoice_console_fields.sql`.
+2. Select an itinerary on the request (do not leave the invoice to guess option 1/2/3).
+3. Assign a vehicle on the selected itinerary and a chauffeur-guide on the request.
+4. Click **Create invoice**. Client, journey, vehicle and chauffeur-guide are snapshotted from live request data.
+5. Enter package total and record payments. Balance = total − successful payments.
+6. **Preview invoice**, then **Finalize invoice**. After finalize, itinerary edits do not change that document. Use **Create revised invoice** for a new draft.
+7. **Download PDF**, **Send by email**, or **Share via WhatsApp**. Email/WhatsApp always use the finalized PDF.
+8. Configure bank details once in **Settings → Payment instructions**. Only client-visible fields appear on the invoice.
+
