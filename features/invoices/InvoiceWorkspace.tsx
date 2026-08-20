@@ -118,7 +118,14 @@ function TripSourceFields({ source }: { source: InvoiceSource }) {
             {[source.client.email, source.client.phone, source.client.country].filter(Boolean).join(' · ') || '—'}
           </p>
           <p className="ll-muted">
-            {source.client.adults} adults{source.client.children ? ` · ${source.client.children} children` : ''}
+            {source.client.adults + source.client.children} passenger{source.client.adults + source.client.children === 1 ? '' : 's'}
+            {' · '}
+            {source.client.adults} adult{source.client.adults === 1 ? '' : 's'}
+            {source.client.children
+              ? ` · ${source.client.children} ${source.client.children === 1 ? 'child' : 'children'}${
+                  source.client.childrenAges?.length ? ` (ages ${source.client.childrenAges.join(', ')})` : ''
+                }`
+              : ''}
           </p>
         </div>
         <div>

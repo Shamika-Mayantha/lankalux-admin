@@ -42,9 +42,47 @@ type OverviewDraft = {
   requested_destinations: string
   interests: string
   notes: string
+  number_of_adults: number
+  number_of_children: number
+  children_ages: string
+}
+
+function parseAgeList(raw: string | number[] | null | undefined): number[] {
+  if (raw == null || raw === '') return []
+  if (Array.isArray(raw)) return raw.map((n) => parseInt(String(n), 10)).filter((n) => Number.isFinite(n) && n >= 0)
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      return parsed.map((n) => parseInt(String(n), 10)).filter((n) => Number.isFinite(n) && n >= 0)
+    }
+  } catch {
+    // Comma-separated ages from the overview form.
+  }
+  return String(raw)
+    .split(',')
+    .map((x) => parseInt(x.trim(), 10))
+    .filter((n) => Number.isFinite(n) && n >= 0)
+}
+
+function partyCounts(adults: number | null | undefined, children: number | null | undefined, agesRaw: string | number[] | null | undefined) {
+  const ages = parseAgeList(agesRaw)
+  const adultCount = Math.max(0, adults || 0)
+  const childCount = Math.max(0, children || ages.length || 0)
+  return { adults: adultCount, children: childCount, ages, total: adultCount + childCount }
+}
+
+function partySummary(adults: number, children: number, ages: number[]) {
+  const total = adults + children
+  const bits = [`${total} passenger${total === 1 ? '' : 's'}`, `${adults} adult${adults === 1 ? '' : 's'}`]
+  if (children > 0) {
+    const ageBit = ages.length ? ` (ages ${ages.join(', ')})` : ''
+    bits.push(`${children} ${children === 1 ? 'child' : 'children'}${ageBit}`)
+  }
+  return bits.join(' · ')
 }
 
 function toOverviewDraft(row: ClientRequestRow): OverviewDraft {
+  const party = partyCounts(row.number_of_adults, row.number_of_children, row.children_ages)
   return {
     status: normalizeStatus(row.status) || 'new',
     start_date: row.start_date || '',
@@ -57,6 +95,9 @@ function toOverviewDraft(row: ClientRequestRow): OverviewDraft {
     requested_destinations: row.requested_destinations || '',
     interests: row.interests || row.additional_preferences || '',
     notes: row.notes || '',
+    number_of_adults: party.adults,
+    number_of_children: party.children,
+    children_ages: party.ages.join(', '),
   }
 }
 
@@ -261,6 +302,7 @@ export function RequestWorkspace() {
 
   async function saveOverview() {
     if (!overviewDraft) return
+    const ages = overviewDraft.number_of_children > 0 ? parseAgeList(overviewDraft.children_ages) : []
     const patch = {
       status: overviewDraft.status,
       start_date: overviewDraft.start_date || null,
@@ -274,6 +316,9 @@ export function RequestWorkspace() {
       interests: overviewDraft.interests || null,
       additional_preferences: overviewDraft.interests || null,
       notes: overviewDraft.notes || null,
+      number_of_adults: overviewDraft.number_of_adults,
+      number_of_children: overviewDraft.number_of_children,
+      children_ages: ages,
     }
     const updated = await patchRequest(patch)
     if (updated) setNotice('Overview saved.')
@@ -414,11 +459,10 @@ export function RequestWorkspace() {
       endDate: row.end_date,
       durationDays: row.duration,
       durationLabel: draft.duration,
-      party: {
-        adults: row.number_of_adults || 0,
-        children: row.number_of_children || 0,
-        childrenAges: [],
-      },
+      party: (() => {
+        const party = partyCounts(row.number_of_adults, row.number_of_children, row.children_ages)
+        return { adults: party.adults, children: party.children, childrenAges: party.ages }
+      })(),
       days: draft.days,
       vehicle: vehicle ? { id: vehicle.id, name: vehicle.name, description: vehicle.description || '', photos: vehicle.photos } : null,
       hotels: [],
@@ -505,8 +549,11 @@ export function RequestWorkspace() {
                 <p className="ll-card-title">{row.client_name || '—'}</p>
                 <p className="ll-muted">{[row.email, row.whatsapp, row.origin_country].filter(Boolean).join(' · ') || '—'}</p>
                 <p className="ll-muted">
-                  {row.number_of_adults || 0} adults
-                  {row.number_of_children ? ` · ${row.number_of_children} children` : ''}
+                  {partySummary(
+                    overviewDraft.number_of_adults,
+                    overviewDraft.number_of_children,
+                    parseAgeList(overviewDraft.children_ages)
+                  )}
                 </p>
               </div>
               <div>
@@ -593,6 +640,54 @@ export function RequestWorkspace() {
               }
             />
           </label>
+          <div className="ll-fields-2">
+            <label>
+              Adults
+              <input
+                type="number"
+                min={0}
+                value={overviewDraft.number_of_adults}
+                onChange={(e) =>
+                  setOverviewDraft({ ...overviewDraft, number_of_adults: Math.max(0, Number(e.target.value) || 0) })
+                }
+              />
+            </label>
+            <label>
+              Children
+              <input
+                type="number"
+                min={0}
+                value={overviewDraft.number_of_children}
+                onChange={(e) => {
+                  const children = Math.max(0, Number(e.target.value) || 0)
+                  setOverviewDraft({
+                    ...overviewDraft,
+                    number_of_children: children,
+                    children_ages: children > 0 ? overviewDraft.children_ages : '',
+                  })
+                }}
+              />
+            </label>
+          </div>
+          <label>
+            Total passengers
+            <input
+              readOnly
+              value={`${overviewDraft.number_of_adults + overviewDraft.number_of_children} passenger${
+                overviewDraft.number_of_adults + overviewDraft.number_of_children === 1 ? '' : 's'
+              }`}
+            />
+          </label>
+          {overviewDraft.number_of_children > 0 ? (
+            <label>
+              Children&apos;s ages
+              <input
+                value={overviewDraft.children_ages}
+                onChange={(e) => setOverviewDraft({ ...overviewDraft, children_ages: e.target.value })}
+                placeholder="8, 11"
+              />
+            </label>
+          ) : null}
           <label>Email<input value={overviewDraft.email} onChange={(e) => setOverviewDraft({ ...overviewDraft, email: e.target.value })} /></label>
           <label>WhatsApp<input value={overviewDraft.whatsapp} onChange={(e) => setOverviewDraft({ ...overviewDraft, whatsapp: e.target.value })} /></label>
           <label>Country<input value={overviewDraft.origin_country} onChange={(e) => setOverviewDraft({ ...overviewDraft, origin_country: e.target.value })} /></label>
