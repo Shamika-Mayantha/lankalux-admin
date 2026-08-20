@@ -7,6 +7,14 @@ import { STATUS_LABEL, normalizeStatus, type RequestStatus } from '@/config/stat
 import type { ClientRequestRow } from '@/types/domain'
 
 type Range = 'today' | 'week' | 'month' | 'all'
+type StatusFilter = RequestStatus | 'all'
+
+const RANGE_LABEL: Record<Range, string> = {
+  today: 'Today',
+  week: 'This week',
+  month: 'This month',
+  all: 'All time',
+}
 
 function startOfRange(range: Range) {
   const now = new Date()
@@ -18,6 +26,15 @@ function startOfRange(range: Range) {
   return d
 }
 
+function inCreatedRange(createdAt: string | null | undefined, range: Range) {
+  const from = startOfRange(range)
+  if (!from) return true
+  if (!createdAt) return false
+  const created = new Date(createdAt)
+  if (Number.isNaN(created.getTime())) return false
+  return created >= from
+}
+
 function greeting() {
   const h = new Date().getHours()
   if (h < 12) return 'Good morning'
@@ -25,10 +42,15 @@ function greeting() {
   return 'Good evening'
 }
 
+function requestStatus(row: ClientRequestRow): RequestStatus {
+  return normalizeStatus(row.status) || 'new'
+}
+
 export default function DashboardPage() {
   const [rows, setRows] = useState<ClientRequestRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [range, setRange] = useState<Range>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   useEffect(() => {
     consoleFetch('/api/v2/requests')
@@ -36,33 +58,22 @@ export default function DashboardPage() {
       .catch((e) => setError(e.message))
   }, [])
 
-  const soldRows = useMemo(() => rows.filter((r) => (normalizeStatus(r.status) || 'new') === 'sold'), [rows])
+  const soldRows = useMemo(() => rows.filter((r) => requestStatus(r) === 'sold'), [rows])
 
-  const filtered = useMemo(() => {
-    const from = startOfRange(range)
-    return soldRows.filter((r) => {
-      if (!from) return true
-      const created = new Date(r.created_at)
-      return created >= from
-    })
-  }, [soldRows, range])
+  const rangedRows = useMemo(() => rows.filter((r) => inCreatedRange(r.created_at, range)), [rows, range])
 
   const counts = useMemo(() => {
     const c: Record<RequestStatus, number> = { new: 0, follow_up: 0, sold: 0, after_sales: 0, cancelled: 0, expired: 0 }
-    for (const r of filtered) {
-      const s = normalizeStatus(r.status) || 'new'
-      c[s]++
+    for (const r of rangedRows) {
+      c[requestStatus(r)]++
     }
     return c
-  }, [filtered])
+  }, [rangedRows])
 
-  const recentRequests = useMemo(
-    () =>
-      [...rows]
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 12),
-    [rows]
-  )
+  const listedRequests = useMemo(() => {
+    const list = statusFilter === 'all' ? rangedRows : rangedRows.filter((r) => requestStatus(r) === statusFilter)
+    return [...list].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  }, [rangedRows, statusFilter])
 
   const today = new Date().toISOString().slice(0, 10)
   const upcomingArrivals = useMemo(
@@ -82,6 +93,15 @@ export default function DashboardPage() {
     [soldRows, today]
   )
 
+  const listTitle =
+    statusFilter === 'all'
+      ? range === 'all'
+        ? 'All requests'
+        : `Requests · ${RANGE_LABEL[range]}`
+      : `${STATUS_LABEL[statusFilter]} · ${RANGE_LABEL[range]}`
+
+  const requestsHref = statusFilter === 'all' ? '/console/requests' : `/console/requests?status=${statusFilter}`
+
   return (
     <div>
       <h1 className="ll-greeting">{greeting()}</h1>
@@ -90,7 +110,7 @@ export default function DashboardPage() {
       <div className="ll-row" style={{ marginBottom: 18 }}>
         {(['today', 'week', 'month', 'all'] as Range[]).map((r) => (
           <button key={r} className={`ll-btn ${range === r ? '' : 'secondary'}`} onClick={() => setRange(r)}>
-            {r === 'all' ? 'All time' : r === 'today' ? 'Today' : r === 'week' ? 'This week' : 'This month'}
+            {RANGE_LABEL[r]}
           </button>
         ))}
         <Link href="/console/requests/new" className="ll-btn">
@@ -105,10 +125,15 @@ export default function DashboardPage() {
       </div>
       <div className="ll-grid">
         {(Object.keys(STATUS_LABEL) as RequestStatus[]).map((s) => (
-          <div className="ll-card" key={s}>
-            <h3>{s === 'new' ? 'Requests' : STATUS_LABEL[s]}</h3>
+          <button
+            type="button"
+            className={`ll-card ll-stat-card ${statusFilter === s ? 'active' : ''}`}
+            key={s}
+            onClick={() => setStatusFilter((prev) => (prev === s ? 'all' : s))}
+          >
+            <h3>{STATUS_LABEL[s]}</h3>
             <p className="ll-stat">{counts[s]}</p>
-          </div>
+          </button>
         ))}
       </div>
       <div className="ll-grid-2" style={{ marginTop: 18 }}>
@@ -131,7 +156,14 @@ export default function DashboardPage() {
           ))}
         </div>
       </div>
-      <h2 style={{ marginTop: 32 }}>Recent requests</h2>
+      <div className="ll-row" style={{ marginTop: 32, marginBottom: 12, justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <h2 style={{ margin: 0 }}>
+          {listTitle} <span className="ll-muted">({listedRequests.length})</span>
+        </h2>
+        <Link href={requestsHref} className="ll-btn secondary">
+          Open in Requests
+        </Link>
+      </div>
       <table className="ll-table">
         <thead>
           <tr>
@@ -142,14 +174,17 @@ export default function DashboardPage() {
           </tr>
         </thead>
         <tbody>
-          {recentRequests.map((r) => {
-            const s = normalizeStatus(r.status) || 'new'
+          {listedRequests.map((r) => {
+            const s = requestStatus(r)
+            const href = `/console/requests/${r.id}`
             return (
               <tr key={r.id}>
                 <td>
-                  <Link href={`/console/requests/${r.id}`}>{r.id}</Link>
+                  <Link href={href}>{r.id}</Link>
                 </td>
-                <td>{r.client_name}</td>
+                <td>
+                  <Link href={href}>{r.client_name}</Link>
+                </td>
                 <td>
                   {r.start_date || '—'} → {r.end_date || '—'}
                 </td>
@@ -159,10 +194,10 @@ export default function DashboardPage() {
               </tr>
             )
           })}
-          {recentRequests.length === 0 ? (
+          {listedRequests.length === 0 ? (
             <tr>
               <td colSpan={4} className="ll-muted" style={{ textAlign: 'center' }}>
-                No recent requests yet.
+                No requests in this period.
               </td>
             </tr>
           ) : null}
