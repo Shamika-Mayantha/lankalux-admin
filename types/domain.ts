@@ -1,4 +1,5 @@
-import type { ItineraryStyle, RequestStatus } from '@/config/status'
+export type ItineraryStyle = 'balanced' | 'relaxed' | 'experience' | string
+export type RequestStatus = 'new' | 'follow_up' | 'deposit' | 'sold' | 'after_sales' | 'cancelled' | 'expired' | string
 
 export type TravelInfo = {
   from: string
