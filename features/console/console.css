@@ -225,6 +225,38 @@ html:has(.ll-root) body {
   border-color: var(--line-strong);
 }
 
+button.ll-card,
+.ll-stat-card {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.ll-stat-card.active {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-soft);
+}
+
+.ll-category {
+  margin-top: 28px;
+}
+
+.ll-category-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.ll-category-head h2 {
+  margin: 0;
+}
+
 .ll-card h3 {
   margin: 0;
   font-size: 12px;
@@ -325,6 +357,10 @@ html:has(.ll-root) body {
 .ll-table a:hover {
   color: var(--gold);
   border-bottom-color: var(--gold);
+}
+
+.ll-table tbody tr:hover td {
+  background: var(--gold-soft);
 }
 
 .ll-btn {

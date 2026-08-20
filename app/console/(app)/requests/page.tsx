@@ -1,22 +1,40 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { consoleFetch } from '@/lib/console-api'
-import { STATUS_LABEL, normalizeStatus, REQUEST_STATUSES } from '@/config/status'
+import { STATUS_LABEL, normalizeStatus, REQUEST_STATUSES, type RequestStatus } from '@/config/status'
 import type { ClientRequestRow } from '@/types/domain'
 
-export default function RequestsPage() {
+function isStatus(value: string): value is RequestStatus {
+  return (REQUEST_STATUSES as readonly string[]).includes(value)
+}
+
+function RequestsPageInner() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [rows, setRows] = useState<ClientRequestRow[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [status, setStatus] = useState('all')
   const [q, setQ] = useState('')
+
+  const statusParam = searchParams.get('status') || 'all'
+  const status = statusParam === 'all' || isStatus(statusParam) ? statusParam : 'all'
 
   useEffect(() => {
     consoleFetch('/api/v2/requests')
       .then((d) => setRows(d.requests || []))
       .catch((e) => setError(e.message))
   }, [])
+
+  function setStatus(next: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (!next || next === 'all') params.delete('status')
+    else params.set('status', next)
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname)
+  }
 
   const shown = rows.filter((r) => {
     const s = normalizeStatus(r.status) || 'new'
@@ -61,13 +79,16 @@ export default function RequestsPage() {
         <tbody>
           {shown.map((r) => {
             const s = normalizeStatus(r.status) || 'new'
+            const href = `/console/requests/${r.id}`
             return (
               <tr key={r.id}>
                 <td>
-                  <Link href={`/console/requests/${r.id}`}>{r.id}</Link>
+                  <Link href={href}>{r.id}</Link>
                 </td>
                 <td>
-                  <div>{r.client_name}</div>
+                  <div>
+                    <Link href={href}>{r.client_name}</Link>
+                  </div>
                   <div className="ll-muted">{r.email}</div>
                 </td>
                 <td>
@@ -82,8 +103,30 @@ export default function RequestsPage() {
               </tr>
             )
           })}
+          {shown.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="ll-muted" style={{ textAlign: 'center' }}>
+                No requests match this filter.
+              </td>
+            </tr>
+          ) : null}
         </tbody>
       </table>
     </div>
+  )
+}
+
+export default function RequestsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div>
+          <h1 className="ll-h1">Requests</h1>
+          <p className="ll-muted">Loading requests…</p>
+        </div>
+      }
+    >
+      <RequestsPageInner />
+    </Suspense>
   )
 }
