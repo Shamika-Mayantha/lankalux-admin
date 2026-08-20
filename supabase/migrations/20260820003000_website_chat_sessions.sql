@@ -1,5 +1,4 @@
--- Website chat storage for LankaLux Live Chat
--- Run in Supabase SQL editor for the admin project.
+-- Website live chat sessions used by /dashboard/chats and /api/chats.
 
 CREATE TABLE IF NOT EXISTS website_chat_sessions (
   session_id TEXT PRIMARY KEY,
@@ -24,6 +23,9 @@ CREATE TABLE IF NOT EXISTS website_chat_sessions (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+ALTER TABLE website_chat_sessions ADD COLUMN IF NOT EXISTS chat_rating INTEGER;
+ALTER TABLE website_chat_sessions ADD COLUMN IF NOT EXISTS chat_rated_at TIMESTAMPTZ;
+
 ALTER TABLE website_chat_sessions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow authenticated read write website_chat_sessions" ON website_chat_sessions;
@@ -33,8 +35,3 @@ CREATE POLICY "Allow authenticated read write website_chat_sessions"
   TO authenticated
   USING (true)
   WITH CHECK (true);
-
--- If the table already exists, run:
--- ALTER TABLE website_chat_sessions ADD COLUMN IF NOT EXISTS chat_rating INTEGER;
--- ALTER TABLE website_chat_sessions ADD COLUMN IF NOT EXISTS chat_rated_at TIMESTAMPTZ;
-
