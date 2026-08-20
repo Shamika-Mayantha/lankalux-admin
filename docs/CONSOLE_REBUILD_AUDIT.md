@@ -50,9 +50,7 @@ hooks/useInactivityLogout.ts   # 45-minute idle logout
 lib/                      # supabase, fleet, email, hotels, images, chat
 public/images/            # real LankaLux photographs (keep)
 public/Fleet/             # real vehicle photographs (keep)
-Fleet/                    # duplicate of public/Fleet
-supabase/migrations/      # only 2 files; most schema lives as loose SQL
-*.sql                     # ad-hoc scripts, some targeting `requests`, some `"Client Requests"`
+supabase/migrations/      # schema changes for "Client Requests" and related tables
 ```
 
 There is no `features/`, `services/`, `types/`, or `config/` layer. Business logic is embedded in route handlers and the request detail page.
@@ -253,7 +251,7 @@ Logo: `public/favicon.png` and `app/favicon.png`. Reuse; do not regenerate.
 
 `lib/managed-image.ts` normalizes uploaded vs default images. Uploads go to Supabase Storage.
 
-Vehicle images: `lib/fleet.ts` points at `/Fleet/*.jpg` (copied into `public/Fleet/`).
+Vehicle images: `lib/fleet.ts` points at `/Fleet/*.jpg` (served from `public/Fleet/`).
 
 There is no central mapper used by email, WhatsApp, and preview together. The new console adds `services/image-map.service.ts` as that utility.
 

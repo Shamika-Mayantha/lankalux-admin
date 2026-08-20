@@ -72,17 +72,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Email configuration
-    console.log("=== ENV DEBUG START ===")
-    console.log("Project name check: send-itinerary route running")
-    console.log("SMTP_HOST:", process.env.SMTP_HOST)
-    console.log("SMTP_PORT:", process.env.SMTP_PORT)
-    console.log("SMTP_USER:", process.env.SMTP_USER)
-    console.log("SMTP_PASS:", process.env.SMTP_PASS ? "***EXISTS***" : "MISSING")
-    console.log("SMTP_PASSWORD:", process.env.SMTP_PASSWORD ? "***EXISTS***" : "MISSING")
-    console.log("All ENV Keys:", Object.keys(process.env).filter(key => key.includes('SMTP')))
-    console.log("=== ENV DEBUG END ===")
-    
     const emailHost = process.env.SMTP_HOST
     const emailPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587
     const emailUser = process.env.SMTP_USER

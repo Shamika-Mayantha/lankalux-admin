@@ -49,3 +49,6 @@ next-env.d.ts
 /CMR/node_modules/
 /Vercel/
 /lankalux-admin-push/
+
+# Duplicate of public/Fleet — do not commit
+/Fleet/
