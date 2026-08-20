@@ -11,7 +11,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const bytes = await renderInvoicePdf(model)
     await addInvoiceActivity(id, 'invoice_downloaded', { mode: 'admin' }, user.email || user.id)
 
-    return new Response(bytes, {
+    return new Response(Buffer.from(bytes), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

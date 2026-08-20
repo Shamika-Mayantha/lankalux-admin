@@ -7,7 +7,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
     const invoice = await getInvoiceByPublicToken(token)
     const model = invoicePreviewModel(invoice)
     const bytes = await renderInvoicePdf(model)
-    return new Response(bytes, {
+    return new Response(Buffer.from(bytes), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
