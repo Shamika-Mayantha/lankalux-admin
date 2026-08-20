@@ -9,8 +9,8 @@ import {
   paymentStatus,
   uniqueInOrder,
 } from '../services/invoice-math'
-import { renderInvoiceEmail } from '../services/journey-copy'
-import { normalizeEditableBody } from '../lib/email-templates'
+import { renderFollowUpEmail, renderInvoiceEmail } from '../services/journey-copy'
+import { getTemplate, normalizeEditableBody } from '../lib/email-templates'
 
 function assert(cond: unknown, msg: string) {
   if (!cond) throw new Error(msg)
@@ -116,5 +116,25 @@ assert(invoiceEmail.text.includes('Balance due USD 1,350'), 'invoice email text 
 
 assert(normalizeEditableBody('Dear Anna,\n\nHello there.\n\nWarm regards,\nLankaLux Team') === 'Hello there.', 'strip greeting and signature')
 assert(normalizeEditableBody('Just checking in.') === 'Just checking in.', 'plain body stays intact')
+
+const followUpHtml = getTemplate('friendly_checkin')!.getHtml({
+  clientName: 'Anna Silva',
+  logoUrl: 'https://admin.lankalux.com/brand/lankalux-logo.png',
+})
+assert(followUpHtml.includes('F9F4EB'), 'follow-up uses ivory header')
+assert(followUpHtml.includes('B18544'), 'follow-up uses gold rule')
+assert(followUpHtml.includes('1A2A1D'), 'follow-up uses forest')
+assert(followUpHtml.includes('/brand/lankalux-logo.png'), 'follow-up uses brand logo')
+assert(!followUpHtml.includes('Georgia'), 'follow-up does not use old serif chrome')
+assert(!followUpHtml.includes('#c8a45d'), 'follow-up does not use old gold')
+assert(!followUpHtml.includes('View your itinerary'), 'follow-up has no itinerary CTA')
+
+const followUpCompiled = renderFollowUpEmail({
+  clientName: 'Anna Silva',
+  bodyText: 'Hello there.',
+  logoUrl: 'https://admin.lankalux.com/brand/lankalux-logo.png',
+})
+assert(followUpCompiled.html.includes('Hello there.'), 'follow-up includes body')
+assert(followUpCompiled.text.includes('Private journeys, exceptional care'), 'follow-up uses brand tagline')
 
 console.log('console core checks passed')

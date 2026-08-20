@@ -4,12 +4,12 @@ import { BRAND } from '@/config/brand'
 import { logActivity } from '@/services/activity.service'
 import { getPublishedItinerary } from '@/services/itinerary.service'
 import { createShareLink } from '@/services/share.service'
-import { renderInvoiceEmail, renderJourneyEmail, withQuotedPrice, withVehicleIncluded } from '@/services/journey-copy'
+import { renderFollowUpEmail, renderInvoiceEmail, renderJourneyEmail, withQuotedPrice, withVehicleIncluded } from '@/services/journey-copy'
 import { getInvoice, invoicePreviewModel, markInvoiceSent } from '@/services/invoice.service'
 import { renderInvoicePdf } from '@/services/invoice-pdf'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
 import { getRequest } from '@/services/request.service'
-import { bodyTextToHtml, buildHtmlFromBody, getTemplate, normalizeEditableBody, type TemplateId } from '@/lib/email-templates'
+import { getTemplate, followUpCta, normalizeEditableBody, type TemplateId } from '@/lib/email-templates'
 
 const FROM_EMAIL = 'hello@lankalux.com'
 
@@ -276,19 +276,22 @@ export async function sendFollowUpTemplateEmail(opts: {
   }
 
   const clientName = request.client_name || 'Valued Client'
-  const itineraryUrl: string | null = null
   const subject = opts.subject?.trim() || template.subject
-  let html: string
-  let text: string
-  if (opts.body != null && String(opts.body).trim() !== '') {
-    const normalizedBody = normalizeEditableBody(String(opts.body))
-    html = buildHtmlFromBody({ clientName, bodyHtml: bodyTextToHtml(normalizedBody), itineraryUrl })
-    text = `${normalizedBody}\n\nWarm regards,\nThe LankaLux Team`
-  } else {
-    html = template.getHtml({ clientName, itineraryUrl })
-    const bodyOnly = normalizeEditableBody(template.getText({ clientName, itineraryUrl }))
-    text = `${bodyOnly}\n\nWarm regards,\nThe LankaLux Team`
-  }
+  const bodySource =
+    opts.body != null && String(opts.body).trim() !== ''
+      ? String(opts.body)
+      : template.getText({ clientName })
+  const normalizedBody = normalizeEditableBody(bodySource)
+  const cta = followUpCta(template.id)
+  const compiled = renderFollowUpEmail({
+    clientName,
+    bodyText: normalizedBody,
+    logoUrl: `${appUrl()}${BRAND.logoSrc}`,
+    ctaUrl: cta?.ctaUrl,
+    ctaLabel: cta?.ctaLabel,
+  })
+  const html = compiled.html
+  const text = compiled.text
 
   const { messageId } = await sendLankaLuxMail({
     to,

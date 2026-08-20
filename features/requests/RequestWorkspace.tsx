@@ -14,10 +14,9 @@ import '@/features/journey/journey.css'
 import type { ActivityEvent, CanonicalJourney, ClientRequestRow, ItineraryDay, ItineraryRecord, StructuredItinerary, VehicleRecord } from '@/types/domain'
 import {
   FOLLOW_UP_TEMPLATES,
-  bodyTextToHtml,
   buildHtmlFromBody,
+  followUpCta,
   getTemplate,
-  normalizeEditableBody,
   type TemplateId,
 } from '@/lib/email-templates'
 
@@ -563,12 +562,15 @@ export function RequestWorkspace() {
   const durationPreview =
     overviewDraft ? durationFromDates(overviewDraft.start_date, overviewDraft.end_date) : null
   const followUpSent = parseFollowUpLog(row.follow_up_emails_sent)
+  const templateCta = followUpCta(templateId)
   const templatePreviewHtml =
     templateOpen && templateBody.trim()
       ? buildHtmlFromBody({
           clientName: row.client_name || 'Valued Client',
-          bodyHtml: bodyTextToHtml(normalizeEditableBody(templateBody)),
-          itineraryUrl: null,
+          bodyText: templateBody,
+          logoUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}${BRAND.logoSrc}`,
+          ctaUrl: templateCta?.ctaUrl,
+          ctaLabel: templateCta?.ctaLabel,
         })
       : null
 
