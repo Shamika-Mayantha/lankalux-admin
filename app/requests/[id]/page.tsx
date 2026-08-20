@@ -18,6 +18,7 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ClientViewPreviewModal } from '@/components/ClientViewPreviewModal'
 import { ImageManager } from '@/components/ImageManager'
+import { InvoicePaymentsPanel } from '@/components/requests/InvoicePaymentsPanel'
 import type { ManagedImageItem } from '@/lib/managed-image'
 import { imageSrcs, normalizeManagedImages, absoluteImageSrc } from '@/lib/managed-image'
 
@@ -1647,6 +1648,20 @@ LankaLux Team`
               </svg>
               Back to Dashboard
             </button>
+              <button
+                type="button"
+                onClick={() => router.push('/invoices')}
+                className={`${btnSec} w-fit shrink-0`}
+              >
+                Invoices
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/payments')}
+                className={`${btnSec} w-fit shrink-0`}
+              >
+                Payments
+              </button>
               <ThemeToggle />
             </div>
           </div>
@@ -2352,6 +2367,8 @@ LankaLux Team`
             </div>
           </div>
         )}
+
+        <InvoicePaymentsPanel requestId={request.id} requestEmail={request.email} requestWhatsapp={request.whatsapp} />
 
         {/* Itinerary options */}
         <div className={card}>

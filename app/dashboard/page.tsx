@@ -260,6 +260,37 @@ export default function DashboardPage() {
               <span className="hidden sm:inline">Vehicle Availability</span>
             </button>
             <button
+              onClick={() => router.push('/invoices')}
+              className="px-4 py-2.5 bg-[var(--bg-btn-secondary)] hover:bg-[var(--bg-btn-secondary-hover)] border border-theme text-primary font-medium rounded-xl transition-all text-sm flex items-center gap-2"
+              title="Open invoices module"
+            >
+              <svg className="w-4 h-4 shrink-0 text-[var(--accent-gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z" />
+              </svg>
+              <span className="hidden sm:inline">Invoices</span>
+            </button>
+            <button
+              onClick={() => router.push('/payments')}
+              className="px-4 py-2.5 bg-[var(--bg-btn-secondary)] hover:bg-[var(--bg-btn-secondary-hover)] border border-theme text-primary font-medium rounded-xl transition-all text-sm flex items-center gap-2"
+              title="Open payments ledger"
+            >
+              <svg className="w-4 h-4 shrink-0 text-[var(--accent-gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a5 5 0 00-10 0v2m-1 0h12a1 1 0 011 1v9a1 1 0 01-1 1H6a1 1 0 01-1-1v-9a1 1 0 011-1z" />
+              </svg>
+              <span className="hidden sm:inline">Payments</span>
+            </button>
+            <button
+              onClick={() => router.push('/settings')}
+              className="px-4 py-2.5 bg-[var(--bg-btn-secondary)] hover:bg-[var(--bg-btn-secondary-hover)] border border-theme text-primary font-medium rounded-xl transition-all text-sm flex items-center gap-2"
+              title="Open settings"
+            >
+              <svg className="w-4 h-4 shrink-0 text-[var(--accent-gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l.7 2.153a1 1 0 00.95.69h2.263c.969 0 1.371 1.24.588 1.81l-1.832 1.332a1 1 0 00-.364 1.118l.7 2.152c.3.922-.755 1.688-1.539 1.118l-1.833-1.332a1 1 0 00-1.176 0l-1.833 1.332c-.783.57-1.838-.196-1.539-1.118l.7-2.152a1 1 0 00-.364-1.118L5.35 7.58c-.783-.57-.38-1.81.588-1.81h2.263a1 1 0 00.95-.69l.7-2.153z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v7m-3-3h6" />
+              </svg>
+              <span className="hidden sm:inline">Settings</span>
+            </button>
+            <button
               onClick={() => router.push('/requests/new')}
               className="px-5 py-2.5 bg-[var(--accent-gold)] hover:bg-[var(--accent-gold-hover)] border border-[var(--accent-gold)] text-black font-semibold rounded-xl transition-all text-sm shadow-sm"
             >
