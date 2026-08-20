@@ -78,6 +78,27 @@ export function bodyTextToHtml(bodyText: string): string {
     .join('\n      ')
 }
 
+/** Strip greeting/signature the HTML shell already renders. */
+export function normalizeEditableBody(input: string): string {
+  const raw = input.replace(/\r\n/g, '\n').trim()
+  if (!raw) return ''
+
+  let lines = raw.split('\n')
+
+  if (lines.length > 0 && /^dear\s+.+,\s*$/i.test(lines[0].trim())) {
+    lines = lines.slice(1)
+    while (lines.length > 0 && lines[0].trim() === '') lines = lines.slice(1)
+  }
+
+  const lower = lines.map((l) => l.trim().toLowerCase())
+  const warmIdx = lower.findIndex((l) => l === 'warm regards,' || l === 'warm regards')
+  if (warmIdx >= 0) {
+    lines = lines.slice(0, warmIdx)
+  }
+
+  return lines.join('\n').trim()
+}
+
 /** Build full email HTML from custom body text (for editable preview/send) */
 export function buildHtmlFromBody(opts: {
   clientName: string

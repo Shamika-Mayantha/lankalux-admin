@@ -1,30 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 const nodemailer = require('nodemailer')
-import { getTemplate, bodyTextToHtml, buildHtmlFromBody, type TemplateId } from '@/lib/email-templates'
-
-function normalizeEditableBody(input: string): string {
-  const raw = input.replace(/\r\n/g, '\n').trim()
-  if (!raw) return ''
-
-  let lines = raw.split('\n')
-
-  // Remove leading "Dear <name>," line because HTML shell already renders greeting.
-  if (lines.length > 0 && /^dear\s+.+,\s*$/i.test(lines[0].trim())) {
-    lines = lines.slice(1)
-    while (lines.length > 0 && lines[0].trim() === '') lines = lines.slice(1)
-  }
-
-  // Remove trailing signature if user pasted template text.
-  const lower = lines.map((l) => l.trim().toLowerCase())
-  const warmIdx = lower.findIndex((l) => l === 'warm regards,' || l === 'warm regards')
-  if (warmIdx >= 0) {
-    lines = lines.slice(0, warmIdx)
-  }
-
-  const cleaned = lines.join('\n').trim()
-  return cleaned
-}
+import { getTemplate, bodyTextToHtml, buildHtmlFromBody, normalizeEditableBody, type TemplateId } from '@/lib/email-templates'
 
 export async function POST(request: Request) {
   try {

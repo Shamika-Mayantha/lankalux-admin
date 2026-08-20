@@ -136,6 +136,7 @@ export type ClientRequestRow = {
   last_sent_at: string | null
   email_sent_count: number | null
   hotel_options: string | null
+  follow_up_emails_sent?: string | null
   created_at: string
   updated_at: string | null
 }
