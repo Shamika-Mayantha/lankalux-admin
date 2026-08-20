@@ -1,7 +1,9 @@
 import { randomBytes } from 'crypto'
 import { appUrl } from '@/config/env'
+import { BRAND } from '@/config/brand'
 import { logActivity } from '@/services/activity.service'
 import { listVehicles } from '@/services/catalog.service'
+import { renderInvoiceEmail } from '@/services/journey-copy'
 import {
   amount,
   calculateTotals,
@@ -1057,22 +1059,16 @@ export function invoicePreviewModel(bundle: InvoiceBundle) {
 }
 
 export function invoiceEmailBody(model: ReturnType<typeof invoicePreviewModel>) {
-  return {
-    subject: `${model.invoiceNumber} · LankaLux Invoice`,
-    text: `Dear ${model.client.name},
-
-Please find attached your LankaLux invoice for your upcoming Sri Lanka journey.
-
-Invoice: ${model.invoiceNumber}
-Travel dates: ${model.formatted.travelStart} - ${model.formatted.travelEnd}
-
-You can also view your complete journey using the link below.
-
-${model.journey.secureLink ? `VIEW YOUR JOURNEY\n${model.journey.secureLink}` : 'Journey link unavailable'}
-
-Warm regards,
-LankaLux`,
-  }
+  return renderInvoiceEmail({
+    clientName: model.client.name,
+    invoiceNumber: model.invoiceNumber,
+    journeyTitle: model.journey.title,
+    travelDates: `${model.formatted.travelStart} – ${model.formatted.travelEnd}`,
+    packageTotal: model.formatted.packageTotal,
+    balanceDue: model.formatted.balanceDue,
+    shareUrl: model.journey.secureLink || null,
+    logoUrl: `${appUrl()}${BRAND.logoSrc}`,
+  })
 }
 
 export { formatMoney, formatDateLabel, humanPaymentMethod }

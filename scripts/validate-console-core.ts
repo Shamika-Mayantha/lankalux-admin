@@ -9,6 +9,7 @@ import {
   paymentStatus,
   uniqueInOrder,
 } from '../services/invoice-math'
+import { renderInvoiceEmail } from '../services/journey-copy'
 
 function assert(cond: unknown, msg: string) {
   if (!cond) throw new Error(msg)
@@ -95,5 +96,21 @@ assert(invoiceStatus('sent', 'partially_paid') === 'partially_paid', 'sent becom
 assert(parseClientFacingPrice('USD 1,850').amount === 1850, 'parse package quote')
 assert(parseClientFacingPrice('USD 1,850').currency === 'USD', 'parse currency')
 assert(uniqueInOrder(['Sigiriya', 'Kandy', 'Ella', 'Yala', 'Mirissa', 'Sigiriya']).join(',') === 'Sigiriya,Kandy,Ella,Yala,Mirissa', 'route unique in order')
+
+const invoiceEmail = renderInvoiceEmail({
+  clientName: 'Sergey Ivanov',
+  invoiceNumber: 'LL-INV-001',
+  journeyTitle: 'Sri Lanka Discovery Journey',
+  travelDates: '12-Sep-2026 – 20-Sep-2026',
+  packageTotal: 'USD 1,850',
+  balanceDue: 'USD 1,350',
+  shareUrl: 'https://admin.lankalux.com/journey/abc',
+  logoUrl: 'https://admin.lankalux.com/brand/lankalux-logo.png',
+})
+assert(invoiceEmail.subject === 'LankaLux Invoice — LL-INV-001', 'invoice email subject')
+assert(invoiceEmail.html.includes('View your LankaLux Journey'), 'invoice email uses itinerary CTA')
+assert(invoiceEmail.html.includes('/brand/lankalux-logo.png'), 'invoice email uses brand logo')
+assert(invoiceEmail.html.includes('F9F4EB'), 'invoice email uses ivory header')
+assert(invoiceEmail.text.includes('Balance due USD 1,350'), 'invoice email text includes balance')
 
 console.log('console core checks passed')

@@ -4,9 +4,90 @@ import { BRAND } from '@/config/brand'
 import { logActivity } from '@/services/activity.service'
 import { getPublishedItinerary } from '@/services/itinerary.service'
 import { createShareLink } from '@/services/share.service'
-import { renderJourneyEmail, withQuotedPrice, withVehicleIncluded } from '@/services/journey-copy'
+import { renderInvoiceEmail, renderJourneyEmail, withQuotedPrice, withVehicleIncluded } from '@/services/journey-copy'
+import { getInvoice, invoicePreviewModel, markInvoiceSent } from '@/services/invoice.service'
+import { renderInvoicePdf } from '@/services/invoice-pdf'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
 import { getRequest } from '@/services/request.service'
+
+const FROM_EMAIL = 'hello@lankalux.com'
+
+type MailAttachment = {
+  filename: string
+  content: Buffer
+  contentType?: string
+}
+
+async function sendLankaLuxMail(opts: {
+  to: string
+  subject: string
+  text: string
+  html: string
+  attachments?: MailAttachment[]
+  requestId?: string
+  shareToken?: string | null
+}): Promise<{ messageId: string }> {
+  const smtp = requireSmtp()
+  const transporter = nodemailer.createTransport({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.port === 465,
+    auth: { user: smtp.user, pass: smtp.pass },
+  })
+
+  try {
+    await transporter.verify()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    throw new AppError(`Email API returned a configuration error: ${msg}`, 502)
+  }
+
+  let messageId = ''
+  try {
+    const result = await transporter.sendMail({
+      from: `"LankaLux" <${FROM_EMAIL}>`,
+      replyTo: FROM_EMAIL,
+      to: opts.to,
+      subject: opts.subject,
+      text: opts.text,
+      html: opts.html,
+      attachments: opts.attachments,
+    })
+    messageId = result.messageId || ''
+  } catch (err) {
+    const anyErr = err as { responseCode?: number; message?: string }
+    const code = anyErr.responseCode ? ` ${anyErr.responseCode}` : ''
+    const msg = anyErr.message || 'Unknown SMTP error'
+    if (opts.requestId) {
+      await recordCommunication({
+        requestId: opts.requestId,
+        channel: 'email',
+        recipient: opts.to,
+        subject: opts.subject,
+        body: opts.text,
+        shareToken: opts.shareToken ?? null,
+        status: 'failed',
+        error: `Email API returned${code}: ${msg}`,
+      })
+    }
+    throw new AppError(`Email API returned${code}: ${msg}`, 502)
+  }
+
+  if (opts.requestId) {
+    await recordCommunication({
+      requestId: opts.requestId,
+      channel: 'email',
+      recipient: opts.to,
+      subject: opts.subject,
+      body: opts.text,
+      shareToken: opts.shareToken ?? null,
+      providerMessageId: messageId,
+      status: 'sent',
+    })
+  }
+
+  return { messageId }
+}
 
 export async function previewJourneyEmail(opts: {
   requestId: string
@@ -35,6 +116,48 @@ export async function previewJourneyEmail(opts: {
   return { ...compiled, journey }
 }
 
+export async function sendInvoiceEmail(opts: { invoiceId: string; to?: string; actor?: string }) {
+  requireSmtp()
+  const bundle = await getInvoice(opts.invoiceId)
+  if (bundle.invoice.status === 'draft') throw new AppError('Finalize the invoice before sending.', 400)
+  if (bundle.invoice.status === 'cancelled') throw new AppError('Cancelled invoice cannot be sent.', 400)
+
+  const model = invoicePreviewModel(bundle)
+  const to = (opts.to || model.client.email || '').trim()
+  if (!to) throw new AppError('Client email is missing.', 400)
+
+  const compiled = renderInvoiceEmail({
+    clientName: model.client.name,
+    invoiceNumber: model.invoiceNumber,
+    journeyTitle: model.journey.title,
+    travelDates: `${model.formatted.travelStart} – ${model.formatted.travelEnd}`,
+    packageTotal: model.formatted.packageTotal,
+    balanceDue: model.formatted.balanceDue,
+    shareUrl: model.journey.secureLink || null,
+    logoUrl: `${appUrl()}${BRAND.logoSrc}`,
+  })
+  const pdfBytes = await renderInvoicePdf(model)
+
+  const { messageId } = await sendLankaLuxMail({
+    to,
+    subject: compiled.subject,
+    text: compiled.text,
+    html: compiled.html,
+    requestId: bundle.invoice.request_id,
+    shareToken: bundle.invoice.share_link_token,
+    attachments: [
+      {
+        filename: `${model.invoiceNumber}.pdf`,
+        content: Buffer.from(pdfBytes),
+        contentType: 'application/pdf',
+      },
+    ],
+  })
+
+  await markInvoiceSent(opts.invoiceId, opts.actor, 'email')
+  return { messageId, subject: compiled.subject, to }
+}
+
 export async function sendJourneyEmail(opts: {
   requestId: string
   actor?: string
@@ -48,7 +171,7 @@ export async function sendJourneyEmail(opts: {
   subject?: string
   to?: string
 }) {
-  const smtp = requireSmtp()
+  requireSmtp()
   const request = await getRequest(opts.requestId)
   const to = (opts.to || request.email || '').trim()
   if (!to) throw new AppError('Client email is missing.', 400)
@@ -98,58 +221,13 @@ export async function sendJourneyEmail(opts: {
       }
 
   const subject = opts.subject?.trim() || compiled.subject
-
-  const transporter = nodemailer.createTransport({
-    host: smtp.host,
-    port: smtp.port,
-    secure: smtp.port === 465,
-    auth: { user: smtp.user, pass: smtp.pass },
-  })
-
-  try {
-    await transporter.verify()
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    throw new AppError(`Email API returned a configuration error: ${msg}`, 502)
-  }
-
-  let messageId = ''
-  try {
-    const result = await transporter.sendMail({
-      from: `"LankaLux" <hello@lankalux.com>`,
-      replyTo: 'hello@lankalux.com',
-      to,
-      subject,
-      text: compiled.text,
-      html: compiled.html,
-    })
-    messageId = result.messageId || ''
-  } catch (err) {
-    const anyErr = err as { responseCode?: number; message?: string }
-    const code = anyErr.responseCode ? ` ${anyErr.responseCode}` : ''
-    const msg = anyErr.message || 'Unknown SMTP error'
-    await recordCommunication({
-      requestId: opts.requestId,
-      channel: 'email',
-      recipient: to,
-      subject,
-      body: compiled.text,
-      shareToken,
-      status: 'failed',
-      error: `Email API returned${code}: ${msg}`,
-    })
-    throw new AppError(`Email API returned${code}: ${msg}`, 502)
-  }
-
-  await recordCommunication({
-    requestId: opts.requestId,
-    channel: 'email',
-    recipient: to,
+  const { messageId } = await sendLankaLuxMail({
+    to,
     subject,
-    body: compiled.text,
+    text: compiled.text,
+    html: compiled.html,
+    requestId: opts.requestId,
     shareToken,
-    providerMessageId: messageId,
-    status: 'sent',
   })
 
   const supabase = getServiceClient()

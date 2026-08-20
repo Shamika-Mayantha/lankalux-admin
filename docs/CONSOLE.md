@@ -49,6 +49,6 @@ Invoices live on `/console/invoices` and as the **Invoices & Payments** tab on e
 4. Click **Create invoice**. Client, journey, vehicle and chauffeur-guide are snapshotted from live request data.
 5. Enter package total and record payments. Balance = total − successful payments.
 6. **Preview invoice**, then **Finalize invoice**. After finalize, itinerary edits do not change that document. Use **Create revised invoice** for a new draft.
-7. **Download PDF**, **Send by email**, or **Share via WhatsApp**. Email/WhatsApp always use the finalized PDF.
+7. **Download PDF**, **Send by email**, or **Share via WhatsApp**. Email uses the same branded LankaLux send as itineraries (`hello@lankalux.com`), with the finalized PDF attached.
 8. Configure bank details once in **Settings → Payment instructions**. Only client-visible fields appear on the invoice.
 

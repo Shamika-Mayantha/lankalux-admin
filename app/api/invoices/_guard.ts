@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { AppError } from '@/services/supabase.server'
 
 export class ApiError extends Error {
   status: number
@@ -39,7 +40,7 @@ export function ok(data: Record<string, unknown>, status = 200) {
 }
 
 export function fail(error: unknown, fallback = 'Request failed') {
-  if (error instanceof ApiError) {
+  if (error instanceof ApiError || error instanceof AppError) {
     return NextResponse.json({ success: false, error: error.message }, { status: error.status })
   }
   const message = error instanceof Error && error.message ? error.message : fallback

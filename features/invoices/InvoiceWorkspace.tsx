@@ -298,12 +298,12 @@ export function InvoiceWorkspace({
     if (!selected) return
     try {
       setSaving(true)
-      await consoleFetch(`/api/invoices/${selected.invoice.id}/send-email`, {
+      const data = await consoleFetch(`/api/invoices/${selected.invoice.id}/send-email`, {
         method: 'POST',
         body: JSON.stringify({ to: emailTo.trim() || undefined }),
       })
       await load(selected.invoice.id)
-      setNotice('Invoice email sent with the finalized PDF attached.')
+      setNotice(`Email sent to ${data.to}.`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to send invoice email.')
     } finally {
@@ -552,7 +552,7 @@ export function InvoiceWorkspace({
 
                 <div className="ll-card">
                   <h3>Send to client</h3>
-                  <p className="ll-muted">Email and WhatsApp always attach or link the finalized PDF.</p>
+                  <p className="ll-muted">Uses the same LankaLux email as itineraries, with the finalized invoice PDF attached.</p>
                   <label>
                     Email
                     <input value={emailTo} onChange={(e) => setEmailTo(e.target.value)} placeholder="client@email.com" />

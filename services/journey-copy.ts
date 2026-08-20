@@ -54,6 +54,54 @@ export function withVehicleIncluded(
   return journey
 }
 
+function firstName(fullName: string) {
+  return fullName.trim().split(' ')[0] || 'Guest'
+}
+
+function renderBrandedClientEmail(opts: {
+  firstName: string
+  introduction: string
+  highlightTitle: string
+  highlightBodyHtml: string
+  extraHtml?: string
+  ctaUrl?: string
+  ctaLabel?: string
+  logoUrl: string
+  textLines: string[]
+}): { html: string; text: string } {
+  const cta =
+    opts.ctaUrl && opts.ctaLabel
+      ? `<p style="text-align:center;margin:28px 0;">
+        <a href="${esc(opts.ctaUrl)}" style="background:#1A2A1D;color:#F9F4EB;text-decoration:none;padding:14px 28px;border-radius:0;font-weight:500;letter-spacing:.02em;font-size:14px;font-family:'Open Sans',Arial,sans-serif;display:inline-block;border:1px solid #B18544;">${esc(opts.ctaLabel)}</a>
+      </p>`
+      : ''
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;background:#FFFFFF;font-family:'Open Sans',Segoe UI,Arial,sans-serif;color:#252523;">
+  <div style="max-width:620px;margin:24px auto;background:#fff;border:1px solid rgba(26,42,29,0.12);">
+    <div style="background:#F9F4EB;padding:28px 20px;text-align:center;">
+      <img src="${esc(opts.logoUrl)}" alt="LankaLux" width="220" style="display:block;width:220px;height:auto;margin:0 auto;"/>
+    </div>
+    <div style="height:1px;background:#B18544;"></div>
+    <div style="padding:28px;">
+      <p>Dear ${esc(opts.firstName)},</p>
+      <p style="color:#6b6b66;line-height:1.75;">${esc(opts.introduction).replace(/\n/g, '<br/>')}</p>
+      <div style="background:#F1E9DA;border-left:3px solid #B18544;padding:12px 14px;margin:20px 0;">
+        <p style="margin:0 0 8px;color:#1A2A1D;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(opts.highlightTitle)}</p>
+        <p style="margin:0;font-size:13px;color:#6b6b66;">${opts.highlightBodyHtml}</p>
+      </div>
+      ${opts.extraHtml || ''}
+      ${cta}
+      <p style="font-size:13px;color:#6b6b66;">If you would like any changes, simply reply to this email.</p>
+      <p>Warm regards,<br/><strong style="color:#1A2A1D;">${esc(BRAND.name)}</strong><br/><span style="color:#B18544;">${esc(BRAND.tagline)}</span></p>
+    </div>
+  </div>
+</body></html>`
+
+  return { html, text: opts.textLines.join('\n') }
+}
+
 export function renderJourneyEmail(opts: {
   journey: CanonicalJourney
   introduction: string
@@ -72,50 +120,78 @@ export function renderJourneyEmail(opts: {
           )
           .join('')}`
       : ''
-
-  const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
-<body style="margin:0;background:#FFFFFF;font-family:'Open Sans',Segoe UI,Arial,sans-serif;color:#252523;">
-  <div style="max-width:620px;margin:24px auto;background:#fff;border:1px solid rgba(26,42,29,0.12);">
-    <div style="background:#F9F4EB;padding:28px 20px;text-align:center;">
-      <img src="${esc(logoUrl)}" alt="LankaLux" width="220" style="display:block;width:220px;height:auto;margin:0 auto;"/>
-    </div>
-    <div style="height:1px;background:#B18544;"></div>
-    <div style="padding:28px;">
-      <p>Dear ${esc(j.clientName.split(' ')[0] || 'Guest')},</p>
-      <p style="color:#6b6b66;line-height:1.75;">${esc(introduction).replace(/\n/g, '<br/>')}</p>
-      <div style="background:#F1E9DA;border-left:3px solid #B18544;padding:12px 14px;margin:20px 0;">
-        <p style="margin:0 0 8px;color:#1A2A1D;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(j.title)}</p>
-        <p style="margin:0;font-size:13px;color:#6b6b66;">${esc(dates(j))}<br/>${esc(metaLine(j))}</p>
-      </div>
-      ${hotelBlock}
-      <p style="text-align:center;margin:28px 0;">
-        <a href="${esc(shareUrl)}" style="background:#1A2A1D;color:#F9F4EB;text-decoration:none;padding:14px 28px;border-radius:0;font-weight:500;letter-spacing:.02em;font-size:14px;font-family:'Open Sans',Arial,sans-serif;display:inline-block;border:1px solid #B18544;">View your LankaLux Journey</a>
-      </p>
-      <p style="font-size:13px;color:#6b6b66;">If you would like any changes, simply reply to this email.</p>
-      <p>Warm regards,<br/><strong style="color:#1A2A1D;">${esc(BRAND.name)}</strong><br/><span style="color:#B18544;">${esc(BRAND.tagline)}</span></p>
-    </div>
-  </div>
-</body></html>`
-
-  const text = [
-    `Dear ${j.clientName.split(' ')[0] || 'Guest'},`,
-    '',
+  const name = firstName(j.clientName)
+  const compiled = renderBrandedClientEmail({
+    firstName: name,
     introduction,
-    '',
-    j.title,
-    dates(j),
-    metaLine(j),
-    '',
-    'View your LankaLux Journey:',
-    shareUrl,
-    '',
-    'Warm regards,',
-    BRAND.name,
-    BRAND.tagline,
-  ].join('\n')
+    highlightTitle: j.title,
+    highlightBodyHtml: `${esc(dates(j))}<br/>${esc(metaLine(j))}`,
+    extraHtml: hotelBlock,
+    ctaUrl: shareUrl,
+    ctaLabel: 'View your LankaLux Journey',
+    logoUrl,
+    textLines: [
+      `Dear ${name},`,
+      '',
+      introduction,
+      '',
+      j.title,
+      dates(j),
+      metaLine(j),
+      '',
+      'View your LankaLux Journey:',
+      shareUrl,
+      '',
+      'Warm regards,',
+      BRAND.name,
+      BRAND.tagline,
+    ],
+  })
+  return { subject, html: compiled.html, text: compiled.text }
+}
 
-  return { subject, html, text }
+export function renderInvoiceEmail(opts: {
+  clientName: string
+  invoiceNumber: string
+  journeyTitle: string
+  travelDates: string
+  packageTotal: string
+  balanceDue: string
+  shareUrl: string | null
+  logoUrl: string
+}): { subject: string; html: string; text: string } {
+  const name = firstName(opts.clientName)
+  const introduction =
+    'Please find attached your LankaLux invoice. Your complete journey details remain available on the secure link below.'
+  const highlightLines = [
+    `Invoice ${opts.invoiceNumber}`,
+    opts.travelDates,
+    `Package total ${opts.packageTotal}`,
+    `Balance due ${opts.balanceDue}`,
+  ]
+  const compiled = renderBrandedClientEmail({
+    firstName: name,
+    introduction,
+    highlightTitle: opts.journeyTitle,
+    highlightBodyHtml: highlightLines.map((line) => esc(line)).join('<br/>'),
+    ctaUrl: opts.shareUrl || undefined,
+    ctaLabel: opts.shareUrl ? 'View your LankaLux Journey' : undefined,
+    logoUrl: opts.logoUrl,
+    textLines: [
+      `Dear ${name},`,
+      '',
+      introduction,
+      '',
+      opts.journeyTitle,
+      ...highlightLines,
+      '',
+      ...(opts.shareUrl ? ['View your LankaLux Journey:', opts.shareUrl, ''] : []),
+      'Warm regards,',
+      BRAND.name,
+      BRAND.tagline,
+    ],
+  })
+  return { subject: `LankaLux Invoice — ${opts.invoiceNumber}`, html: compiled.html, text: compiled.text }
 }
 
 export function renderWhatsAppMessage(opts: { journey: CanonicalJourney; shareUrl: string }): string {
