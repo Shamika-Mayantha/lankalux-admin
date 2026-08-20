@@ -18,7 +18,7 @@ export default function CommunicationsPage() {
         for (const r of reqs) {
           const d = await consoleFetch(`/api/v2/requests/${r.id}`)
           for (const a of d.activity || []) {
-            if (['email_sent', 'whatsapp_shared', 'hotel_proposal_attached', 'share_link_created'].includes(a.event_type)) {
+            if (['email_sent', 'follow_up_email_sent', 'whatsapp_shared', 'hotel_proposal_attached', 'share_link_created'].includes(a.event_type)) {
               all.push({ ...a, client: r.client_name || r.id, request_id: r.id })
             }
           }

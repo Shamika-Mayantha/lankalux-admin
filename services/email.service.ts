@@ -9,6 +9,7 @@ import { getInvoice, invoicePreviewModel, markInvoiceSent } from '@/services/inv
 import { renderInvoicePdf } from '@/services/invoice-pdf'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
 import { getRequest } from '@/services/request.service'
+import { bodyTextToHtml, buildHtmlFromBody, getTemplate, normalizeEditableBody, type TemplateId } from '@/lib/email-templates'
 
 const FROM_EMAIL = 'hello@lankalux.com'
 
@@ -251,6 +252,89 @@ export async function sendJourneyEmail(opts: {
   })
 
   return { messageId, shareUrl, subject, to }
+}
+
+export async function sendFollowUpTemplateEmail(opts: {
+  requestId: string
+  templateId: string
+  subject?: string
+  body?: string
+  actor?: string
+}) {
+  requireSmtp()
+  const template = getTemplate(opts.templateId as TemplateId)
+  if (!template) throw new AppError('Invalid template ID', 400)
+
+  const request = await getRequest(opts.requestId)
+  const to = (request.email || '').trim()
+  if (!to) throw new AppError('Client email is missing.', 400)
+
+  if (opts.templateId === 'custom_email') {
+    const sub = opts.subject?.trim() || ''
+    const bod = opts.body?.trim() || ''
+    if (!sub || !bod) throw new AppError('Custom email requires both a subject and a message.', 400)
+  }
+
+  const clientName = request.client_name || 'Valued Client'
+  const itineraryUrl: string | null = null
+  const subject = opts.subject?.trim() || template.subject
+  let html: string
+  let text: string
+  if (opts.body != null && String(opts.body).trim() !== '') {
+    const normalizedBody = normalizeEditableBody(String(opts.body))
+    html = buildHtmlFromBody({ clientName, bodyHtml: bodyTextToHtml(normalizedBody), itineraryUrl })
+    text = `${normalizedBody}\n\nWarm regards,\nThe LankaLux Team`
+  } else {
+    html = template.getHtml({ clientName, itineraryUrl })
+    const bodyOnly = normalizeEditableBody(template.getText({ clientName, itineraryUrl }))
+    text = `${bodyOnly}\n\nWarm regards,\nThe LankaLux Team`
+  }
+
+  const { messageId } = await sendLankaLuxMail({
+    to,
+    subject,
+    text,
+    html,
+    requestId: opts.requestId,
+  })
+
+  const now = new Date().toISOString()
+  let followUpLog: { sent_at: string; template_id: string; template_name: string; subject: string }[] = []
+  const rawLog = request.follow_up_emails_sent
+  if (rawLog) {
+    try {
+      const parsed = JSON.parse(rawLog)
+      followUpLog = Array.isArray(parsed) ? parsed : []
+    } catch {
+      followUpLog = []
+    }
+  }
+  followUpLog.push({
+    sent_at: now,
+    template_id: template.id,
+    template_name: template.name,
+    subject,
+  })
+  if (followUpLog.length > 50) followUpLog = followUpLog.slice(-50)
+
+  const supabase = getServiceClient()
+  const { error } = await supabase
+    .from('Client Requests')
+    .update({
+      follow_up_emails_sent: JSON.stringify(followUpLog),
+      updated_at: now,
+    })
+    .eq('id', opts.requestId)
+  if (error && !isMissingTableError(error)) console.error('follow_up_emails_sent update:', error.message)
+
+  await logActivity({
+    request_id: opts.requestId,
+    actor: opts.actor,
+    event_type: 'follow_up_email_sent',
+    detail: { to, subject, templateId: template.id, templateName: template.name },
+  })
+
+  return { messageId, subject, to, templateName: template.name }
 }
 
 async function recordCommunication(row: {

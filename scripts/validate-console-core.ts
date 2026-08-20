@@ -10,6 +10,7 @@ import {
   uniqueInOrder,
 } from '../services/invoice-math'
 import { renderInvoiceEmail } from '../services/journey-copy'
+import { normalizeEditableBody } from '../lib/email-templates'
 
 function assert(cond: unknown, msg: string) {
   if (!cond) throw new Error(msg)
@@ -112,5 +113,8 @@ assert(invoiceEmail.html.includes('View your LankaLux Journey'), 'invoice email 
 assert(invoiceEmail.html.includes('/brand/lankalux-logo.png'), 'invoice email uses brand logo')
 assert(invoiceEmail.html.includes('F9F4EB'), 'invoice email uses ivory header')
 assert(invoiceEmail.text.includes('Balance due USD 1,350'), 'invoice email text includes balance')
+
+assert(normalizeEditableBody('Dear Anna,\n\nHello there.\n\nWarm regards,\nLankaLux Team') === 'Hello there.', 'strip greeting and signature')
+assert(normalizeEditableBody('Just checking in.') === 'Just checking in.', 'plain body stays intact')
 
 console.log('console core checks passed')

@@ -12,6 +12,14 @@ import { PhotoPicker } from '@/features/console/PhotoPicker'
 import { InvoiceWorkspace } from '@/features/invoices/InvoiceWorkspace'
 import '@/features/journey/journey.css'
 import type { ActivityEvent, CanonicalJourney, ClientRequestRow, ItineraryDay, ItineraryRecord, StructuredItinerary, VehicleRecord } from '@/types/domain'
+import {
+  FOLLOW_UP_TEMPLATES,
+  bodyTextToHtml,
+  buildHtmlFromBody,
+  getTemplate,
+  normalizeEditableBody,
+  type TemplateId,
+} from '@/lib/email-templates'
 
 const EMPTY_TRAVEL = { from: '', to: '', estimated_distance: '', estimated_duration: '' }
 
@@ -81,6 +89,30 @@ function partySummary(adults: number, children: number, ages: number[]) {
   return bits.join(' · ')
 }
 
+type FollowUpSent = { sent_at: string; template_id: string; template_name: string; subject: string }
+
+function parseFollowUpLog(raw: string | FollowUpSent[] | null | undefined): FollowUpSent[] {
+  if (!raw) return []
+  if (Array.isArray(raw)) return raw
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function templateDraft(templateId: TemplateId, clientName: string) {
+  const template = getTemplate(templateId)
+  const name = clientName || 'Valued Client'
+  if (!template) return { subject: '', body: '' }
+  if (templateId === 'custom_email') {
+    const firstName = name.trim() ? name.split(' ')[0] : 'there'
+    return { subject: template.subject || 'A note from LankaLux', body: `Dear ${firstName},\n\n` }
+  }
+  return { subject: template.subject, body: template.getText({ clientName: name, itineraryUrl: null }) }
+}
+
 function toOverviewDraft(row: ClientRequestRow): OverviewDraft {
   const party = partyCounts(row.number_of_adults, row.number_of_children, row.children_ages)
   return {
@@ -138,6 +170,7 @@ function activityLabel(eventType: string) {
   const labels: Record<string, string> = {
     itinerary_link_opened: 'Client opened itinerary link',
     email_sent: 'Itinerary email sent',
+    follow_up_email_sent: 'Follow-up email sent',
     whatsapp_shared: 'Itinerary shared on WhatsApp',
     invoice_created: 'Invoice created',
     invoice_edited: 'Invoice edited',
@@ -181,6 +214,10 @@ export function RequestWorkspace() {
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([])
   const [notice, setNotice] = useState<string | null>(null)
   const [overviewDraft, setOverviewDraft] = useState<OverviewDraft | null>(null)
+  const [templateId, setTemplateId] = useState<TemplateId>('friendly_checkin')
+  const [templateOpen, setTemplateOpen] = useState(false)
+  const [templateSubject, setTemplateSubject] = useState('')
+  const [templateBody, setTemplateBody] = useState('')
 
   async function reload() {
     const json = await consoleFetch(`/api/v2/requests/${id}`)
@@ -322,6 +359,49 @@ export function RequestWorkspace() {
     }
     const updated = await patchRequest(patch)
     if (updated) setNotice('Overview saved.')
+  }
+
+  function openTemplateEmail(nextId: TemplateId = templateId) {
+    if (!row?.email) {
+      setError('Client email is missing.')
+      return
+    }
+    const draft = templateDraft(nextId, row.client_name || 'Valued Client')
+    setTemplateId(nextId)
+    setTemplateSubject(draft.subject)
+    setTemplateBody(draft.body)
+    setTemplateOpen(true)
+  }
+
+  async function sendTemplateEmail() {
+    if (!row?.email) {
+      setError('Client email is missing.')
+      return
+    }
+    if (templateId === 'custom_email' && (!templateSubject.trim() || !templateBody.trim())) {
+      setError('Please enter both a subject and a message before sending.')
+      return
+    }
+    setBusy('Sending follow-up email…')
+    setError(null)
+    try {
+      await consoleFetch('/api/v2/template-email', {
+        method: 'POST',
+        body: JSON.stringify({
+          requestId: id,
+          templateId,
+          subject: templateSubject.trim() || undefined,
+          body: templateBody.trim() || undefined,
+        }),
+      })
+      setTemplateOpen(false)
+      setNotice('Follow-up email sent.')
+      await reload()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Follow-up email failed')
+    } finally {
+      setBusy(null)
+    }
   }
 
   async function openEmail() {
@@ -482,6 +562,15 @@ export function RequestWorkspace() {
     !!overviewDraft && JSON.stringify(overviewDraft) !== JSON.stringify(baselineOverview)
   const durationPreview =
     overviewDraft ? durationFromDates(overviewDraft.start_date, overviewDraft.end_date) : null
+  const followUpSent = parseFollowUpLog(row.follow_up_emails_sent)
+  const templatePreviewHtml =
+    templateOpen && templateBody.trim()
+      ? buildHtmlFromBody({
+          clientName: row.client_name || 'Valued Client',
+          bodyHtml: bodyTextToHtml(normalizeEditableBody(templateBody)),
+          itineraryUrl: null,
+        })
+      : null
 
   return (
     <div>
@@ -496,7 +585,10 @@ export function RequestWorkspace() {
         <div className="ll-row">
           <span className={`ll-pill ${status}`}>{STATUS_LABEL[status]}</span>
           <button className="ll-btn secondary" disabled={!!busy || !selected || status === 'expired'} onClick={openEmail}>
-            Send email
+            Send itinerary
+          </button>
+          <button className="ll-btn secondary" disabled={!!busy || !row.email} onClick={() => openTemplateEmail()}>
+            Follow-up email
           </button>
           <button className="ll-btn wa" disabled={!!busy || !selected || status === 'expired'} onClick={openWhatsApp}>
             WhatsApp
@@ -587,6 +679,58 @@ export function RequestWorkspace() {
               <button className="ll-btn secondary" onClick={() => setTab('invoices')}>
                 Open Invoices & Payments
               </button>
+            </div>
+          </div>
+          <div className="ll-card" style={{ maxWidth: 'none' }}>
+            <h3>Follow-up email</h3>
+            <p className="ll-muted">
+              Send a template or a custom note. Follow-up emails do not include an itinerary link.
+            </p>
+            {!row.email ? (
+              <p className="ll-muted" style={{ marginTop: 12 }}>
+                Add a client email on this overview before sending a template.
+              </p>
+            ) : (
+              <div className="ll-row" style={{ marginTop: 12, alignItems: 'end' }}>
+                <label style={{ minWidth: 260, flex: 1 }}>
+                  Template
+                  <select
+                    value={templateId}
+                    onChange={(e) => {
+                      const next = e.target.value as TemplateId
+                      setTemplateId(next)
+                      const draft = templateDraft(next, row.client_name || 'Valued Client')
+                      setTemplateSubject(draft.subject)
+                      setTemplateBody(draft.body)
+                    }}
+                  >
+                    {FOLLOW_UP_TEMPLATES.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button className="ll-btn" disabled={!!busy} onClick={() => openTemplateEmail(templateId)}>
+                  Preview & send
+                </button>
+              </div>
+            )}
+            <div style={{ marginTop: 18 }}>
+              <h3 style={{ marginBottom: 8 }}>Sent templates ({followUpSent.length})</h3>
+              {followUpSent.length === 0 ? (
+                <p className="ll-muted">No follow-up templates have been sent yet.</p>
+              ) : (
+                <ul className="ll-muted" style={{ margin: 0, paddingLeft: 18 }}>
+                  {[...followUpSent]
+                    .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
+                    .map((entry, index) => (
+                      <li key={`${entry.sent_at}-${index}`} style={{ marginBottom: 6 }}>
+                        {new Date(entry.sent_at).toLocaleString()} · {entry.template_name}: {entry.subject}
+                      </li>
+                    ))}
+                </ul>
+              )}
             </div>
           </div>
           <div className="ll-row">
@@ -882,6 +1026,60 @@ export function RequestWorkspace() {
                   {busy ? 'Sending…' : 'Send'}
                 </button>
                 <button className="ll-btn secondary" onClick={() => setEmailOpen(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {templateOpen && (
+        <div className="ll-modal-back" onClick={() => !busy && setTemplateOpen(false)}>
+          <div className="ll-modal wide" onClick={(e) => e.stopPropagation()}>
+            <h2>Follow-up email</h2>
+            <p className="ll-muted">
+              {templateId === 'custom_email'
+                ? 'Write your own subject and message. Follow-up emails do not include an itinerary link.'
+                : 'Edit the subject and message, then send. Follow-up emails do not include an itinerary link.'}
+            </p>
+            <div className="ll-form">
+              <label>
+                Template
+                <select
+                  value={templateId}
+                  onChange={(e) => {
+                    const next = e.target.value as TemplateId
+                    const draft = templateDraft(next, row.client_name || 'Valued Client')
+                    setTemplateId(next)
+                    setTemplateSubject(draft.subject)
+                    setTemplateBody(draft.body)
+                  }}
+                >
+                  {FOLLOW_UP_TEMPLATES.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>To<input readOnly value={row.email || ''} /></label>
+              <label>
+                Subject
+                <input value={templateSubject} onChange={(e) => setTemplateSubject(e.target.value)} />
+              </label>
+              <label>
+                Message
+                <textarea rows={12} value={templateBody} onChange={(e) => setTemplateBody(e.target.value)} />
+              </label>
+              {templatePreviewHtml ? (
+                <iframe title="Follow-up email preview" className="ll-preview-frame" srcDoc={templatePreviewHtml} />
+              ) : null}
+              <div className="ll-row">
+                <button className="ll-btn" disabled={!!busy} onClick={sendTemplateEmail}>
+                  {busy ? 'Sending…' : 'Send'}
+                </button>
+                <button className="ll-btn secondary" disabled={!!busy} onClick={() => setTemplateOpen(false)}>
                   Cancel
                 </button>
               </div>
