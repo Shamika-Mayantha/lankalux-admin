@@ -173,7 +173,9 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
   for (const [k, col] of map) {
     if (k in patch) next[col] = patch[k] ?? null
   }
-  if (patch.children_ages) next.children_ages = JSON.stringify(patch.children_ages)
+  if ('children_ages' in patch) {
+    next.children_ages = patch.children_ages?.length ? JSON.stringify(patch.children_ages) : null
+  }
   if (patch.status) next.status = patch.status
   if ('cancellation_reason' in patch) next.cancellation_reason = patch.cancellation_reason ?? null
   if (patch.start_date !== undefined || patch.end_date !== undefined) {
