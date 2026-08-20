@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { consoleFetch } from '@/lib/console-api'
-import { STATUS_LABEL, normalizeStatus, type RequestStatus } from '@/config/status'
+import { REQUEST_STATUSES, STATUS_LABEL, normalizeStatus, type RequestStatus } from '@/config/status'
 import type { ClientRequestRow } from '@/types/domain'
 
 type Range = 'today' | 'week' | 'month' | 'all'
@@ -14,6 +14,15 @@ const RANGE_LABEL: Record<Range, string> = {
   week: 'This week',
   month: 'This month',
   all: 'All time',
+}
+
+const DASHBOARD_STATUS_LABEL: Record<RequestStatus, string> = {
+  new: 'Requests',
+  follow_up: 'Follow Up',
+  sold: 'Sold',
+  after_sales: 'After Sales',
+  cancelled: 'Cancelled',
+  expired: 'Expired',
 }
 
 function startOfRange(range: Range) {
@@ -46,6 +55,47 @@ function requestStatus(row: ClientRequestRow): RequestStatus {
   return normalizeStatus(row.status) || 'new'
 }
 
+function RequestTable({ rows }: { rows: ClientRequestRow[] }) {
+  if (rows.length === 0) {
+    return <p className="ll-muted">No requests in this category.</p>
+  }
+
+  return (
+    <table className="ll-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Client</th>
+          <th>Dates</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => {
+          const s = requestStatus(r)
+          const href = `/console/requests/${r.id}`
+          return (
+            <tr key={r.id}>
+              <td>
+                <Link href={href}>{r.id}</Link>
+              </td>
+              <td>
+                <Link href={href}>{r.client_name}</Link>
+              </td>
+              <td>
+                {r.start_date || '—'} → {r.end_date || '—'}
+              </td>
+              <td>
+                <span className={`ll-pill ${s}`}>{STATUS_LABEL[s]}</span>
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  )
+}
+
 export default function DashboardPage() {
   const [rows, setRows] = useState<ClientRequestRow[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -62,18 +112,26 @@ export default function DashboardPage() {
 
   const rangedRows = useMemo(() => rows.filter((r) => inCreatedRange(r.created_at, range)), [rows, range])
 
-  const counts = useMemo(() => {
-    const c: Record<RequestStatus, number> = { new: 0, follow_up: 0, sold: 0, after_sales: 0, cancelled: 0, expired: 0 }
+  const grouped = useMemo(() => {
+    const g = Object.fromEntries(REQUEST_STATUSES.map((s) => [s, [] as ClientRequestRow[]])) as Record<
+      RequestStatus,
+      ClientRequestRow[]
+    >
     for (const r of rangedRows) {
-      c[requestStatus(r)]++
+      g[requestStatus(r)].push(r)
     }
-    return c
+    for (const s of REQUEST_STATUSES) {
+      g[s].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    }
+    return g
   }, [rangedRows])
 
-  const listedRequests = useMemo(() => {
-    const list = statusFilter === 'all' ? rangedRows : rangedRows.filter((r) => requestStatus(r) === statusFilter)
-    return [...list].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  }, [rangedRows, statusFilter])
+  const counts = useMemo(() => {
+    const c = Object.fromEntries(REQUEST_STATUSES.map((s) => [s, grouped[s].length])) as Record<RequestStatus, number>
+    return c
+  }, [grouped])
+
+  const visibleStatuses = statusFilter === 'all' ? REQUEST_STATUSES : [statusFilter]
 
   const today = new Date().toISOString().slice(0, 10)
   const upcomingArrivals = useMemo(
@@ -93,14 +151,12 @@ export default function DashboardPage() {
     [soldRows, today]
   )
 
-  const listTitle =
-    statusFilter === 'all'
-      ? range === 'all'
-        ? 'All requests'
-        : `Requests · ${RANGE_LABEL[range]}`
-      : `${STATUS_LABEL[statusFilter]} · ${RANGE_LABEL[range]}`
-
-  const requestsHref = statusFilter === 'all' ? '/console/requests' : `/console/requests?status=${statusFilter}`
+  function selectStatus(next: RequestStatus) {
+    setStatusFilter((prev) => (prev === next ? 'all' : next))
+    requestAnimationFrame(() => {
+      document.getElementById('dash-categories')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
 
   return (
     <div>
@@ -124,18 +180,22 @@ export default function DashboardPage() {
         </Link>
       </div>
       <div className="ll-grid">
-        {(Object.keys(STATUS_LABEL) as RequestStatus[]).map((s) => (
+        {REQUEST_STATUSES.map((s) => (
           <button
             type="button"
             className={`ll-card ll-stat-card ${statusFilter === s ? 'active' : ''}`}
             key={s}
-            onClick={() => setStatusFilter((prev) => (prev === s ? 'all' : s))}
+            aria-pressed={statusFilter === s}
+            onClick={() => selectStatus(s)}
           >
-            <h3>{STATUS_LABEL[s]}</h3>
+            <h3>{DASHBOARD_STATUS_LABEL[s]}</h3>
             <p className="ll-stat">{counts[s]}</p>
           </button>
         ))}
       </div>
+      <p className="ll-muted" style={{ marginTop: 10 }}>
+        Click a category to see those requests.
+      </p>
       <div className="ll-grid-2" style={{ marginTop: 18 }}>
         <div className="ll-card">
           <h3>Upcoming arrivals</h3>
@@ -156,53 +216,21 @@ export default function DashboardPage() {
           ))}
         </div>
       </div>
-      <div className="ll-row" style={{ marginTop: 32, marginBottom: 12, justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h2 style={{ margin: 0 }}>
-          {listTitle} <span className="ll-muted">({listedRequests.length})</span>
-        </h2>
-        <Link href={requestsHref} className="ll-btn secondary">
-          Open in Requests
-        </Link>
+      <div id="dash-categories">
+        {visibleStatuses.map((s) => (
+          <section className="ll-category" key={s}>
+            <div className="ll-category-head">
+              <h2>
+                {DASHBOARD_STATUS_LABEL[s]} <span className="ll-muted">({counts[s]})</span>
+              </h2>
+              <Link href={`/console/requests?status=${s}`} className="ll-btn secondary">
+                Open in Requests
+              </Link>
+            </div>
+            <RequestTable rows={grouped[s]} />
+          </section>
+        ))}
       </div>
-      <table className="ll-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Client</th>
-            <th>Dates</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {listedRequests.map((r) => {
-            const s = requestStatus(r)
-            const href = `/console/requests/${r.id}`
-            return (
-              <tr key={r.id}>
-                <td>
-                  <Link href={href}>{r.id}</Link>
-                </td>
-                <td>
-                  <Link href={href}>{r.client_name}</Link>
-                </td>
-                <td>
-                  {r.start_date || '—'} → {r.end_date || '—'}
-                </td>
-                <td>
-                  <span className={`ll-pill ${s}`}>{STATUS_LABEL[s]}</span>
-                </td>
-              </tr>
-            )
-          })}
-          {listedRequests.length === 0 ? (
-            <tr>
-              <td colSpan={4} className="ll-muted" style={{ textAlign: 'center' }}>
-                No requests in this period.
-              </td>
-            </tr>
-          ) : null}
-        </tbody>
-      </table>
     </div>
   )
 }
