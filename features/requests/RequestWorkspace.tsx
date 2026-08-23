@@ -379,6 +379,7 @@ export function RequestWorkspace() {
           : 'Overview saved.'
       )
     }
+  }
 
   function openTemplateEmail(nextId: TemplateId = templateId) {
     if (!row?.email) {
