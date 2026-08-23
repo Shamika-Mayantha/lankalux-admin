@@ -57,6 +57,26 @@ export function normalizeStatus(raw: string | null | undefined): RequestStatus |
   return LEGACY_STATUS_MAP[raw.toLowerCase()] ?? null
 }
 
+/** Statuses that keep the itinerary the client booked. */
+export const SOLD_LIKE_STATUSES: RequestStatus[] = ['sold', 'after_sales']
+
+export function isSoldLikeStatus(status: string | null | undefined): boolean {
+  const normalized = normalizeStatus(status)
+  return !!normalized && SOLD_LIKE_STATUSES.includes(normalized)
+}
+
+/** `selected_option` is stored 0-based; itinerary cards are Option 1–3. */
+export function soldOptionNumber(selectedOption: number | string | null | undefined): 1 | 2 | 3 | null {
+  if (selectedOption == null || selectedOption === '') return null
+  const n = Number(selectedOption) + 1
+  return n === 1 || n === 2 || n === 3 ? n : null
+}
+
+export function soldOptionLabel(selectedOption: number | null | undefined): string {
+  const n = soldOptionNumber(selectedOption)
+  return n ? `Option ${n}` : 'Not marked'
+}
+
 export const ITINERARY_STYLES = ['balanced', 'relaxed', 'experience'] as const
 export type ItineraryStyle = (typeof ITINERARY_STYLES)[number]
 

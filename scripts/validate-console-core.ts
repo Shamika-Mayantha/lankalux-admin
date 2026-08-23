@@ -1,7 +1,7 @@
 import { parseItineraryJson } from '../validation/itinerary.schema'
 import { assignDayImages, matchDestination } from '../services/image-map.service'
 import { calculateTotalKilometers, LOCAL_DAY_KM } from '../services/kilometers.service'
-import { shouldExpireRequest } from '../config/status'
+import { shouldExpireRequest, soldOptionLabel, soldOptionNumber } from '../config/status'
 import {
   calculateTotals,
   invoiceStatus,
@@ -55,6 +55,11 @@ assert(shouldExpireRequest({ start_date: '2026-08-11', status: 'new' }, '2026-08
 assert(shouldExpireRequest({ start_date: '2026-08-12', status: 'new' }, '2026-08-14') === false, 'do not expire at 2 days')
 assert(shouldExpireRequest({ start_date: '2026-08-10', status: 'sold' }, '2026-08-14') === false, 'sold trips do not expire')
 assert(shouldExpireRequest({ start_date: '2026-08-20', status: 'follow_up' }, '2026-08-14') === false, 'future dates stay open')
+assert(soldOptionNumber(0) === 1, 'selected_option 0 is Option 1')
+assert(soldOptionNumber(2) === 3, 'selected_option 2 is Option 3')
+assert(soldOptionNumber(null) === null, 'missing sold option')
+assert(soldOptionLabel(1) === 'Option 2', 'sold label uses 1-based option')
+assert(soldOptionLabel(null) === 'Not marked', 'unmarked sold itinerary')
 
 const classic = calculateTotalKilometers([
   { location: 'Sigiriya' },

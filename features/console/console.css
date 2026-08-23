@@ -537,6 +537,10 @@ button.ll-card,
   box-shadow: 0 0 0 3px var(--gold-soft);
 }
 
+.ll-option.sold {
+  border-color: var(--forest);
+}
+
 .ll-option h3 {
   margin: 0;
   font-family: var(--font-display);

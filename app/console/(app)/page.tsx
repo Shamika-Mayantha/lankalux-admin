@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { consoleFetch } from '@/lib/console-api'
-import { REQUEST_STATUSES, STATUS_LABEL, normalizeStatus, type RequestStatus } from '@/config/status'
+import { REQUEST_STATUSES, STATUS_LABEL, isSoldLikeStatus, normalizeStatus, soldOptionLabel, type RequestStatus } from '@/config/status'
 import type { ClientRequestRow } from '@/types/domain'
 
 type Range = 'today' | 'week' | 'month' | 'all'
@@ -66,8 +66,9 @@ function RequestTable({ rows }: { rows: ClientRequestRow[] }) {
         <tr>
           <th>ID</th>
           <th>Client</th>
-          <th>Dates</th>
-          <th>Status</th>
+            <th>Dates</th>
+            <th>Sold itinerary</th>
+            <th>Status</th>
         </tr>
       </thead>
       <tbody>
@@ -84,6 +85,9 @@ function RequestTable({ rows }: { rows: ClientRequestRow[] }) {
               </td>
               <td>
                 {r.start_date || '—'} → {r.end_date || '—'}
+              </td>
+              <td>
+                {isSoldLikeStatus(s) ? soldOptionLabel(r.selected_option) : '—'}
               </td>
               <td>
                 <span className={`ll-pill ${s}`}>{STATUS_LABEL[s]}</span>

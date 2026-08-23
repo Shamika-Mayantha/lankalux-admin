@@ -1,4 +1,5 @@
 import { jsonErr, jsonOk, readJson, requireAdmin } from '@/app/api/v2/_guard'
+import { publishSoldItinerary } from '@/services/companion-publish.service'
 import { selectItinerary, updateItineraryDraft } from '@/services/itinerary.service'
 import type { StructuredItinerary } from '@/types/domain'
 import { AppError } from '@/services/supabase.server'
@@ -10,7 +11,7 @@ export async function POST(request: Request, ctx: Ctx) {
     const user = await requireAdmin(request)
     const { id } = await ctx.params
     const body = await readJson<{
-      action?: 'select' | 'save'
+      action?: 'select' | 'save' | 'mark_sold'
       optionNumber?: number
       payload?: StructuredItinerary
       vehicle_id?: string | null
@@ -23,12 +24,16 @@ export async function POST(request: Request, ctx: Ctx) {
       const selected = await selectItinerary(id, n, user.email)
       return jsonOk({ itinerary: selected })
     }
+    if (body.action === 'mark_sold') {
+      const marked = await publishSoldItinerary(id, n, user.email)
+      return jsonOk({ itinerary: { option_number: marked.option_number, title: marked.title }, companion: marked })
+    }
     if (body.action === 'save') {
       if (!body.payload) throw new AppError('payload is required')
       const saved = await updateItineraryDraft(id, n, body.payload, { vehicle_id: body.vehicle_id, internal_notes: body.internal_notes }, user.email)
       return jsonOk({ itinerary: saved })
     }
-    throw new AppError('action must be select or save')
+    throw new AppError('action must be select, mark_sold or save')
   } catch (err) {
     return jsonErr(err)
   }
