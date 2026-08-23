@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { isLankaLuxAdminEmail } from '@/lib/admin-email'
 import { AppError, publicError, getServiceClient } from '@/services/supabase.server'
 import type { User } from '@supabase/supabase-js'
 
@@ -9,6 +10,9 @@ export async function requireAdmin(request: Request): Promise<User> {
   const supabase = getServiceClient()
   const { data, error } = await supabase.auth.getUser(token)
   if (error || !data.user) throw new AppError('Sign in required.', 401)
+  if (!isLankaLuxAdminEmail(data.user.email)) {
+    throw new AppError('This login cannot access admin.', 403)
+  }
   return data.user
 }
 

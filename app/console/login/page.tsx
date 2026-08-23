@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { isLankaLuxAdminEmail } from '@/lib/admin-email'
 import { supabase } from '@/lib/supabase'
 import { BRAND } from '@/config/brand'
 import '@/features/console/console.css'
@@ -17,8 +18,13 @@ export default function ConsoleLoginPage() {
   )
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.replace('/console')
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) return
+      if (!isLankaLuxAdminEmail(data.session.user.email)) {
+        await supabase.auth.signOut()
+        return
+      }
+      router.replace('/console')
     })
   }, [router])
 
@@ -29,9 +35,20 @@ export default function ConsoleLoginPage() {
       return
     }
     setLoading(true)
-    const { error: signErr } = await supabase.auth.signInWithPassword({ email, password })
+    if (!isLankaLuxAdminEmail(email)) {
+      setError('This login cannot access admin.')
+      setLoading(false)
+      return
+    }
+    const { data, error: signErr } = await supabase.auth.signInWithPassword({ email, password })
     if (signErr) {
       setError(signErr.message || 'Failed to sign in.')
+      setLoading(false)
+      return
+    }
+    if (!isLankaLuxAdminEmail(data.user?.email)) {
+      await supabase.auth.signOut()
+      setError('This login cannot access admin.')
       setLoading(false)
       return
     }

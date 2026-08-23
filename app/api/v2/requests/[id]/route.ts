@@ -1,7 +1,9 @@
 import { jsonErr, jsonOk, readJson, requireAdmin } from '@/app/api/v2/_guard'
-import { getRequest, restoreRequest, updateRequest } from '@/services/request.service'
+import { normalizeStatus } from '@/config/status'
 import { listActivity } from '@/services/activity.service'
+import { publishSoldItinerary } from '@/services/companion-publish.service'
 import { listGenerationLogs, listItineraries } from '@/services/itinerary.service'
+import { getRequest, restoreRequest, updateRequest } from '@/services/request.service'
 import type { RequestInput } from '@/types/domain'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -24,9 +26,14 @@ export async function PATCH(request: Request, ctx: Ctx) {
   try {
     const user = await requireAdmin(request)
     const { id } = await ctx.params
-    const body = await readJson<Partial<RequestInput> & { restore?: boolean; cancellation_reason?: string | null }>(request)
+    const body = await readJson<
+      Partial<RequestInput> & { restore?: boolean; cancellation_reason?: string | null; sold_option?: 1 | 2 | 3 }
+    >(request)
     const updated = body.restore ? await restoreRequest(id, user.email) : await updateRequest(id, body, user.email)
-    return jsonOk({ request: updated })
+    if (!body.restore && normalizeStatus(updated.status) === 'sold') {
+      await publishSoldItinerary(id, body.sold_option, user.email)
+    }
+    return jsonOk({ request: await getRequest(id) })
   } catch (err) {
     return jsonErr(err)
   }

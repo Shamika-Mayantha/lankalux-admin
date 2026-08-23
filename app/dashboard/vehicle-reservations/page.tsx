@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { isLankaLuxAdminEmail } from '@/lib/admin-email'
 import { supabase } from '@/lib/supabase'
 import { Select } from '@/components/ui/Select'
 
@@ -87,7 +88,8 @@ export default function VehicleReservationsPage() {
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession()
-      if (error || !session?.user) {
+      if (error || !session?.user || !isLankaLuxAdminEmail(session.user.email)) {
+        if (session) await supabase.auth.signOut()
         router.push('/login')
         return
       }

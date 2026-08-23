@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { isLankaLuxAdminEmail } from '@/lib/admin-email'
 import { supabase } from '@/lib/supabase'
 import { INACTIVITY_MS } from '@/config/status'
 import { BRAND } from '@/config/brand'
@@ -47,17 +48,21 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return
-      if (!data.session) {
+      if (!data.session || !isLankaLuxAdminEmail(data.session.user.email)) {
+        if (data.session) await supabase.auth.signOut()
         router.replace('/console/login')
         return
       }
       setEmail(data.session.user.email ?? null)
       setReady(true)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!session) router.replace('/console/login')
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_e, session) => {
+      if (!session || !isLankaLuxAdminEmail(session.user.email)) {
+        if (session) await supabase.auth.signOut()
+        router.replace('/console/login')
+      }
     })
     return () => {
       mounted = false

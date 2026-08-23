@@ -39,6 +39,7 @@ function emptyDay(n: number): ItineraryDay {
 
 type OverviewDraft = {
   status: string
+  sold_option: 1 | 2 | 3 | ''
   start_date: string
   end_date: string
   email: string
@@ -52,6 +53,12 @@ type OverviewDraft = {
   number_of_adults: number
   number_of_children: number
   children_ages: string
+}
+
+function soldOptionFromRow(row: ClientRequestRow): 1 | 2 | 3 | '' {
+  if (row.selected_option == null) return ''
+  const n = Number(row.selected_option) + 1
+  return n === 1 || n === 2 || n === 3 ? n : ''
 }
 
 function parseAgeList(raw: string | number[] | null | undefined): number[] {
@@ -116,6 +123,7 @@ function toOverviewDraft(row: ClientRequestRow): OverviewDraft {
   const party = partyCounts(row.number_of_adults, row.number_of_children, row.children_ages)
   return {
     status: normalizeStatus(row.status) || 'new',
+    sold_option: soldOptionFromRow(row),
     start_date: row.start_date || '',
     end_date: row.end_date || '',
     email: row.email || '',
@@ -339,8 +347,14 @@ export function RequestWorkspace() {
   async function saveOverview() {
     if (!overviewDraft) return
     const ages = overviewDraft.number_of_children > 0 ? parseAgeList(overviewDraft.children_ages) : []
+    const soldOption = overviewDraft.sold_option || selected?.option_number || ''
+    if (overviewDraft.status === 'sold' && !soldOption) {
+      setError('Choose which itinerary was sold. The guest app will show only that one.')
+      return
+    }
     const patch = {
       status: overviewDraft.status,
+      sold_option: overviewDraft.status === 'sold' ? soldOption : undefined,
       start_date: overviewDraft.start_date || null,
       end_date: overviewDraft.end_date || null,
       email: overviewDraft.email || null,
@@ -357,8 +371,14 @@ export function RequestWorkspace() {
       children_ages: ages,
     }
     const updated = await patchRequest(patch)
-    if (updated) setNotice('Overview saved.')
-  }
+    if (updated) {
+      await reload().catch(() => {})
+      setNotice(
+        overviewDraft.status === 'sold'
+          ? 'Sold itinerary saved. The guest app now shows only that one.'
+          : 'Overview saved.'
+      )
+    }
 
   function openTemplateEmail(nextId: TemplateId = templateId) {
     if (!row?.email) {
@@ -657,7 +677,9 @@ export function RequestWorkspace() {
                 </p>
               </div>
               <div>
-                <p className="ll-muted" style={{ margin: 0 }}>Selected itinerary</p>
+                <p className="ll-muted" style={{ margin: 0 }}>
+                  {status === 'sold' ? 'Sold itinerary' : 'Selected itinerary'}
+                </p>
                 <p className="ll-card-title">{selected?.title || 'Not selected yet'}</p>
                 <p className="ll-muted">
                   {selected?.payload?.days?.map((d) => d.location).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · ') || 'Select an itinerary tab first'}
@@ -740,7 +762,11 @@ export function RequestWorkspace() {
               Status
               <select
                 value={overviewDraft.status}
-                onChange={(e) => setOverviewDraft({ ...overviewDraft, status: e.target.value })}
+                onChange={(e) => {
+                  const status = e.target.value
+                  const sold = overviewDraft.sold_option || selected?.option_number || ''
+                  setOverviewDraft({ ...overviewDraft, status, sold_option: status === 'sold' ? sold : overviewDraft.sold_option })
+                }}
               >
                 {REQUEST_STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -755,6 +781,31 @@ export function RequestWorkspace() {
               </button>
             ) : null}
           </div>
+          {overviewDraft.status === 'sold' ? (
+            <label>
+              Sold itinerary
+              <select
+                value={overviewDraft.sold_option}
+                onChange={(e) =>
+                  setOverviewDraft({
+                    ...overviewDraft,
+                    sold_option: e.target.value ? (Number(e.target.value) as 1 | 2 | 3) : '',
+                  })
+                }
+              >
+                <option value="">Choose the itinerary they bought</option>
+                {itineraries
+                  .filter((item) => item.payload?.days?.length)
+                  .map((item) => (
+                    <option key={item.option_number} value={item.option_number}>
+                      Option {item.option_number}
+                      {item.title ? ` · ${item.title}` : ''}
+                    </option>
+                  ))}
+              </select>
+              <span className="ll-muted">The guest companion shows only this itinerary.</span>
+            </label>
+          ) : null}
           <div className="ll-fields-2">
             <label>
               Arrival
