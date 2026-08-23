@@ -2,7 +2,7 @@ import { logActivity } from '@/services/activity.service'
 import { listItineraries, selectItinerary } from '@/services/itinerary.service'
 import { getRequest } from '@/services/request.service'
 import { AppError, getServiceClient } from '@/services/supabase.server'
-import type { ItineraryDay, ItineraryRecord } from '@/types/domain'
+import type { ClientRequestRow, ItineraryDay, ItineraryRecord } from '@/types/domain'
 
 type RequestExtras = {
   guest_user_id?: string | null
@@ -25,7 +25,7 @@ function routeParts(day: ItineraryDay) {
 
 async function materializeCompanionTrip(requestId: string, selected: ItineraryRecord) {
   const supabase = getServiceClient()
-  const request = (await getRequest(requestId)) as typeof request & RequestExtras
+  const request = (await getRequest(requestId)) as ClientRequestRow & RequestExtras
   const days = selected.payload.days || []
   if (!days.length) {
     throw new AppError('The sold itinerary has no days to publish.', 400)
