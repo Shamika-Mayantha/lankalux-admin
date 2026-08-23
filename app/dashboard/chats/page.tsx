@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { isLankaLuxAdminEmail } from '@/lib/admin-email'
 import { supabase } from '@/lib/supabase'
 
 function RatingScale({ score }: { score: number }) {
@@ -52,7 +53,8 @@ export default function ChatsPage() {
       data: { session },
       error,
     } = await supabase.auth.getSession()
-    if (error || !session?.user) {
+    if (error || !session?.user || !isLankaLuxAdminEmail(session.user.email)) {
+      if (session) await supabase.auth.signOut()
       router.push('/login')
       return false
     }

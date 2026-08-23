@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { isLankaLuxAdminEmail } from '@/lib/admin-email'
 import { supabase } from '@/lib/supabase'
 import { ThemeToggle } from '@/components/ThemeToggle'
 
@@ -42,7 +43,8 @@ export default function DashboardPage() {
           return
         }
 
-        if (!session || !session.user) {
+        if (!session || !session.user || !isLankaLuxAdminEmail(session.user.email)) {
+          if (session) await supabase.auth.signOut()
           router.push('/login')
           return
         }
