@@ -133,22 +133,40 @@ export async function publishSoldItinerary(
   requestId: string,
   soldOption?: 1 | 2 | 3,
   actor?: string
-) {
+): Promise<{ option_number: 1 | 2 | 3; title: string; published: boolean; warning?: string }> {
   const all = await listItineraries(requestId)
   const requested = soldOption
     ? all.find((row) => row.option_number === soldOption)
     : all.find((row) => row.is_selected)
   if (!requested || requested.status === 'empty' || !requested.payload?.days?.length) {
-    throw new AppError('Choose which itinerary was sold. The guest app will show only that one.', 400)
+    throw new AppError('Choose which itinerary the client booked. Mark Option 1, 2 or 3 as sold.', 400)
   }
   if (!requested.is_selected) {
     await selectItinerary(requestId, requested.option_number, actor)
   }
-  await materializeCompanionTrip(requestId, requested)
   await logActivity({
     request_id: requestId,
     actor,
-    event_type: 'companion_published',
+    event_type: 'sold_itinerary_marked',
     detail: { option_number: requested.option_number, title: requested.title },
   })
+  try {
+    await materializeCompanionTrip(requestId, requested)
+    await logActivity({
+      request_id: requestId,
+      actor,
+      event_type: 'companion_published',
+      detail: { option_number: requested.option_number, title: requested.title },
+    })
+    return { option_number: requested.option_number, title: requested.title, published: true }
+  } catch (err) {
+    const warning = err instanceof AppError ? err.message : 'The sold itinerary was saved, but the guest app could not be updated.'
+    console.error('companion publish:', warning)
+    return {
+      option_number: requested.option_number,
+      title: requested.title,
+      published: false,
+      warning,
+    }
+  }
 }

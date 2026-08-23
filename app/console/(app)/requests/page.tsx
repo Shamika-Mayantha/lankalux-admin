@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Suspense, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { consoleFetch } from '@/lib/console-api'
-import { STATUS_LABEL, normalizeStatus, REQUEST_STATUSES, type RequestStatus } from '@/config/status'
+import { STATUS_LABEL, isSoldLikeStatus, normalizeStatus, REQUEST_STATUSES, soldOptionLabel, type RequestStatus } from '@/config/status'
 import type { ClientRequestRow } from '@/types/domain'
 
 function isStatus(value: string): value is RequestStatus {
@@ -73,6 +73,7 @@ function RequestsPageInner() {
             <th>Client</th>
             <th>Travel</th>
             <th>Party</th>
+            <th>Sold itinerary</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -98,6 +99,9 @@ function RequestsPageInner() {
                   {r.number_of_adults || 0} ad · {r.number_of_children || 0} ch
                 </td>
                 <td>
+                  {isSoldLikeStatus(s) ? soldOptionLabel(r.selected_option) : '—'}
+                </td>
+                <td>
                   <span className={`ll-pill ${s}`}>{STATUS_LABEL[s]}</span>
                 </td>
               </tr>
@@ -105,7 +109,7 @@ function RequestsPageInner() {
           })}
           {shown.length === 0 ? (
             <tr>
-              <td colSpan={5} className="ll-muted" style={{ textAlign: 'center' }}>
+              <td colSpan={6} className="ll-muted" style={{ textAlign: 'center' }}>
                 No requests match this filter.
               </td>
             </tr>

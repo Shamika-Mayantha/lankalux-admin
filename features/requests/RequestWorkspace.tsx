@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { consoleFetch } from '@/lib/console-api'
-import { STYLE_META, STATUS_LABEL, REQUEST_STATUSES, normalizeStatus, type ItineraryStyle } from '@/config/status'
+import { STYLE_META, STATUS_LABEL, REQUEST_STATUSES, isSoldLikeStatus, normalizeStatus, soldOptionNumber, type ItineraryStyle } from '@/config/status'
 import { BRAND } from '@/config/brand'
 import { allLibraryImages } from '@/services/image-map.service'
 import { formatKilometers, totalKilometersFor } from '@/services/kilometers.service'
@@ -56,9 +56,7 @@ type OverviewDraft = {
 }
 
 function soldOptionFromRow(row: ClientRequestRow): 1 | 2 | 3 | '' {
-  if (row.selected_option == null) return ''
-  const n = Number(row.selected_option) + 1
-  return n === 1 || n === 2 || n === 3 ? n : ''
+  return soldOptionNumber(row.selected_option) || ''
 }
 
 function parseAgeList(raw: string | number[] | null | undefined): number[] {
@@ -175,6 +173,8 @@ function activityItineraryUrl(entry: ActivityEvent): string | null {
 
 function activityLabel(eventType: string) {
   const labels: Record<string, string> = {
+    sold_itinerary_marked: 'Sold itinerary marked',
+    companion_published: 'Sold itinerary published to guest app',
     itinerary_link_opened: 'Client opened itinerary link',
     email_sent: 'Itinerary email sent',
     follow_up_email_sent: 'Follow-up email sent',
@@ -311,6 +311,28 @@ export function RequestWorkspace() {
     }
   }
 
+  async function markSold(n: 1 | 2 | 3) {
+    setBusy('Marking sold itinerary…')
+    setError(null)
+    try {
+      const json = await consoleFetch(`/api/v2/requests/${id}/itinerary`, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'mark_sold', optionNumber: n }),
+      })
+      await reload()
+      const warning = json.companion?.warning as string | undefined
+      setNotice(
+        warning
+          ? `Option ${n} is the sold itinerary. ${warning}`
+          : `Option ${n} is the itinerary the client booked.`
+      )
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not mark the sold itinerary')
+    } finally {
+      setBusy(null)
+    }
+  }
+
   async function saveDraft() {
     if (!draft) return
     setBusy('Saving…')
@@ -335,7 +357,7 @@ export function RequestWorkspace() {
     try {
       const json = await consoleFetch(`/api/v2/requests/${id}`, { method: 'PATCH', body: JSON.stringify(patch) })
       setRow(json.request)
-      return json.request as ClientRequestRow
+      return json as { request: ClientRequestRow; companion?: { warning?: string } }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed')
       return null
@@ -348,13 +370,13 @@ export function RequestWorkspace() {
     if (!overviewDraft) return
     const ages = overviewDraft.number_of_children > 0 ? parseAgeList(overviewDraft.children_ages) : []
     const soldOption = overviewDraft.sold_option || selected?.option_number || ''
-    if (overviewDraft.status === 'sold' && !soldOption) {
-      setError('Choose which itinerary was sold. The guest app will show only that one.')
+    if (isSoldLikeStatus(overviewDraft.status) && !soldOption) {
+      setError('Choose which itinerary the client booked. Mark Option 1, 2 or 3 as sold.')
       return
     }
     const patch = {
       status: overviewDraft.status,
-      sold_option: overviewDraft.status === 'sold' ? soldOption : undefined,
+      sold_option: isSoldLikeStatus(overviewDraft.status) ? soldOption : undefined,
       start_date: overviewDraft.start_date || null,
       end_date: overviewDraft.end_date || null,
       email: overviewDraft.email || null,
@@ -374,8 +396,10 @@ export function RequestWorkspace() {
     if (updated) {
       await reload().catch(() => {})
       setNotice(
-        overviewDraft.status === 'sold'
-          ? 'Sold itinerary saved. The guest app now shows only that one.'
+        isSoldLikeStatus(overviewDraft.status)
+          ? updated.companion?.warning
+            ? `Sold itinerary saved. ${updated.companion.warning}`
+            : 'Sold itinerary saved. This is the journey the client booked.'
           : 'Overview saved.'
       )
     }
@@ -636,6 +660,17 @@ export function RequestWorkspace() {
       {busy && <p className="ll-muted">{busy}</p>}
       {notice && <div className="ll-ok">{notice}</div>}
       {error && <div className="ll-error">{error}</div>}
+      {isSoldLikeStatus(status) && !selected && (
+        <div className="ll-error">
+          This sale has no sold itinerary yet. Open Itineraries and mark the option the client booked.
+        </div>
+      )}
+      {isSoldLikeStatus(status) && selected && (
+        <div className="ll-ok">
+          Sold itinerary: Option {selected.option_number}
+          {selected.title ? ` · ${selected.title}` : ''}
+        </div>
+      )}
 
       <div className="ll-tabs">
         {(
@@ -679,11 +714,18 @@ export function RequestWorkspace() {
               </div>
               <div>
                 <p className="ll-muted" style={{ margin: 0 }}>
-                  {status === 'sold' ? 'Sold itinerary' : 'Selected itinerary'}
+                  {isSoldLikeStatus(status) ? 'Sold itinerary' : 'Selected itinerary'}
                 </p>
-                <p className="ll-card-title">{selected?.title || 'Not selected yet'}</p>
+                <p className="ll-card-title">
+                  {selected
+                    ? `Option ${selected.option_number}${selected.title ? ` · ${selected.title}` : ''}`
+                    : isSoldLikeStatus(status)
+                      ? 'Not marked yet'
+                      : 'Not selected yet'}
+                </p>
                 <p className="ll-muted">
-                  {selected?.payload?.days?.map((d) => d.location).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · ') || 'Select an itinerary tab first'}
+                  {selected?.payload?.days?.map((d) => d.location).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · ') ||
+                    (isSoldLikeStatus(status) ? 'Mark the itinerary the client booked' : 'Select an itinerary tab first')}
                 </p>
               </div>
               <div>
@@ -766,7 +808,11 @@ export function RequestWorkspace() {
                 onChange={(e) => {
                   const status = e.target.value
                   const sold = overviewDraft.sold_option || selected?.option_number || ''
-                  setOverviewDraft({ ...overviewDraft, status, sold_option: status === 'sold' ? sold : overviewDraft.sold_option })
+                  setOverviewDraft({
+                    ...overviewDraft,
+                    status,
+                    sold_option: isSoldLikeStatus(status) ? sold : overviewDraft.sold_option,
+                  })
                 }}
               >
                 {REQUEST_STATUSES.map((s) => (
@@ -782,7 +828,7 @@ export function RequestWorkspace() {
               </button>
             ) : null}
           </div>
-          {overviewDraft.status === 'sold' ? (
+          {isSoldLikeStatus(overviewDraft.status) ? (
             <label>
               Sold itinerary
               <select
@@ -794,7 +840,7 @@ export function RequestWorkspace() {
                   })
                 }
               >
-                <option value="">Choose the itinerary they bought</option>
+                <option value="">Choose the itinerary the client booked</option>
                 {itineraries
                   .filter((item) => item.payload?.days?.length)
                   .map((item) => (
@@ -804,7 +850,7 @@ export function RequestWorkspace() {
                     </option>
                   ))}
               </select>
-              <span className="ll-muted">The guest companion shows only this itinerary.</span>
+              <span className="ll-muted">This is the journey that was sold. You can also mark it on the Itineraries tab.</span>
             </label>
           ) : null}
           <div className="ll-fields-2">
@@ -923,17 +969,23 @@ export function RequestWorkspace() {
             <button className="ll-btn" disabled={Object.values(generating).some(Boolean)} onClick={generateAll}>
               Generate itineraries
             </button>
-            <span className="ll-muted">Each option is a separate job. A failure will not erase the others.</span>
+            <span className="ll-muted">
+              {isSoldLikeStatus(status)
+                ? 'Mark the option the client booked. That becomes the sold itinerary.'
+                : 'Each option is a separate job. A failure will not erase the others.'}
+            </span>
           </div>
           <div className="ll-option-grid">
             {([1, 2, 3] as const).map((n) => {
               const style = (['balanced', 'relaxed', 'experience'] as const)[n - 1]
               const rec = itineraries.find((i) => i.option_number === n)
               const loading = !!generating[n]
+              const soldHere = isSoldLikeStatus(status) && !!rec?.is_selected
               return (
-                <div key={n} className={`ll-option ${rec?.is_selected ? 'selected' : ''}`}>
+                <div key={n} className={`ll-option ${rec?.is_selected ? 'selected' : ''} ${soldHere ? 'sold' : ''}`}>
                   <p className="ll-muted">{STYLE_META[style].label}</p>
                   <h3>{STYLE_META[style].subtitle}</h3>
+                  {soldHere ? <span className="ll-pill sold">Sold</span> : null}
                   {loading && <p>Generating itinerary {n}…</p>}
                   {!loading && rec?.status === 'failed' && <div className="ll-error">{genError[n] || rec.error || 'Failed'}</div>}
                   {!loading && rec?.payload?.days?.length ? (
@@ -956,9 +1008,15 @@ export function RequestWorkspace() {
                     <button className="ll-btn secondary" disabled={!rec?.payload?.days?.length} onClick={() => { setEditOption(n); setTab('editor') }}>
                       Edit
                     </button>
-                    <button className="ll-btn" disabled={!rec?.payload?.days?.length || loading} onClick={() => selectOption(n)}>
-                      {rec?.is_selected ? 'Selected' : 'Select'}
-                    </button>
+                    {isSoldLikeStatus(status) ? (
+                      <button className="ll-btn" disabled={!rec?.payload?.days?.length || loading || !!busy} onClick={() => markSold(n)}>
+                        {rec?.is_selected ? 'Sold' : 'Mark as sold'}
+                      </button>
+                    ) : (
+                      <button className="ll-btn" disabled={!rec?.payload?.days?.length || loading} onClick={() => selectOption(n)}>
+                        {rec?.is_selected ? 'Selected' : 'Select'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )

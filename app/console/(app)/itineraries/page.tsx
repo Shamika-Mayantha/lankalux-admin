@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { consoleFetch } from '@/lib/console-api'
+import { isSoldLikeStatus } from '@/config/status'
 import type { ClientRequestRow, ItineraryRecord } from '@/types/domain'
 
 type Row = { request: ClientRequestRow; itineraries: ItineraryRecord[] }
@@ -38,7 +39,7 @@ export default function ItinerariesPage() {
         <thead>
           <tr>
             <th>Request</th>
-            <th>Selected</th>
+            <th>Selected / sold</th>
             <th>Options</th>
           </tr>
         </thead>
@@ -51,7 +52,13 @@ export default function ItinerariesPage() {
                   <Link href={`/console/requests/${r.request.id}`}>{r.request.client_name}</Link>
                   <div className="ll-muted">{r.request.id}</div>
                 </td>
-                <td>{selected?.title || '—'}</td>
+                <td>
+                  {selected
+                    ? `${isSoldLikeStatus(r.request.status) ? 'Sold' : 'Selected'} · Option ${selected.option_number}${selected.title ? ` · ${selected.title}` : ''}`
+                    : isSoldLikeStatus(r.request.status)
+                      ? 'Not marked'
+                      : '—'}
+                </td>
                 <td>{r.itineraries.filter((i) => i.payload?.days?.length).map((i) => i.option_number).join(', ')}</td>
               </tr>
             )
