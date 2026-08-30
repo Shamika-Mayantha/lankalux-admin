@@ -40,6 +40,7 @@ function emptyDay(n: number): ItineraryDay {
 type OverviewDraft = {
   status: string
   sold_option: 1 | 2 | 3 | ''
+  client_name: string
   start_date: string
   end_date: string
   email: string
@@ -124,6 +125,7 @@ function toOverviewDraft(row: ClientRequestRow): OverviewDraft {
   return {
     status: normalizeStatus(row.status) || 'new',
     sold_option: soldOptionFromRow(row),
+    client_name: row.client_name || '',
     start_date: row.start_date || '',
     end_date: row.end_date || '',
     email: row.email || '',
@@ -175,6 +177,7 @@ function activityItineraryUrl(entry: ActivityEvent): string | null {
 
 function activityLabel(eventType: string) {
   const labels: Record<string, string> = {
+    name_changed: 'Client name changed',
     itinerary_link_opened: 'Client opened itinerary link',
     email_sent: 'Itinerary email sent',
     follow_up_email_sent: 'Follow-up email sent',
@@ -352,9 +355,15 @@ export function RequestWorkspace() {
       setError('Choose which itinerary was sold. The guest app will show only that one.')
       return
     }
+    const clientName = overviewDraft.client_name.trim()
+    if (!clientName) {
+      setError('Client name is required.')
+      return
+    }
     const patch = {
       status: overviewDraft.status,
       sold_option: overviewDraft.status === 'sold' ? soldOption : undefined,
+      client_name: clientName,
       start_date: overviewDraft.start_date || null,
       end_date: overviewDraft.end_date || null,
       email: overviewDraft.email || null,
@@ -600,7 +609,7 @@ export function RequestWorkspace() {
       <div className="ll-row" style={{ justifyContent: 'space-between' }}>
         <div>
           <p className="ll-muted">{row.id}</p>
-          <h1 className="ll-h1">{row.client_name}</h1>
+          <h1 className="ll-h1">{overviewDraft?.client_name.trim() || row.client_name || 'Unnamed client'}</h1>
           <p className="ll-sub">
             {row.start_date} → {row.end_date} · {row.duration || '—'} days
           </p>
@@ -661,7 +670,7 @@ export function RequestWorkspace() {
             <div className="ll-grid-2" style={{ marginTop: 12 }}>
               <div>
                 <p className="ll-muted" style={{ margin: 0 }}>Client</p>
-                <p className="ll-card-title">{row.client_name || '—'}</p>
+                <p className="ll-card-title">{overviewDraft.client_name.trim() || row.client_name || '—'}</p>
                 <p className="ll-muted">{[row.email, row.whatsapp, row.origin_country].filter(Boolean).join(' · ') || '—'}</p>
                 <p className="ll-muted">
                   {partySummary(
@@ -886,6 +895,13 @@ export function RequestWorkspace() {
               />
             </label>
           ) : null}
+          <label>
+            Client name
+            <input
+              value={overviewDraft.client_name}
+              onChange={(e) => setOverviewDraft({ ...overviewDraft, client_name: e.target.value })}
+            />
+          </label>
           <label>Email<input value={overviewDraft.email} onChange={(e) => setOverviewDraft({ ...overviewDraft, email: e.target.value })} /></label>
           <label>WhatsApp<input value={overviewDraft.whatsapp} onChange={(e) => setOverviewDraft({ ...overviewDraft, whatsapp: e.target.value })} /></label>
           <label>Country<input value={overviewDraft.origin_country} onChange={(e) => setOverviewDraft({ ...overviewDraft, origin_country: e.target.value })} /></label>

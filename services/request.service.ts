@@ -176,6 +176,11 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
   if ('children_ages' in patch) {
     next.children_ages = patch.children_ages?.length ? JSON.stringify(patch.children_ages) : null
   }
+  if ('client_name' in patch) {
+    const name = String(patch.client_name || '').trim()
+    if (!name) throw new AppError('Client name is required')
+    next.client_name = name
+  }
   if (patch.status) next.status = patch.status
   if ('cancellation_reason' in patch) next.cancellation_reason = patch.cancellation_reason ?? null
   if (patch.start_date !== undefined || patch.end_date !== undefined) {
@@ -204,6 +209,14 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
       actor,
       event_type: 'status_changed',
       detail: { from: current.status, to: patch.status },
+    })
+  }
+  if (patch.client_name !== undefined && String(patch.client_name).trim() !== (current.client_name || '')) {
+    await logActivity({
+      request_id: id,
+      actor,
+      event_type: 'name_changed',
+      detail: { from: current.client_name, to: String(patch.client_name).trim() },
     })
   }
   if (patch.assigned_employee !== undefined && patch.assigned_employee !== current.assigned_employee) {
