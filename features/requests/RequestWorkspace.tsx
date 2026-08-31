@@ -1019,9 +1019,8 @@ export function RequestWorkspace() {
             />
             <datalist id="ll-chauffeurs">
               {drivers.map((d) => (
-                <option key={d.id} value={d.email || d.full_name}>
-                  {d.full_name}
-                  {d.email ? ` · ${d.email}` : ''}
+                <option key={d.id} value={d.full_name}>
+                  {d.email || d.full_name}
                 </option>
               ))}
             </datalist>

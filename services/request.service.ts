@@ -198,7 +198,10 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
     })
     if (resolved) {
       next.assigned_driver_id = resolved.id
-      next.assigned_employee = resolved.full_name
+      const typed = String(next.assigned_employee ?? patch.assigned_employee ?? current.assigned_employee ?? '').trim()
+      if (!typed || typed.includes('@')) {
+        next.assigned_employee = resolved.full_name
+      }
     } else if ('assigned_employee' in patch && !String(patch.assigned_employee || '').trim()) {
       next.assigned_driver_id = null
     }
