@@ -1,6 +1,6 @@
 import { FLEET } from '@/config/fleet'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
-import type { HotelRecord, VehicleRecord } from '@/types/domain'
+import type { DriverRecord, HotelRecord, VehicleRecord } from '@/types/domain'
 import { logActivity } from '@/services/activity.service'
 
 function asHotel(row: Record<string, unknown>): HotelRecord {
@@ -80,4 +80,72 @@ export async function listVehicles(): Promise<VehicleRecord[]> {
     ...(row as VehicleRecord),
     photos: Array.isArray((row as VehicleRecord).photos) ? (row as VehicleRecord).photos : [],
   }))
+}
+
+export async function listDrivers(): Promise<DriverRecord[]> {
+  const supabase = getServiceClient()
+  const { data, error } = await supabase.from('drivers').select('id, full_name, phone, status, profile_id').order('full_name')
+  if (error) {
+    if (isMissingTableError(error)) return []
+    throw new AppError(error.message, 500)
+  }
+  const emails = new Map<string, string | null>()
+  try {
+    const { data: usersData } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+    for (const user of usersData?.users || []) {
+      if (user.id) emails.set(user.id, user.email ?? null)
+    }
+  } catch {
+    // Email labels are optional in the picker.
+  }
+  return (data || []).map((row) => {
+    const profileId = row.profile_id ? String(row.profile_id) : ''
+    return {
+      id: String(row.id),
+      full_name: String(row.full_name || 'Chauffeur'),
+      email: profileId ? emails.get(profileId) || null : null,
+      phone: row.phone ? String(row.phone) : null,
+      status: String(row.status || 'active'),
+    }
+  })
+}
+
+function driverScore(driver: DriverRecord, query: string): number {
+  const q = query.trim().toLowerCase()
+  if (!q) return 0
+  const name = driver.full_name.trim().toLowerCase()
+  const email = (driver.email || '').trim().toLowerCase()
+  const local = email.split('@')[0] || ''
+  if (email && email === q) return 100
+  if (name && name === q) return 90
+  if (local && local === q) return 80
+  if (email.startsWith(q) || local.startsWith(q) || name.startsWith(q)) return 70
+  if (email.includes(q) || name.includes(q)) return 50
+  return 0
+}
+
+export function matchDriver(drivers: DriverRecord[], query: string | null | undefined): DriverRecord | null {
+  const q = String(query || '').trim()
+  if (!q) return null
+  const ranked = drivers
+    .map((driver) => ({ driver, score: driverScore(driver, q) }))
+    .filter((row) => row.score > 0)
+    .sort((a, b) => b.score - a.score)
+  if (!ranked.length) return null
+  if (ranked.length === 1 || ranked[0].score >= 80) return ranked[0].driver
+  if (ranked[0].score >= ranked[1].score + 20) return ranked[0].driver
+  return null
+}
+
+export async function resolveAssignedDriver(input: {
+  assigned_driver_id?: string | null
+  assigned_employee?: string | null
+}): Promise<DriverRecord | null> {
+  const drivers = await listDrivers()
+  if (!drivers.length) return null
+  if (input.assigned_driver_id) {
+    const byId = drivers.find((d) => d.id === input.assigned_driver_id)
+    if (byId) return byId
+  }
+  return matchDriver(drivers, input.assigned_employee)
 }

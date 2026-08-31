@@ -1,5 +1,6 @@
 import { ID_PREFIX, shouldExpireRequest, isStartDateExpired, normalizeStatus } from '@/config/status'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
+import { resolveAssignedDriver } from '@/services/catalog.service'
 import { logActivity } from '@/services/activity.service'
 import type { ClientRequestRow, RequestInput } from '@/types/domain'
 
@@ -159,6 +160,7 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
     ['number_of_children', 'number_of_children'],
     ['additional_preferences', 'additional_preferences'],
     ['assigned_employee', 'assigned_employee'],
+    ['assigned_driver_id', 'assigned_driver_id'],
     ['lead_source', 'lead_source'],
     ['budget', 'budget'],
     ['hotel_preference', 'hotel_preference'],
@@ -188,6 +190,19 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
     if (!('budget' in patch)) next.budget = next.sold_price
   }
   if ('cancellation_reason' in patch) next.cancellation_reason = patch.cancellation_reason ?? null
+  if ('assigned_employee' in patch || 'assigned_driver_id' in patch) {
+    const resolved = await resolveAssignedDriver({
+      assigned_driver_id: (typeof next.assigned_driver_id === 'string' ? next.assigned_driver_id : patch.assigned_driver_id) || current.assigned_driver_id,
+      assigned_employee:
+        (typeof next.assigned_employee === 'string' ? next.assigned_employee : patch.assigned_employee) || current.assigned_employee,
+    })
+    if (resolved) {
+      next.assigned_driver_id = resolved.id
+      next.assigned_employee = resolved.full_name
+    } else if ('assigned_employee' in patch && !String(patch.assigned_employee || '').trim()) {
+      next.assigned_driver_id = null
+    }
+  }
   if (patch.start_date !== undefined || patch.end_date !== undefined) {
     if ('start_date' in next && !next.start_date) next.start_date = null
     if ('end_date' in next && !next.end_date) next.end_date = null
@@ -209,6 +224,12 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
   if (error && 'sold_price' in next && /sold_price|schema cache|PGRST204/i.test(error.message || '')) {
     const { sold_price: _sold, ...withoutSoldPrice } = next
     const retry = await supabase.from('Client Requests').update(withoutSoldPrice).eq('id', id).select('*').single()
+    data = retry.data
+    error = retry.error
+  }
+  if (error && 'assigned_driver_id' in next && /assigned_driver_id|schema cache|PGRST204/i.test(error.message || '')) {
+    const { assigned_driver_id: _driver, ...withoutDriver } = next
+    const retry = await supabase.from('Client Requests').update(withoutDriver).eq('id', id).select('*').single()
     data = retry.data
     error = retry.error
   }

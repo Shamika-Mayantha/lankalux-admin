@@ -121,6 +121,7 @@ export type ClientRequestRow = {
   cancellation_reason: string | null
   notes: string | null
   assigned_employee: string | null
+  assigned_driver_id?: string | null
   lead_source: string | null
   budget: string | null
   hotel_preference: string | null
@@ -154,6 +155,7 @@ export type RequestInput = {
   children_ages?: number[]
   additional_preferences?: string | null
   assigned_employee?: string | null
+  assigned_driver_id?: string | null
   lead_source?: string | null
   budget?: string | null
   hotel_preference?: string | null
@@ -269,6 +271,14 @@ export type VehicleRecord = {
   availability_status: string
   internal_notes: string | null
   active: boolean
+}
+
+export type DriverRecord = {
+  id: string
+  full_name: string
+  email: string | null
+  phone: string | null
+  status: string
 }
 
 export type GenerationLog = {

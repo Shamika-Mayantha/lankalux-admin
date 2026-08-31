@@ -1,5 +1,6 @@
 import { logActivity } from '@/services/activity.service'
 import { listItineraries, selectItinerary } from '@/services/itinerary.service'
+import { resolveAssignedDriver } from '@/services/catalog.service'
 import { getRequest } from '@/services/request.service'
 import { AppError, getServiceClient } from '@/services/supabase.server'
 import type { ClientRequestRow, ItineraryDay, ItineraryRecord } from '@/types/domain'
@@ -44,9 +45,15 @@ async function materializeCompanionTrip(requestId: string, selected: ItineraryRe
     guestProfileId = profile?.id ?? null
   }
   let driverId: string | null = null
-  if (request.assigned_driver_id) {
-    const { data: driver } = await supabase.from('drivers').select('id').eq('id', request.assigned_driver_id).maybeSingle()
-    driverId = driver?.id ?? null
+  let driverProfileId: string | null = null
+  const assigned = await resolveAssignedDriver({
+    assigned_driver_id: request.assigned_driver_id,
+    assigned_employee: request.assigned_employee,
+  })
+  if (assigned) {
+    const { data: found } = await supabase.from('drivers').select('id, profile_id').eq('id', assigned.id).maybeSingle()
+    driverId = found?.id ?? assigned.id
+    driverProfileId = found?.profile_id ?? null
   }
 
   let hotelPayload: unknown = null
@@ -86,6 +93,12 @@ async function materializeCompanionTrip(requestId: string, selected: ItineraryRe
   if (guestProfileId) {
     await supabase.from('trip_members').upsert(
       { trip_id: tripId, profile_id: guestProfileId, member_role: 'guest' },
+      { onConflict: 'trip_id,profile_id' }
+    )
+  }
+  if (driverProfileId) {
+    await supabase.from('trip_members').upsert(
+      { trip_id: tripId, profile_id: driverProfileId, member_role: 'driver' },
       { onConflict: 'trip_id,profile_id' }
     )
   }

@@ -11,7 +11,7 @@ import { JourneyView } from '@/features/journey/JourneyView'
 import { PhotoPicker } from '@/features/console/PhotoPicker'
 import { InvoiceWorkspace } from '@/features/invoices/InvoiceWorkspace'
 import '@/features/journey/journey.css'
-import type { ActivityEvent, CanonicalJourney, ClientRequestRow, ItineraryDay, ItineraryRecord, StructuredItinerary, VehicleRecord } from '@/types/domain'
+import type { ActivityEvent, CanonicalJourney, ClientRequestRow, DriverRecord, ItineraryDay, ItineraryRecord, StructuredItinerary, VehicleRecord } from '@/types/domain'
 import {
   FOLLOW_UP_TEMPLATES,
   buildHtmlFromBody,
@@ -48,6 +48,7 @@ type OverviewDraft = {
   whatsapp: string
   origin_country: string
   assigned_employee: string
+  assigned_driver_id: string
   lead_source: string
   requested_destinations: string
   interests: string
@@ -55,6 +56,30 @@ type OverviewDraft = {
   number_of_adults: number
   number_of_children: number
   children_ages: string
+}
+
+function matchChauffeur(drivers: DriverRecord[], query: string) {
+  const q = query.trim().toLowerCase()
+  if (!q) return null
+  const scored = drivers
+    .map((driver) => {
+      const name = driver.full_name.trim().toLowerCase()
+      const email = (driver.email || '').trim().toLowerCase()
+      const local = email.split('@')[0] || ''
+      let score = 0
+      if (email === q) score = 100
+      else if (name === q) score = 90
+      else if (local === q) score = 80
+      else if (email.startsWith(q) || local.startsWith(q) || name.startsWith(q)) score = 70
+      else if (email.includes(q) || name.includes(q)) score = 50
+      return { driver, score }
+    })
+    .filter((row) => row.score > 0)
+    .sort((a, b) => b.score - a.score)
+  if (!scored.length) return null
+  if (scored.length === 1 || scored[0].score >= 80) return scored[0].driver
+  if (scored[0].score >= scored[1].score + 20) return scored[0].driver
+  return null
 }
 
 function soldOptionFromRow(row: ClientRequestRow, selected?: ItineraryRecord | undefined): 1 | 2 | 3 | '' {
@@ -138,6 +163,7 @@ function toOverviewDraft(row: ClientRequestRow, selected?: ItineraryRecord | und
     whatsapp: row.whatsapp || '',
     origin_country: row.origin_country || '',
     assigned_employee: row.assigned_employee || '',
+    assigned_driver_id: row.assigned_driver_id || '',
     lead_source: row.lead_source || '',
     requested_destinations: row.requested_destinations || '',
     interests: row.interests || row.additional_preferences || '',
@@ -228,6 +254,7 @@ export function RequestWorkspace() {
   const [waMessage, setWaMessage] = useState('')
   const [waHref, setWaHref] = useState('')
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([])
+  const [drivers, setDrivers] = useState<DriverRecord[]>([])
   const [notice, setNotice] = useState<string | null>(null)
   const [overviewDraft, setOverviewDraft] = useState<OverviewDraft | null>(null)
   const [templateId, setTemplateId] = useState<TemplateId>('friendly_checkin')
@@ -247,6 +274,9 @@ export function RequestWorkspace() {
     reload().catch((e) => setError(e.message))
     consoleFetch('/api/v2/vehicles')
       .then((d) => setVehicles(d.vehicles || []))
+      .catch(() => {})
+    consoleFetch('/api/v2/drivers')
+      .then((d) => setDrivers(d.drivers || []))
       .catch(() => {})
   }, [id])
 
@@ -278,6 +308,11 @@ export function RequestWorkspace() {
     if (!vehicleId) return null
     return vehicles.find((v) => v.id === vehicleId) || null
   }, [selected, vehicles])
+  const assignedDriver = useMemo(() => {
+    const driverId = overviewDraft?.assigned_driver_id || row?.assigned_driver_id
+    if (driverId) return drivers.find((d) => d.id === driverId) || matchChauffeur(drivers, driverId)
+    return matchChauffeur(drivers, overviewDraft?.assigned_employee || row?.assigned_employee || '')
+  }, [overviewDraft?.assigned_driver_id, overviewDraft?.assigned_employee, row?.assigned_driver_id, row?.assigned_employee, drivers])
   const sendVehicle = useMemo(() => {
     if (!sendVehicleId) return null
     return vehicles.find((v) => v.id === sendVehicleId) || null
@@ -394,6 +429,7 @@ export function RequestWorkspace() {
       whatsapp: overviewDraft.whatsapp || null,
       origin_country: overviewDraft.origin_country || null,
       assigned_employee: overviewDraft.assigned_employee || null,
+      assigned_driver_id: overviewDraft.assigned_driver_id || null,
       lead_source: overviewDraft.lead_source || null,
       requested_destinations: overviewDraft.requested_destinations || null,
       interests: overviewDraft.interests || null,
@@ -736,8 +772,8 @@ export function RequestWorkspace() {
               </div>
               <div>
                 <p className="ll-muted" style={{ margin: 0 }}>Chauffeur-Guide</p>
-                <p className="ll-card-title">{overviewDraft.assigned_employee || 'Not assigned yet'}</p>
-                <p className="ll-muted">LankaLux Chauffeur-Guide</p>
+                <p className="ll-card-title">{assignedDriver?.full_name || overviewDraft.assigned_employee || 'Not assigned yet'}</p>
+                <p className="ll-muted">{assignedDriver?.email || 'LankaLux Chauffeur-Guide'}</p>
               </div>
             </div>
             <div className="ll-row" style={{ marginTop: 16 }}>
@@ -965,7 +1001,38 @@ export function RequestWorkspace() {
           <label>Email<input value={overviewDraft.email} onChange={(e) => setOverviewDraft({ ...overviewDraft, email: e.target.value })} /></label>
           <label>WhatsApp<input value={overviewDraft.whatsapp} onChange={(e) => setOverviewDraft({ ...overviewDraft, whatsapp: e.target.value })} /></label>
           <label>Country<input value={overviewDraft.origin_country} onChange={(e) => setOverviewDraft({ ...overviewDraft, origin_country: e.target.value })} /></label>
-          <label>Chauffeur-Guide<input value={overviewDraft.assigned_employee} onChange={(e) => setOverviewDraft({ ...overviewDraft, assigned_employee: e.target.value })} /></label>
+          <label>
+            Chauffeur-Guide
+            <input
+              list="ll-chauffeurs"
+              value={overviewDraft.assigned_employee}
+              onChange={(e) => {
+                const typed = e.target.value
+                const match = matchChauffeur(drivers, typed)
+                setOverviewDraft({
+                  ...overviewDraft,
+                  assigned_employee: typed,
+                  assigned_driver_id: match?.id || '',
+                })
+              }}
+              placeholder="Shantha or shantha@lankalux.com"
+            />
+            <datalist id="ll-chauffeurs">
+              {drivers.map((d) => (
+                <option key={d.id} value={d.email || d.full_name}>
+                  {d.full_name}
+                  {d.email ? ` · ${d.email}` : ''}
+                </option>
+              ))}
+            </datalist>
+            <span className="ll-muted">
+              {assignedDriver
+                ? `Linked to ${assignedDriver.full_name}${assignedDriver.email ? ` (${assignedDriver.email})` : ''}. They will see this trip in the chauffeur app.`
+                : overviewDraft.assigned_employee.trim()
+                  ? 'No matching chauffeur login. Run 16-make-chauffeur.sql for that email first.'
+                  : 'Type Shantha — it will match shantha@lankalux.com if that chauffeur exists.'}
+            </span>
+          </label>
           <label>Lead source<input value={overviewDraft.lead_source} onChange={(e) => setOverviewDraft({ ...overviewDraft, lead_source: e.target.value })} /></label>
           <label>Destinations<input value={overviewDraft.requested_destinations} onChange={(e) => setOverviewDraft({ ...overviewDraft, requested_destinations: e.target.value })} /></label>
           <label>
