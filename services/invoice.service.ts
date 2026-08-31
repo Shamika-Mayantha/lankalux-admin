@@ -542,8 +542,8 @@ export async function previewInvoiceSource(requestId: string) {
       vehicle,
       settings,
     })
-    const quoted = parseClientFacingPrice(itinerary.payload.price || request.budget)
-    const budgetQuote = parseClientFacingPrice(request.budget)
+    const quoted = parseClientFacingPrice(request.sold_price || itinerary.payload.price || request.budget)
+    const budgetQuote = parseClientFacingPrice(request.sold_price || request.budget)
     return {
       ready: true,
       reason: null as string | null,
@@ -583,8 +583,8 @@ async function gatherLiveInvoiceSource(requestId: string, actor?: string) {
     vehicle,
     settings,
   })
-  const quoted = parseClientFacingPrice(itinerary.payload.price || request.budget)
-  const budgetQuote = parseClientFacingPrice(request.budget)
+  const quoted = parseClientFacingPrice(request.sold_price || itinerary.payload.price || request.budget)
+  const budgetQuote = parseClientFacingPrice(request.sold_price || request.budget)
   const packageTotal = quoted.amount || budgetQuote.amount
   const currency = quoted.amount ? quoted.currency : budgetQuote.currency || 'USD'
   return {

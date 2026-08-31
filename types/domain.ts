@@ -132,6 +132,7 @@ export type ClientRequestRow = {
   requested_destinations: string | null
   selected_itinerary_id: string | null
   published_itinerary_id: string | null
+  sold_price?: string | null
   sent_at: string | null
   last_sent_at: string | null
   email_sent_count: number | null
@@ -164,6 +165,7 @@ export type RequestInput = {
   requested_destinations?: string | null
   notes?: string | null
   status?: RequestStatus
+  sold_price?: string | null
 }
 
 export type ActivityEvent = {

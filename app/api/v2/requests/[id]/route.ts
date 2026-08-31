@@ -27,11 +27,16 @@ export async function PATCH(request: Request, ctx: Ctx) {
     const user = await requireAdmin(request)
     const { id } = await ctx.params
     const body = await readJson<
-      Partial<RequestInput> & { restore?: boolean; cancellation_reason?: string | null; sold_option?: 1 | 2 | 3 }
+      Partial<RequestInput> & {
+        restore?: boolean
+        cancellation_reason?: string | null
+        sold_option?: 1 | 2 | 3
+        sold_price?: string | null
+      }
     >(request)
     const updated = body.restore ? await restoreRequest(id, user.email) : await updateRequest(id, body, user.email)
     if (!body.restore && normalizeStatus(updated.status) === 'sold') {
-      await publishSoldItinerary(id, body.sold_option, user.email)
+      await publishSoldItinerary(id, body.sold_option, user.email, body.sold_price)
     }
     return jsonOk({ request: await getRequest(id) })
   } catch (err) {

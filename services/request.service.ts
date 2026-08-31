@@ -169,6 +169,7 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
     ['departure_flight', 'departure_flight'],
     ['requested_destinations', 'requested_destinations'],
     ['notes', 'notes'],
+    ['sold_price', 'sold_price'],
   ]
   for (const [k, col] of map) {
     if (k in patch) next[col] = patch[k] ?? null
@@ -182,6 +183,10 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
     next.client_name = name
   }
   if (patch.status) next.status = patch.status
+  if ('sold_price' in patch && patch.sold_price != null) {
+    next.sold_price = String(patch.sold_price).trim() || null
+    if (!('budget' in patch)) next.budget = next.sold_price
+  }
   if ('cancellation_reason' in patch) next.cancellation_reason = patch.cancellation_reason ?? null
   if (patch.start_date !== undefined || patch.end_date !== undefined) {
     if ('start_date' in next && !next.start_date) next.start_date = null
@@ -200,7 +205,13 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
     next.status = 'follow_up'
   }
 
-  const { data, error } = await supabase.from('Client Requests').update(next).eq('id', id).select('*').single()
+  let { data, error } = await supabase.from('Client Requests').update(next).eq('id', id).select('*').single()
+  if (error && 'sold_price' in next && /sold_price|schema cache|PGRST204/i.test(error.message || '')) {
+    const { sold_price: _sold, ...withoutSoldPrice } = next
+    const retry = await supabase.from('Client Requests').update(withoutSoldPrice).eq('id', id).select('*').single()
+    data = retry.data
+    error = retry.error
+  }
   if (error || !data) throw new AppError(error?.message || 'Failed to update request', 500)
 
   if (patch.status && patch.status !== current.status) {

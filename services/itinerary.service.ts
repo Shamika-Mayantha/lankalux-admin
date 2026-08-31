@@ -78,6 +78,7 @@ export function toStructured(raw: unknown, startDate?: string | null): Structure
     duration: data.duration != null ? String(data.duration) : `${km.days.length} days`,
     days: km.days,
     total_kilometers: km.total,
+    price: data.price?.trim() || undefined,
   }
 }
 
@@ -127,6 +128,7 @@ function legacyOptionToStructured(opt: unknown, startDate: string | null): Struc
         title: o.title || 'Journey',
         summary: o.summary || 'A tailor-made Sri Lanka journey.',
         duration: o.duration,
+        price: typeof o.price === 'string' ? o.price : undefined,
         days: Array.isArray(daysRaw) ? daysRaw : [],
       },
       startDate
@@ -181,6 +183,7 @@ async function syncLegacyJson(requestId: string, records: ItineraryRecord[]) {
       title: rec.payload.title,
       summary: rec.payload.summary,
       duration: rec.payload.duration,
+      price: rec.payload.price || null,
       total_kilometers: rec.payload.total_kilometers ?? totalKilometersFor(rec.payload.days),
       days: rec.payload.days.map((d) => ({
         day: d.day,

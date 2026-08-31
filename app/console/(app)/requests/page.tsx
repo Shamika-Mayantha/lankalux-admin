@@ -74,6 +74,7 @@ function RequestsPageInner() {
             <th>Travel</th>
             <th>Party</th>
             <th>Status</th>
+            <th>Sold</th>
           </tr>
         </thead>
         <tbody>
@@ -100,12 +101,22 @@ function RequestsPageInner() {
                 <td>
                   <span className={`ll-pill ${s}`}>{STATUS_LABEL[s]}</span>
                 </td>
+                <td className="ll-muted">
+                  {s === 'sold'
+                    ? [
+                        r.selected_option != null ? `Option ${Number(r.selected_option) + 1}` : null,
+                        r.sold_price || r.budget,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || 'Choose itinerary & price'
+                    : '—'}
+                </td>
               </tr>
             )
           })}
           {shown.length === 0 ? (
             <tr>
-              <td colSpan={5} className="ll-muted" style={{ textAlign: 'center' }}>
+              <td colSpan={6} className="ll-muted" style={{ textAlign: 'center' }}>
                 No requests match this filter.
               </td>
             </tr>

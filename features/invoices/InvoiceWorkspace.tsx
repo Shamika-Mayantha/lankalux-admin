@@ -155,7 +155,7 @@ function TripSourceFields({ source }: { source: InvoiceSource }) {
           <p className="ll-muted">{source.chauffeurGuide.role}</p>
         </div>
         <div>
-          <p className="ll-muted" style={{ margin: 0 }}>Suggested package</p>
+          <p className="ll-muted" style={{ margin: 0 }}>Sold for</p>
           <p className="ll-card-title">
             {source.currency} {Number(source.packageTotal || 0).toFixed(2)}
           </p>

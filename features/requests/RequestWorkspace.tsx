@@ -40,6 +40,7 @@ function emptyDay(n: number): ItineraryDay {
 type OverviewDraft = {
   status: string
   sold_option: 1 | 2 | 3 | ''
+  sold_price: string
   client_name: string
   start_date: string
   end_date: string
@@ -56,10 +57,14 @@ type OverviewDraft = {
   children_ages: string
 }
 
-function soldOptionFromRow(row: ClientRequestRow): 1 | 2 | 3 | '' {
-  if (row.selected_option == null) return ''
-  const n = Number(row.selected_option) + 1
-  return n === 1 || n === 2 || n === 3 ? n : ''
+function soldOptionFromRow(row: ClientRequestRow, selected?: ItineraryRecord | undefined): 1 | 2 | 3 | '' {
+  if (row.selected_option != null) {
+    const n = Number(row.selected_option) + 1
+    if (n === 1 || n === 2 || n === 3) return n
+  }
+  return selected?.option_number === 1 || selected?.option_number === 2 || selected?.option_number === 3
+    ? selected.option_number
+    : ''
 }
 
 function parseAgeList(raw: string | number[] | null | undefined): number[] {
@@ -120,11 +125,12 @@ function templateDraft(templateId: TemplateId, clientName: string) {
   return { subject: template.subject, body: template.getText({ clientName: name, itineraryUrl: null }) }
 }
 
-function toOverviewDraft(row: ClientRequestRow): OverviewDraft {
+function toOverviewDraft(row: ClientRequestRow, selected?: ItineraryRecord | undefined): OverviewDraft {
   const party = partyCounts(row.number_of_adults, row.number_of_children, row.children_ages)
   return {
     status: normalizeStatus(row.status) || 'new',
-    sold_option: soldOptionFromRow(row),
+    sold_option: soldOptionFromRow(row, selected),
+    sold_price: row.sold_price || selected?.payload?.price || row.budget || '',
     client_name: row.client_name || '',
     start_date: row.start_date || '',
     end_date: row.end_date || '',
@@ -251,8 +257,20 @@ export function RequestWorkspace() {
 
   useEffect(() => {
     if (!row) return
-    setOverviewDraft(toOverviewDraft(row))
+    setOverviewDraft(toOverviewDraft(row, itineraries.find((item) => item.is_selected)))
   }, [row])
+
+  useEffect(() => {
+    const selectedItinerary = itineraries.find((item) => item.is_selected)
+    if (!selectedItinerary) return
+    setOverviewDraft((current) => {
+      if (!current) return current
+      const nextOption = current.sold_option || selectedItinerary.option_number
+      const nextPrice = current.sold_price || selectedItinerary.payload?.price || ''
+      if (nextOption === current.sold_option && nextPrice === current.sold_price) return current
+      return { ...current, sold_option: nextOption, sold_price: nextPrice }
+    })
+  }, [itineraries])
 
   const selected = itineraries.find((i) => i.is_selected)
   const selectedVehicle = useMemo(() => {
@@ -351,8 +369,13 @@ export function RequestWorkspace() {
     if (!overviewDraft) return
     const ages = overviewDraft.number_of_children > 0 ? parseAgeList(overviewDraft.children_ages) : []
     const soldOption = overviewDraft.sold_option || selected?.option_number || ''
+    const soldPrice = overviewDraft.sold_price.trim()
     if (overviewDraft.status === 'sold' && !soldOption) {
       setError('Choose which itinerary was sold. The guest app will show only that one.')
+      return
+    }
+    if (overviewDraft.status === 'sold' && !soldPrice) {
+      setError('Enter the sold price. The guest app shows that itinerary; invoices use this amount.')
       return
     }
     const clientName = overviewDraft.client_name.trim()
@@ -363,6 +386,7 @@ export function RequestWorkspace() {
     const patch = {
       status: overviewDraft.status,
       sold_option: overviewDraft.status === 'sold' ? soldOption : undefined,
+      sold_price: overviewDraft.status === 'sold' ? soldPrice : undefined,
       client_name: clientName,
       start_date: overviewDraft.start_date || null,
       end_date: overviewDraft.end_date || null,
@@ -384,7 +408,7 @@ export function RequestWorkspace() {
       await reload().catch(() => {})
       setNotice(
         overviewDraft.status === 'sold'
-          ? 'Sold itinerary saved. The guest app now shows only that one.'
+          ? `Sold Option ${soldOption} for ${soldPrice}. The guest app now shows only that itinerary.`
           : 'Overview saved.'
       )
     }
@@ -586,7 +610,7 @@ export function RequestWorkspace() {
   if (!row) return <p>Loading request…</p>
 
   const status = normalizeStatus(row.status) || 'new'
-  const baselineOverview = toOverviewDraft(row)
+  const baselineOverview = toOverviewDraft(row, selected)
   const overviewDirty =
     !!overviewDraft && JSON.stringify(overviewDraft) !== JSON.stringify(baselineOverview)
   const durationPreview =
@@ -612,6 +636,9 @@ export function RequestWorkspace() {
           <h1 className="ll-h1">{overviewDraft?.client_name.trim() || row.client_name || 'Unnamed client'}</h1>
           <p className="ll-sub">
             {row.start_date} → {row.end_date} · {row.duration || '—'} days
+            {status === 'sold' && (selected || overviewDraft?.sold_price)
+              ? ` · Sold Option ${overviewDraft?.sold_option || selected?.option_number || '—'}${overviewDraft?.sold_price || selected?.payload?.price ? ` · ${overviewDraft?.sold_price || selected?.payload?.price}` : ''}`
+              : ''}
           </p>
         </div>
         <div className="ll-row">
@@ -692,7 +719,14 @@ export function RequestWorkspace() {
                 </p>
                 <p className="ll-card-title">{selected?.title || 'Not selected yet'}</p>
                 <p className="ll-muted">
-                  {selected?.payload?.days?.map((d) => d.location).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · ') || 'Select an itinerary tab first'}
+                  {status === 'sold'
+                    ? [
+                        selected ? `Option ${selected.option_number}` : null,
+                        overviewDraft.sold_price || selected?.payload?.price || row.sold_price || row.budget,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || 'Choose the itinerary and price below'
+                    : selected?.payload?.days?.map((d) => d.location).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · ') || 'Select an itinerary tab first'}
                 </p>
               </div>
               <div>
@@ -773,9 +807,18 @@ export function RequestWorkspace() {
               <select
                 value={overviewDraft.status}
                 onChange={(e) => {
-                  const status = e.target.value
+                  const nextStatus = e.target.value
                   const sold = overviewDraft.sold_option || selected?.option_number || ''
-                  setOverviewDraft({ ...overviewDraft, status, sold_option: status === 'sold' ? sold : overviewDraft.sold_option })
+                  const rec = itineraries.find((item) => item.option_number === sold)
+                  setOverviewDraft({
+                    ...overviewDraft,
+                    status: nextStatus,
+                    sold_option: nextStatus === 'sold' ? sold : overviewDraft.sold_option,
+                    sold_price:
+                      nextStatus === 'sold'
+                        ? overviewDraft.sold_price || rec?.payload?.price || row.sold_price || row.budget || ''
+                        : overviewDraft.sold_price,
+                  })
                 }}
               >
                 {REQUEST_STATUSES.map((s) => (
@@ -792,29 +835,46 @@ export function RequestWorkspace() {
             ) : null}
           </div>
           {overviewDraft.status === 'sold' ? (
-            <label>
-              Sold itinerary
-              <select
-                value={overviewDraft.sold_option}
-                onChange={(e) =>
-                  setOverviewDraft({
-                    ...overviewDraft,
-                    sold_option: e.target.value ? (Number(e.target.value) as 1 | 2 | 3) : '',
-                  })
-                }
-              >
-                <option value="">Choose the itinerary they bought</option>
-                {itineraries
-                  .filter((item) => item.payload?.days?.length)
-                  .map((item) => (
-                    <option key={item.option_number} value={item.option_number}>
-                      Option {item.option_number}
-                      {item.title ? ` · ${item.title}` : ''}
-                    </option>
-                  ))}
-              </select>
-              <span className="ll-muted">The guest companion shows only this itinerary.</span>
-            </label>
+            <div className="ll-card" style={{ maxWidth: 'none', background: 'var(--ivory-deep, #f4efe4)' }}>
+              <h3>Sold itinerary</h3>
+              <p className="ll-muted">Choose the option they bought and the sale price. The guest and chauffeur apps show only this itinerary.</p>
+              <div className="ll-fields-2" style={{ marginTop: 12 }}>
+                <label>
+                  Sold itinerary
+                  <select
+                    value={overviewDraft.sold_option}
+                    onChange={(e) => {
+                      const next = e.target.value ? (Number(e.target.value) as 1 | 2 | 3) : ''
+                      const rec = itineraries.find((item) => item.option_number === next)
+                      setOverviewDraft({
+                        ...overviewDraft,
+                        sold_option: next,
+                        sold_price: rec?.payload?.price || overviewDraft.sold_price,
+                      })
+                    }}
+                  >
+                    <option value="">Choose the itinerary they bought</option>
+                    {itineraries
+                      .filter((item) => item.payload?.days?.length)
+                      .map((item) => (
+                        <option key={item.option_number} value={item.option_number}>
+                          Option {item.option_number}
+                          {item.title ? ` · ${item.title}` : ''}
+                          {item.payload?.price ? ` · ${item.payload.price}` : ''}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label>
+                  Sold for
+                  <input
+                    value={overviewDraft.sold_price}
+                    onChange={(e) => setOverviewDraft({ ...overviewDraft, sold_price: e.target.value })}
+                    placeholder="USD 4,200"
+                  />
+                </label>
+              </div>
+            </div>
           ) : null}
           <div className="ll-fields-2">
             <label>
@@ -948,7 +1008,10 @@ export function RequestWorkspace() {
               const loading = !!generating[n]
               return (
                 <div key={n} className={`ll-option ${rec?.is_selected ? 'selected' : ''}`}>
-                  <p className="ll-muted">{STYLE_META[style].label}</p>
+                  <p className="ll-muted">
+                    {STYLE_META[style].label}
+                    {status === 'sold' && rec?.is_selected ? ' · SOLD' : ''}
+                  </p>
                   <h3>{STYLE_META[style].subtitle}</h3>
                   {loading && <p>Generating itinerary {n}…</p>}
                   {!loading && rec?.status === 'failed' && <div className="ll-error">{genError[n] || rec.error || 'Failed'}</div>}
@@ -956,7 +1019,11 @@ export function RequestWorkspace() {
                     <>
                       <strong>{rec.title}</strong>
                       <p className="ll-muted">{rec.summary}</p>
-                      <p className="ll-km">{formatKilometers(totalKilometersFor(rec.payload.days)) || '—'}</p>
+                      <p className="ll-km">
+                        {[formatKilometers(totalKilometersFor(rec.payload.days)), rec.payload.price || (rec.is_selected ? overviewDraft?.sold_price : '')]
+                          .filter(Boolean)
+                          .join(' · ') || '—'}
+                      </p>
                       <p className="ll-muted">
                         {rec.payload.days.length} days · {rec.payload.days.map((d) => d.location).filter(Boolean).join(' → ')}
                       </p>
@@ -973,7 +1040,7 @@ export function RequestWorkspace() {
                       Edit
                     </button>
                     <button className="ll-btn" disabled={!rec?.payload?.days?.length || loading} onClick={() => selectOption(n)}>
-                      {rec?.is_selected ? 'Selected' : 'Select'}
+                      {status === 'sold' && rec?.is_selected ? 'Sold' : rec?.is_selected ? 'Selected' : 'Select'}
                     </button>
                   </div>
                 </div>

@@ -132,7 +132,8 @@ async function materializeCompanionTrip(requestId: string, selected: ItineraryRe
 export async function publishSoldItinerary(
   requestId: string,
   soldOption?: 1 | 2 | 3,
-  actor?: string
+  actor?: string,
+  soldPrice?: string | null
 ) {
   const all = await listItineraries(requestId)
   const requested = soldOption
@@ -141,14 +142,36 @@ export async function publishSoldItinerary(
   if (!requested || requested.status === 'empty' || !requested.payload?.days?.length) {
     throw new AppError('Choose which itinerary was sold. The guest app will show only that one.', 400)
   }
+  const price = (soldPrice || requested.payload.price || '').trim() || null
   if (!requested.is_selected) {
     await selectItinerary(requestId, requested.option_number, actor)
   }
-  await materializeCompanionTrip(requestId, requested)
+  if (price && price !== requested.payload.price && !requested.id.startsWith('legacy-') && !requested.id.startsWith('placeholder-')) {
+    const supabase = getServiceClient()
+    await supabase
+      .from('itineraries')
+      .update({ payload: { ...requested.payload, price }, updated_at: new Date().toISOString() })
+      .eq('id', requested.id)
+  }
+  await materializeCompanionTrip(requestId, { ...requested, payload: { ...requested.payload, price: price || requested.payload.price } })
+  const saleUpdate: Record<string, unknown> = {
+    app_published_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+  if (price) {
+    saleUpdate.sold_price = price
+    saleUpdate.budget = price
+  }
+  const supabase = getServiceClient()
+  const published = await supabase.from('Client Requests').update(saleUpdate).eq('id', requestId)
+  if (published.error && /sold_price|schema cache|PGRST204/i.test(published.error.message || '')) {
+    const { sold_price: _ignore, ...without } = saleUpdate
+    await supabase.from('Client Requests').update(without).eq('id', requestId)
+  }
   await logActivity({
     request_id: requestId,
     actor,
     event_type: 'companion_published',
-    detail: { option_number: requested.option_number, title: requested.title },
+    detail: { option_number: requested.option_number, title: requested.title, sold_price: price },
   })
 }
