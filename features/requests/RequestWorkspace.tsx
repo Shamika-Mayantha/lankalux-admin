@@ -174,6 +174,15 @@ function toOverviewDraft(row: ClientRequestRow, selected?: ItineraryRecord | und
   }
 }
 
+function draftFromItinerary(rec: ItineraryRecord): StructuredItinerary {
+  const payload = JSON.parse(JSON.stringify(rec.payload || {})) as StructuredItinerary
+  return {
+    ...payload,
+    vehicle_id: rec.vehicle_id || payload.vehicle_id || null,
+    internal_notes: rec.internal_notes || payload.internal_notes || '',
+  }
+}
+
 function durationFromDates(startDate: string, endDate: string): number | null {
   if (!startDate || !endDate) return null
   const start = new Date(`${startDate}T00:00:00`)
@@ -282,7 +291,7 @@ export function RequestWorkspace() {
 
   useEffect(() => {
     const current = itineraries.find((i) => i.option_number === editOption)
-    if (current?.payload) setDraft(JSON.parse(JSON.stringify(current.payload)))
+    if (current?.payload) setDraft(draftFromItinerary(current))
   }, [editOption, itineraries])
 
   useEffect(() => {
@@ -374,7 +383,13 @@ export function RequestWorkspace() {
     try {
       await consoleFetch(`/api/v2/requests/${id}/itinerary`, {
         method: 'POST',
-        body: JSON.stringify({ action: 'save', optionNumber: editOption, payload: draft }),
+        body: JSON.stringify({
+          action: 'save',
+          optionNumber: editOption,
+          payload: draft,
+          vehicle_id: draft.vehicle_id || null,
+          internal_notes: draft.internal_notes,
+        }),
       })
       await reload()
       setNotice('Itinerary saved.')
@@ -1459,6 +1474,9 @@ function Editor({
               onChange={(e) => setDraft({ ...draft, vehicle_id: e.target.value || null })}
             >
               <option value="">None</option>
+              {draft.vehicle_id && !vehicles.some((v) => v.id === draft.vehicle_id) ? (
+                <option value={draft.vehicle_id}>{draft.vehicle_id}</option>
+              ) : null}
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.name}

@@ -30,6 +30,12 @@ function cleanTitle(raw: string, dayNumber: number, location: string) {
   return cleaned
 }
 
+export function normalizeVehicleId(value: unknown): string | null {
+  if (value == null) return null
+  const id = String(value).trim()
+  return id ? id : null
+}
+
 export function toStructured(raw: unknown, startDate?: string | null): StructuredItinerary {
   const parsed = parseItineraryJson(raw)
   if (!parsed.ok) throw new AppError(parsed.error, 422)
@@ -79,6 +85,7 @@ export function toStructured(raw: unknown, startDate?: string | null): Structure
     days: km.days,
     total_kilometers: km.total,
     price: data.price?.trim() || undefined,
+    vehicle_id: normalizeVehicleId((data as { vehicle_id?: string | null }).vehicle_id),
   }
 }
 
@@ -92,8 +99,12 @@ function recordFromRow(row: Record<string, unknown>): ItineraryRecord {
   const rawPayload = (row.payload && typeof row.payload === 'object' ? row.payload : emptyPayload(styleFromNumber(option_number))) as StructuredItinerary
   const payload: StructuredItinerary =
     rawPayload.days?.length
-      ? { ...rawPayload, total_kilometers: totalKilometersFor(rawPayload.days) }
-      : rawPayload
+      ? {
+          ...rawPayload,
+          total_kilometers: totalKilometersFor(rawPayload.days),
+          vehicle_id: normalizeVehicleId(row.vehicle_id) || normalizeVehicleId(rawPayload.vehicle_id),
+        }
+      : { ...rawPayload, vehicle_id: normalizeVehicleId(row.vehicle_id) || normalizeVehicleId(rawPayload.vehicle_id) }
   return {
     id: String(row.id),
     request_id: String(row.request_id),
@@ -129,6 +140,7 @@ function legacyOptionToStructured(opt: unknown, startDate: string | null): Struc
         summary: o.summary || 'A tailor-made Sri Lanka journey.',
         duration: o.duration,
         price: typeof o.price === 'string' ? o.price : undefined,
+        vehicle_id: normalizeVehicleId(o.vehicle_id),
         days: Array.isArray(daysRaw) ? daysRaw : [],
       },
       startDate
@@ -184,6 +196,7 @@ async function syncLegacyJson(requestId: string, records: ItineraryRecord[]) {
       summary: rec.payload.summary,
       duration: rec.payload.duration,
       price: rec.payload.price || null,
+      vehicle_id: rec.vehicle_id || rec.payload.vehicle_id || null,
       total_kilometers: rec.payload.total_kilometers ?? totalKilometersFor(rec.payload.days),
       days: rec.payload.days.map((d) => ({
         day: d.day,
@@ -450,11 +463,15 @@ export async function updateItineraryDraft(
   if (!current) throw new AppError('Itinerary not found', 404)
 
   const km = applyJourneyKilometers(payload.days)
+  const vehicleId =
+    extras && 'vehicle_id' in extras
+      ? normalizeVehicleId(extras.vehicle_id)
+      : normalizeVehicleId(payload.vehicle_id) || normalizeVehicleId(current.vehicle_id)
   const nextPayload: StructuredItinerary = {
     ...payload,
     days: km.days,
     total_kilometers: km.total,
-    vehicle_id: extras?.vehicle_id !== undefined ? extras.vehicle_id : payload.vehicle_id,
+    vehicle_id: vehicleId,
     internal_notes: extras?.internal_notes ?? payload.internal_notes,
   }
   const supabase = getServiceClient()
@@ -462,25 +479,46 @@ export async function updateItineraryDraft(
 
   let saved = current
   if (!current.id.startsWith('legacy-') && !current.id.startsWith('placeholder-')) {
-    const { data, error } = await supabase
-      .from('itineraries')
-      .update({
-        title: nextPayload.title,
-        summary: nextPayload.summary,
-        duration: nextPayload.duration,
-        payload: nextPayload,
-        vehicle_id: nextPayload.vehicle_id ?? null,
-        internal_notes: nextPayload.internal_notes ?? '',
-        status: current.is_selected ? 'published' : 'draft',
-        updated_at: now,
-      })
-      .eq('id', current.id)
-      .select('*')
-      .single()
+    const row = {
+      title: nextPayload.title,
+      summary: nextPayload.summary,
+      duration: nextPayload.duration,
+      payload: nextPayload,
+      vehicle_id: vehicleId,
+      internal_notes: nextPayload.internal_notes ?? '',
+      status: current.is_selected ? 'published' : 'draft',
+      updated_at: now,
+    }
+    let { data, error } = await supabase.from('itineraries').update(row).eq('id', current.id).select('*').single()
+    if (error && isMissingTableError(error)) {
+      const retry = await supabase
+        .from('itineraries')
+        .update({
+          title: row.title,
+          summary: row.summary,
+          duration: row.duration,
+          payload: row.payload,
+          status: row.status,
+          updated_at: row.updated_at,
+        })
+        .eq('id', current.id)
+        .select('*')
+        .single()
+      data = retry.data
+      error = retry.error
+    }
     if (error) throw new AppError(`Supabase request failed: ${error.message}`, 500)
     saved = recordFromRow(data)
   } else {
-    saved = { ...current, title: nextPayload.title, summary: nextPayload.summary, duration: nextPayload.duration, payload: nextPayload, status: 'draft' }
+    saved = {
+      ...current,
+      title: nextPayload.title,
+      summary: nextPayload.summary,
+      duration: nextPayload.duration,
+      payload: nextPayload,
+      vehicle_id: vehicleId,
+      status: 'draft',
+    }
   }
 
   const merged = all.map((r) => (r.option_number === optionNumber ? saved : r))

@@ -25,7 +25,11 @@ export async function POST(request: Request, ctx: Ctx) {
     }
     if (body.action === 'save') {
       if (!body.payload) throw new AppError('payload is required')
-      const saved = await updateItineraryDraft(id, n, body.payload, { vehicle_id: body.vehicle_id, internal_notes: body.internal_notes }, user.email)
+      const extras: { vehicle_id?: string | null; internal_notes?: string } = {}
+      if (body.vehicle_id !== undefined) extras.vehicle_id = body.vehicle_id
+      else if (body.payload.vehicle_id !== undefined) extras.vehicle_id = body.payload.vehicle_id
+      if (body.internal_notes !== undefined) extras.internal_notes = body.internal_notes
+      const saved = await updateItineraryDraft(id, n, body.payload, extras, user.email)
       return jsonOk({ itinerary: saved })
     }
     throw new AppError('action must be select or save')

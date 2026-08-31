@@ -32,6 +32,17 @@ if (parsed.ok) {
   assert(parsed.data.days.length === 5, 'five days')
 }
 
+const withVehicle = parseItineraryJson({
+  title: 'Hill & Coast',
+  summary: 'A paced journey.',
+  vehicle_id: 'voxy',
+  days: [{ day: 1, location: 'Sigiriya', title: 'Rock fortress', activities: ['09:00 - Climb'] }],
+})
+assert(withVehicle.ok, 'schema should accept vehicle_id')
+if (withVehicle.ok) {
+  assert(withVehicle.data.vehicle_id === 'voxy', 'vehicle_id should be kept on the itinerary')
+}
+
 const bad = parseItineraryJson({ title: '', summary: '', days: [] })
 assert(!bad.ok, 'empty itinerary must fail validation')
 
