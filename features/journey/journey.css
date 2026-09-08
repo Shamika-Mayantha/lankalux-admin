@@ -144,6 +144,14 @@ html:has(.journey-root) body {
   font-size: 14px;
 }
 
+.journey-day-stay {
+  margin: -10px 0 18px;
+  color: var(--gold);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .journey-photo-wrap {
   margin: 0 -24px 20px;
 }

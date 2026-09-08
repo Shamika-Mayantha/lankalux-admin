@@ -2,11 +2,12 @@ import OpenAI from 'openai'
 import { openaiModel, requireOpenAiKey } from '@/config/env'
 import { PROMPT_VERSION, type ItineraryStyle } from '@/config/status'
 import { inclusiveDuration } from '@/services/request.service'
+import { applyHotelsToDays } from '@/services/hotel-match.service'
 import { buildItineraryPrompt } from '@/services/itinerary-prompt'
+import { hotelsForRequest, saveGeneratedOption, saveGenerationLog, toStructured, markOptionFailed } from '@/services/itinerary.service'
 import { AppError } from '@/services/supabase.server'
 import type { ClientRequestRow, StructuredItinerary } from '@/types/domain'
 import { extractJsonObject } from '@/validation/itinerary.schema'
-import { saveGeneratedOption, saveGenerationLog, toStructured, markOptionFailed } from '@/services/itinerary.service'
 
 function openaiMessage(err: unknown): string {
   const anyErr = err as { status?: number; code?: string; message?: string; error?: { message?: string; code?: string } }
@@ -33,6 +34,7 @@ export async function generateOneItinerary(opts: {
   const model = openaiModel()
   const expectedDays =
     inclusiveDuration(opts.request.start_date, opts.request.end_date) || opts.request.duration || 7
+  const hotels = await hotelsForRequest(opts.request.id)
   const openai = new OpenAI({ apiKey: key })
   let raw = ''
 
@@ -48,7 +50,7 @@ export async function generateOneItinerary(opts: {
           content:
             'You design LankaLux itineraries. Reply with a single valid JSON object matching the requested schema. Never wrap in markdown. Transfer days must include named en-route places, written in LankaLux voice — never copied from another operator.',
         },
-        { role: 'user', content: buildItineraryPrompt(opts.request, opts.style, expectedDays) },
+        { role: 'user', content: buildItineraryPrompt(opts.request, opts.style, expectedDays, hotels) },
       ],
     })
     raw = completion.choices[0]?.message?.content?.trim() || ''
@@ -58,7 +60,9 @@ export async function generateOneItinerary(opts: {
     if (!raw) throw new AppError('AI request failed: empty response.', 502)
 
     const json = extractJsonObject(raw)
-    const payload = toStructured(json, opts.request.start_date)
+    const generated = toStructured(json, opts.request.start_date)
+    const applied = applyHotelsToDays(generated.days, hotels, { replace: true })
+    const payload = { ...generated, days: applied.days }
     if (payload.days.length !== expectedDays) {
       throw new AppError(
         `Unable to parse generated itinerary. Expected ${expectedDays} days but received ${payload.days.length}.`,

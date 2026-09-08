@@ -4,6 +4,7 @@ import {
   placesForJourney,
 } from '@/config/sri-lanka-places'
 import type { ClientRequestRow } from '@/types/domain'
+import { hotelsPromptSection, type StayCandidate } from '@/services/hotel-match.service'
 
 function parseChildrenAges(raw: string | null | undefined): number[] {
   if (!raw) return []
@@ -66,7 +67,12 @@ Pick from these named stops when they sit on today's drive or in today's overnig
 ${catalog}`
 }
 
-export function buildItineraryPrompt(request: ClientRequestRow, style: ItineraryStyle, expectedDays: number) {
+export function buildItineraryPrompt(
+  request: ClientRequestRow,
+  style: ItineraryStyle,
+  expectedDays: number,
+  hotels: StayCandidate[] = []
+) {
   const ages = parseChildrenAges(request.children_ages)
   const childLine =
     (request.number_of_children || 0) > 0
@@ -111,6 +117,8 @@ HARD RULES
 ${enRouteDesignRules(style)}
 
 ${placesPromptSection({ destinations, interests, notes })}
+
+${hotelsPromptSection(hotels)}
 
 JSON SHAPE
 {
