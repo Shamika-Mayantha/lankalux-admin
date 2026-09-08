@@ -3,7 +3,7 @@ import { generateOneItinerary } from '@/services/ai.service'
 import { getRequest } from '@/services/request.service'
 import { styleFromNumber, type ItineraryStyle } from '@/config/status'
 
-export const maxDuration = 60
+export const maxDuration = 90
 
 export async function POST(request: Request) {
   try {

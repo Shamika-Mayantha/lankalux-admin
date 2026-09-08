@@ -11,6 +11,8 @@ import {
 } from '../services/invoice-math'
 import { renderFollowUpEmail, renderInvoiceEmail } from '../services/journey-copy'
 import { getTemplate, normalizeEditableBody } from '../lib/email-templates'
+import { placesForJourney } from '../config/sri-lanka-places'
+import { buildItineraryPrompt, enRouteDesignRules } from '../services/itinerary-prompt'
 
 function assert(cond: unknown, msg: string) {
   if (!cond) throw new Error(msg)
@@ -147,5 +149,89 @@ const followUpCompiled = renderFollowUpEmail({
 })
 assert(followUpCompiled.html.includes('Hello there.'), 'follow-up includes body')
 assert(followUpCompiled.text.includes('Private journeys, exceptional care'), 'follow-up uses brand tagline')
+
+const classicPlaces = placesForJourney({
+  destinations: 'Sigiriya → Kandy → Ella → Yala → Mirissa',
+})
+assert(
+  classicPlaces.regions.some((r) => r.id === 'cultural-triangle'),
+  'classic route includes the cultural triangle'
+)
+assert(
+  classicPlaces.corridors.some((c) => c.id === 'kandy-tea' || c.id === 'tea-ella' || c.id === 'triangle-kandy'),
+  'classic route includes hill-country transfer corridors'
+)
+assert(
+  classicPlaces.corridors.some((c) => c.stops.some((s) => /ramboda/i.test(s.name))),
+  'Kandy to tea country should surface Ramboda as an en-route stop'
+)
+assert(
+  classicPlaces.corridors.some((c) => c.stops.some((s) => /nine arches/i.test(s.name))),
+  'tea to Ella should surface Nine Arches'
+)
+assert(
+  !JSON.stringify(classicPlaces).toLowerCase().includes('olanka'),
+  'place book must not mention competitor names'
+)
+
+const southOnly = placesForJourney({ destinations: 'Galle and Bentota' })
+assert(
+  southOnly.regions.every((r) => ['south-coast', 'west-coast', 'colombo'].includes(r.id)),
+  'a south-west request should not pull the whole island catalog'
+)
+assert(
+  southOnly.corridors.some((c) => c.stops.some((s) => /madu/i.test(s.name) || /kosgoda/i.test(s.name))),
+  'south-west drive should include Madu Ganga or Kosgoda'
+)
+
+const prompt = buildItineraryPrompt(
+  {
+    id: 'req-id-test',
+    client_name: 'Test Client',
+    email: 'test@example.com',
+    whatsapp: null,
+    origin_country: 'Australia',
+    start_date: '2026-09-12',
+    end_date: '2026-09-21',
+    duration: 10,
+    number_of_adults: 2,
+    number_of_children: 2,
+    children_ages: JSON.stringify([8, 11]),
+    additional_preferences: 'Family pace, wildlife if it sits on the way',
+    itineraryoptions: null,
+    selected_option: null,
+    public_token: null,
+    status: 'new',
+    cancellation_reason: null,
+    notes: null,
+    assigned_employee: null,
+    lead_source: null,
+    budget: null,
+    hotel_preference: null,
+    vehicle_preference: null,
+    special_requirements: null,
+    interests: 'culture, tea, coast',
+    arrival_flight: null,
+    departure_flight: null,
+    requested_destinations: 'Sigiriya → Kandy → Ella → Yala → Mirissa',
+    selected_itinerary_id: null,
+    published_itinerary_id: null,
+    sent_at: null,
+    last_sent_at: null,
+    email_sent_count: null,
+    hotel_options: null,
+    created_at: '2026-09-08T00:00:00Z',
+    updated_at: null,
+  },
+  'balanced',
+  10
+)
+assert(prompt.includes('En route:'), 'prompt asks for En route prefixes')
+assert(prompt.includes('Ramboda Falls'), 'prompt includes Ramboda as a named stop')
+assert(prompt.includes('Peradeniya'), 'prompt includes Peradeniya on the triangle-to-Kandy drive')
+assert(prompt.includes('Do not copy competitor wording'), 'prompt forbids copying competitor copy')
+assert(!prompt.toLowerCase().includes('olanka'), 'generated prompt must not name the competitor')
+assert(enRouteDesignRules('relaxed').includes('1–2 scenic pauses'), 'relaxed density is lighter')
+assert(enRouteDesignRules('experience').includes('3–4 distinctive stops'), 'experience density is richer')
 
 console.log('console core checks passed')

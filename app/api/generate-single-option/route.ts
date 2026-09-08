@@ -3,6 +3,7 @@ import OpenAI from 'openai'
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { enRouteDesignRules, placesPromptSection } from '@/services/itinerary-prompt'
 
 function cleanGeneratedDayTitle(rawTitle: unknown, dayNumber: number, location?: string) {
   const title = typeof rawTitle === 'string' ? rawTitle.trim() : ''
@@ -264,6 +265,14 @@ export async function POST(request: Request) {
     const existingTitles = comparisonOptions.filter((opt: any) => opt && opt.title).map((opt: any) => opt.title).join(', ')
     const currentOption = existingOptions[optionIndex] || null
     
+    const alongTheWayBlock = `${enRouteDesignRules(optionIndex === 1 ? 'relaxed' : optionIndex === 2 ? 'experience' : 'balanced')}
+
+${placesPromptSection({
+  destinations: requestData.requested_destinations || requestData.additional_preferences,
+  interests: requestData.interests,
+  notes: requestData.additional_preferences,
+})}`
+
     const prompt = `You are an experienced and passionate luxury travel consultant who creates personalized, memorable journeys through Sri Lanka. Generate ONE distinct, premium itinerary option for the following client:
 
 CLIENT INFORMATION:
@@ -319,7 +328,8 @@ ${dayDatesBlock}
 
 - Use ALL the information provided: travel dates, passenger info, and additional preferences
 - Plan locations naturally based on the route - use appropriate location names that fit the geographic flow
-- Activities must be an array of strings (include 4-6 main activities per day)
+- Activities must be an array of strings (include 6-8 named highlights per stay day; transfer days must include 2-3 "En route:" stops)
+${alongTheWayBlock}
 - CRITICAL: Each activity MUST include a timestamp in the format "HH:MM - Activity description"
 - Each day MUST include:
   * "image": MANDATORY - Select the most appropriate UNIQUE image path based on the day's MAIN HIGHLIGHT (the primary experience/attraction). Each day must have a DIFFERENT photo - NO REPEATS. Match the photo to what makes this day special (the highlight from the day title), not just the location.
@@ -386,7 +396,7 @@ REMINDER: Count the days from ${startDateFormatted} to ${endDateFormatted} (incl
       try {
         attempt++
         // Calculate max_tokens based on duration (roughly 800 tokens per day)
-        const calculatedMaxTokens = Math.min(Math.max(expectedDaysNum * 800, 3000), 5000)
+        const calculatedMaxTokens = Math.min(Math.max(expectedDaysNum * 950, 4000), 8000)
         
         // Make prompt even more explicit on retry
         let currentPrompt = `${prompt}${uniquenessRetryNote}`

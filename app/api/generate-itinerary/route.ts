@@ -3,6 +3,7 @@ import OpenAI from 'openai'
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { enRouteDesignRules, placesPromptSection } from '@/services/itinerary-prompt'
 
 function cleanGeneratedDayTitle(rawTitle: unknown, dayNumber: number, location?: string) {
   const title = typeof rawTitle === 'string' ? rawTitle.trim() : ''
@@ -213,6 +214,16 @@ export async function POST(request: Request) {
       actualDuration = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1 // +1 to include both start and end days
     }
 
+    const alongTheWayBlock = `${enRouteDesignRules('balanced')}
+
+Option 2 should use relaxed stop density. Option 3 should use experience stop density.
+
+${placesPromptSection({
+  destinations: requestData.requested_destinations || requestData.additional_preferences,
+  interests: requestData.interests,
+  notes: requestData.additional_preferences,
+})}`
+
     const prompt = `You are an experienced and passionate luxury travel consultant who creates personalized, memorable journeys through Sri Lanka. Write naturally, as if you're personally crafting this itinerary for a dear friend. Generate exactly 3 distinct, premium itinerary options for the following client:
 
 CLIENT INFORMATION:
@@ -268,7 +279,8 @@ ${requestData.additional_preferences && requestData.additional_preferences.trim(
 - Use ALL the information provided: travel dates, duration, passenger info, and additional preferences
 - Plan locations naturally based on the route - use appropriate location names that fit the geographic flow
 - Include clear location field for each day
-- Activities must be an array of strings (include 4-6 main activities per day)
+- Activities must be an array of strings (include 6-8 named highlights per stay day; transfer days must include 2-3 "En route:" stops)
+${alongTheWayBlock}
 - CRITICAL: Each activity MUST include a timestamp in the format "HH:MM - Activity description" (e.g., "09:00 - Morning breakfast at hotel", "14:30 - Guided tour of ancient temple")
 - Create a proper, professional itinerary plan with realistic timing:
   * Morning activities: 08:00-12:00
@@ -414,7 +426,7 @@ Format your response as a valid JSON object with this exact structure:
 IMPORTANT RULES:
 - Each option MUST have EXACTLY ${actualDuration || 'the specified number of'} days - use the duration provided in the client information above (${actualDuration || requestData.duration || 'Not specified'} days from ${startDateFormatted} to ${endDateFormatted})
 - Location names must be one of: Colombo, Sigiriya, Ella, Yala, Galle, Kandy, Nuwara Eliya
-- Activities must be an array of strings
+- Activities must be an array of strings with named places, including "En route:" stops on transfer days
 - CRITICAL: EVERY day MUST have an "image" field - this is MANDATORY. No day should be without a photo.
 - The "image" field must contain a valid image path from the available photos list
 - Analyze each day's highlight and select the image that best showcases what the client will experience
@@ -464,7 +476,7 @@ Return JSON in this format: { "title": "...", "summary": "...", "total_kilometer
       let completion
       let generatedContent = ''
       const maxRetries = 4
-      let currentMaxTokens = 6000
+      let currentMaxTokens = 8000
       let uniquenessRetryNote = ''
       
       for (let attempt = 1; attempt <= maxRetries; attempt++) {

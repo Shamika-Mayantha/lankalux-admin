@@ -1,85 +1,12 @@
 import OpenAI from 'openai'
 import { openaiModel, requireOpenAiKey } from '@/config/env'
-import { PROMPT_VERSION, STYLE_META, type ItineraryStyle } from '@/config/status'
-import { inclusiveDuration, parseChildrenAges } from '@/services/request.service'
+import { PROMPT_VERSION, type ItineraryStyle } from '@/config/status'
+import { inclusiveDuration } from '@/services/request.service'
+import { buildItineraryPrompt } from '@/services/itinerary-prompt'
 import { AppError } from '@/services/supabase.server'
 import type { ClientRequestRow, StructuredItinerary } from '@/types/domain'
 import { extractJsonObject } from '@/validation/itinerary.schema'
 import { saveGeneratedOption, saveGenerationLog, toStructured, markOptionFailed } from '@/services/itinerary.service'
-
-const STYLE_INSTRUCTIONS: Record<ItineraryStyle, string> = {
-  balanced:
-    'Create the RECOMMENDED, well-paced itinerary. Mix culture, scenery and rest in equal measure. This is the default proposal LankaLux would proudly send.',
-  relaxed:
-    'Create a RELAXED, comfort-focused itinerary. Fewer hotel changes, later starts, spa and beach time, scenic rather than strenuous days. Still cover the requested route without rushing.',
-  experience:
-    'Create an EXPERIENCE / EXPLORATION itinerary. Lean into wildlife, walking, trains, local food and distinctive places. Keep driving realistic — never sacrifice sleep for sightseeing.',
-}
-
-function formatDate(iso: string | null) {
-  if (!iso) return 'Not specified'
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-}
-
-function buildPrompt(request: ClientRequestRow, style: ItineraryStyle, expectedDays: number) {
-  const ages = parseChildrenAges(request.children_ages)
-  const childLine =
-    (request.number_of_children || 0) > 0
-      ? `${request.number_of_children} child${(request.number_of_children || 0) > 1 ? 'ren' : ''}${ages.length ? ` aged ${ages.join(', ')}` : ''}`
-      : 'no children'
-  const meta = STYLE_META[style]
-
-  return `You are a luxury travel designer for LankaLux, a Sri Lankan tailor-made journey company.
-
-Write ONE itinerary only — ${meta.label}: ${meta.subtitle}.
-${STYLE_INSTRUCTIONS[style]}
-
-CLIENT
-- Name: ${request.client_name || 'Guest'}
-- Country: ${request.origin_country || 'Not specified'}
-- Dates: ${formatDate(request.start_date)} to ${formatDate(request.end_date)}
-- Duration: EXACTLY ${expectedDays} days (inclusive)
-- Party: ${request.number_of_adults || 0} adults, ${childLine}
-- Destinations requested: ${request.requested_destinations || 'Plan a classic Sri Lanka flow'}
-- Interests: ${request.interests || request.additional_preferences || 'None specified'}
-- Hotel preference: ${request.hotel_preference || 'Not specified'}
-- Vehicle preference: ${request.vehicle_preference || 'Not specified'}
-- Budget: ${request.budget || 'Not specified'}
-- Special requirements: ${request.special_requirements || 'None'}
-- Additional notes: ${request.additional_preferences || 'None'}
-- Arrival flight: ${request.arrival_flight || 'Not specified'}
-- Departure flight: ${request.departure_flight || 'Not specified'}
-
-HARD RULES
-- Return ONLY JSON. No markdown.
-- The "days" array MUST contain exactly ${expectedDays} objects, day 1 = start date, last day = end date.
-- Geographic flow in ONE direction. No backtracking (do not go north then south then north).
-- At most one major location transfer per day.
-- Do not invent hotels that must be booked; describe overnight towns only.
-- Activities are timed strings in 12-hour format with AM/PM: "09:00 AM - Description".
-- Each day "description" must include useful place insight (what guests will see, local character, and why this stop is special) in 2-4 clear sentences.
-- Do NOT include image URLs. The server maps photographs.
-
-JSON SHAPE
-{
-  "title": "",
-  "summary": "",
-  "duration": "${expectedDays} days",
-  "days": [
-    {
-      "day": 1,
-      "date": "",
-      "location": "",
-      "overnight_location": "",
-      "title": "",
-      "description": "",
-      "activities": [],
-      "optional_activities": [],
-      "travel": { "from": "", "to": "", "estimated_distance": "", "estimated_duration": "" }
-    }
-  ]
-}`
-}
 
 function openaiMessage(err: unknown): string {
   const anyErr = err as { status?: number; code?: string; message?: string; error?: { message?: string; code?: string } }
@@ -113,15 +40,15 @@ export async function generateOneItinerary(opts: {
     const completion = await openai.chat.completions.create({
       model,
       temperature: opts.style === 'experience' ? 0.9 : 0.7,
-      max_tokens: Math.min(Math.max(expectedDays * 700, 3500), 12000),
+      max_tokens: Math.min(Math.max(expectedDays * 950, 5000), 14000),
       response_format: { type: 'json_object' },
       messages: [
         {
           role: 'system',
           content:
-            'You design LankaLux itineraries. Reply with a single valid JSON object matching the requested schema. Never wrap in markdown.',
+            'You design LankaLux itineraries. Reply with a single valid JSON object matching the requested schema. Never wrap in markdown. Transfer days must include named en-route places, written in LankaLux voice — never copied from another operator.',
         },
-        { role: 'user', content: buildPrompt(opts.request, opts.style, expectedDays) },
+        { role: 'user', content: buildItineraryPrompt(opts.request, opts.style, expectedDays) },
       ],
     })
     raw = completion.choices[0]?.message?.content?.trim() || ''
