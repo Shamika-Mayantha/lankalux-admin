@@ -4,6 +4,7 @@ import { logActivity } from '@/services/activity.service'
 import { getPublishedItinerary } from '@/services/itinerary.service'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
 import type { CanonicalJourney } from '@/types/domain'
+import { journeyShareSchema } from '@/validation/journey-share.schema'
 
 export function makeShareToken() {
   return `${Date.now().toString(36)}-${randomBytes(9).toString('base64url')}`
@@ -69,4 +70,34 @@ export async function createShareLink(opts: {
 
 export function journeyUrl(token: string) {
   return `${appUrl()}/journey/${token}`
+}
+
+/** Freeze the visible preview without selecting or publishing an itinerary. */
+export async function createPreviewShareLink(opts: { journey: unknown; actor?: string }) {
+  const parsed = journeyShareSchema.safeParse(opts.journey)
+  if (!parsed.success) {
+    throw new AppError(`Invalid journey preview: ${parsed.error.issues[0]?.message || 'invalid fields'}`, 400)
+  }
+  const token = makeShareToken()
+  const snapshot: CanonicalJourney = { ...parsed.data, shareToken: token }
+  const { error } = await getServiceClient().from('share_links').insert({
+    token,
+    request_id: snapshot.requestId,
+    itinerary_id: null,
+    itinerary_snapshot: snapshot,
+    send_options: { channel: 'preview' },
+    created_by: opts.actor || null,
+  })
+  if (error) {
+    throw new AppError(isMissingTableError(error)
+      ? 'Share links table is missing. Run supabase/migrations/20260814000000_console_v2_foundation.sql in the Supabase SQL editor, then try again.'
+      : `Supabase request failed: ${error.message}`, 500)
+  }
+  await logActivity({
+    request_id: snapshot.requestId,
+    actor: opts.actor,
+    event_type: 'share_link_created',
+    detail: { token, source: 'preview', optionNumber: snapshot.optionNumber },
+  })
+  return { token, url: journeyUrl(token), journey: snapshot }
 }
