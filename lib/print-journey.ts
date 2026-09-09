@@ -7,13 +7,12 @@ const IVORY = '#f9f4eb'
 const IVORY_RGB = rgb(249 / 255, 244 / 255, 235 / 255)
 const A4_WIDTH_PT = 595.28
 const A4_HEIGHT_PT = 841.89
-const MARGIN_PT = 28
-/** Prefer leaving empty space at the bottom over splitting a photo. */
-const MIN_PAGE_CONTENT_PX = 48
+const MARGIN_PT = 24
+const MIN_PAGE_CONTENT_PX = 64
 
 type Range = { top: number; bottom: number }
 
-function waitForImages(root: ParentNode, timeoutMs = 12000): Promise<void> {
+function waitForImages(root: ParentNode, timeoutMs = 15000): Promise<void> {
   const images = Array.from(root.querySelectorAll('img'))
   if (!images.length) return Promise.resolve()
   return new Promise((resolve) => {
@@ -22,19 +21,16 @@ function waitForImages(root: ParentNode, timeoutMs = 12000): Promise<void> {
       remaining -= 1
       if (remaining <= 0) resolve()
     }
-    const timer = window.setTimeout(resolve, timeoutMs)
+    window.setTimeout(resolve, timeoutMs)
     images.forEach((img) => {
-      if (img.complete) {
+      if (img.complete && img.naturalWidth > 0) {
         done()
         return
       }
       img.addEventListener('load', done, { once: true })
       img.addEventListener('error', done, { once: true })
     })
-    if (remaining <= 0) {
-      window.clearTimeout(timer)
-      resolve()
-    }
+    if (remaining <= 0) resolve()
   })
 }
 
@@ -43,38 +39,64 @@ function absolutizeUrls(root: HTMLElement, base: string) {
     const src = img.getAttribute('src')
     if (!src) return
     try {
-      const abs = new URL(src, base).href
-      img.setAttribute('src', abs)
-      img.setAttribute('crossorigin', 'anonymous')
+      img.setAttribute('src', new URL(src, base).href)
+      img.crossOrigin = 'anonymous'
     } catch {
       /* keep original */
     }
   })
 }
 
-/** Keep day photos short enough that they usually fit under a day header on one page. */
-function prepareCloneForPdf(root: HTMLElement) {
-  root.querySelectorAll('.journey-photo').forEach((el) => {
-    const img = el as HTMLElement
-    img.style.maxHeight = '200px'
-    img.style.width = '100%'
-    img.style.objectFit = 'cover'
-    img.style.display = 'block'
-  })
-  root.querySelectorAll('.journey-photo-wrap').forEach((el) => {
-    const wrap = el as HTMLElement
-    wrap.style.marginLeft = '0'
-    wrap.style.marginRight = '0'
-    wrap.style.breakInside = 'avoid'
-  })
-  root.querySelectorAll('.journey-v-photos img').forEach((el) => {
-    const img = el as HTMLElement
-    img.style.height = '72px'
-    img.style.objectFit = 'cover'
-  })
-  root.querySelectorAll('.journey-logo').forEach((el) => {
-    const img = el as HTMLElement
-    img.style.maxHeight = '48px'
+/**
+ * html2canvas often stretches CSS object-fit images.
+ * Bake object-fit:cover into a plain bitmap at the element's display size.
+ */
+function bakeObjectFitImages(root: HTMLElement) {
+  root.querySelectorAll('img').forEach((imgEl) => {
+    const img = imgEl as HTMLImageElement
+    const style = window.getComputedStyle(img)
+    const fit = style.objectFit
+    if (fit !== 'cover' && fit !== 'contain') return
+    if (!img.naturalWidth || !img.naturalHeight) return
+
+    const w = Math.max(1, Math.round(img.getBoundingClientRect().width))
+    const h = Math.max(1, Math.round(img.getBoundingClientRect().height))
+    if (w < 2 || h < 2) return
+
+    const canvas = document.createElement('canvas')
+    const ratio = Math.min(2, window.devicePixelRatio || 2)
+    canvas.width = Math.round(w * ratio)
+    canvas.height = Math.round(h * ratio)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const scale =
+      fit === 'cover'
+        ? Math.max(w / img.naturalWidth, h / img.naturalHeight)
+        : Math.min(w / img.naturalWidth, h / img.naturalHeight)
+    const dw = img.naturalWidth * scale
+    const dh = img.naturalHeight * scale
+    const dx = (w - dw) / 2
+    const dy = (h - dh) / 2
+    try {
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
+      ctx.fillStyle = IVORY
+      ctx.fillRect(0, 0, w, h)
+      ctx.drawImage(img, dx, dy, dw, dh)
+
+      const baked = document.createElement('img')
+      baked.src = canvas.toDataURL('image/jpeg', 0.93)
+      baked.alt = img.alt || ''
+      baked.className = img.className
+      baked.style.width = `${w}px`
+      baked.style.height = `${h}px`
+      baked.style.maxHeight = 'none'
+      baked.style.objectFit = 'fill'
+      baked.style.display = 'block'
+      img.replaceWith(baked)
+    } catch {
+      /* Cross-origin image — leave original and let html2canvas best-effort */
+    }
   })
 }
 
@@ -99,7 +121,6 @@ function layoutMetrics(root: HTMLElement, scale: number): { breaks: number[]; bl
   const breaks = new Set<number>([0])
   const blocked: Range[] = []
 
-  // Never slice through photos / logo / vehicle thumbnails
   root.querySelectorAll('.journey-photo-wrap, .journey-logo, .journey-v-photos').forEach((el) => {
     const top = yAt(el, 'top')
     const bottom = yAt(el, 'bottom')
@@ -110,7 +131,6 @@ function layoutMetrics(root: HTMLElement, scale: number): { breaks: number[]; bl
     }
   })
 
-  // Prefer starting new pages at these boundaries
   root
     .querySelectorAll(
       '.journey-hero, .journey-day, .journey-footer, .journey-footer section, .journey-hotel, .journey-contact, .journey-desc, .journey-list-title, .journey-acts, .journey-travel'
@@ -129,14 +149,9 @@ function layoutMetrics(root: HTMLElement, scale: number): { breaks: number[]; bl
 function avoidBlockedEnd(start: number, end: number, blocked: Range[]): number {
   let next = end
   for (const zone of blocked) {
-    // Slice would cut through a protected block → end before it when possible
     if (zone.top < next && zone.bottom > next) {
-      if (zone.top > start + MIN_PAGE_CONTENT_PX) {
-        next = zone.top
-      } else {
-        // Block already began on this page — keep it whole on this page
-        next = Math.max(next, zone.bottom)
-      }
+      if (zone.top > start + MIN_PAGE_CONTENT_PX) next = zone.top
+      else next = Math.max(next, zone.bottom)
     }
   }
   return next
@@ -153,20 +168,14 @@ function nextSliceEnd(
 
   let hardEnd = avoidBlockedEnd(start, Math.min(maxEnd, totalHeight), blocked)
 
-  // If including a full photo pushed us past a page, still don't cut the photo —
-  // but try to start the photo on the next page instead when it hasn't begun yet.
   for (const zone of blocked) {
     if (zone.top >= start && zone.top < hardEnd && zone.bottom > maxEnd) {
-      // Photo cannot fit in remaining page budget
-      if (zone.top > start + MIN_PAGE_CONTENT_PX) {
-        hardEnd = zone.top
-      }
+      if (zone.top > start + MIN_PAGE_CONTENT_PX) hardEnd = zone.top
     }
   }
 
   hardEnd = avoidBlockedEnd(start, hardEnd, blocked)
 
-  // Prefer the latest clean break at or before hardEnd
   let chosen = hardEnd
   for (const y of breaks) {
     if (y <= start + MIN_PAGE_CONTENT_PX) continue
@@ -176,7 +185,6 @@ function nextSliceEnd(
 
   chosen = avoidBlockedEnd(start, chosen, blocked)
 
-  // Final guard: never return an end that sits inside a photo
   for (const zone of blocked) {
     if (chosen > zone.top && chosen < zone.bottom) {
       chosen = zone.top > start + MIN_PAGE_CONTENT_PX ? zone.top : zone.bottom
@@ -200,24 +208,46 @@ function triggerDownload(bytes: Uint8Array, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 2000)
 }
 
-/** Capture the on-screen journey preview and download it as a PDF file. */
-export async function downloadJourneyPdf(node: HTMLElement, title = 'LankaLux Itinerary') {
+function setupPreviewClone(node: HTMLElement): HTMLElement {
   const host = document.createElement('div')
   host.setAttribute('aria-hidden', 'true')
+  // Match journey preview column width used on screen
   host.style.cssText =
     'position:fixed;left:-12000px;top:0;width:760px;background:#f9f4eb;padding:0;margin:0;z-index:-1;pointer-events:none;'
 
   const clone = node.cloneNode(true) as HTMLElement
   clone.style.minHeight = '0'
+  clone.style.width = '760px'
   clone.style.background = IVORY
+  // Keep preview photo sizing (do not force shorter/stretched images)
+  clone.querySelectorAll('.journey-photo-wrap').forEach((el) => {
+    const wrap = el as HTMLElement
+    wrap.style.marginLeft = '0'
+    wrap.style.marginRight = '0'
+  })
   absolutizeUrls(clone, window.location.href)
-  prepareCloneForPdf(clone)
   host.appendChild(clone)
   document.body.appendChild(host)
+  ;(host as HTMLElement & { __clone?: HTMLElement }).__clone = clone
+  return host
+}
+
+/** Capture the journey preview exactly as shown and download a PDF. */
+export async function downloadJourneyPdf(node: HTMLElement, title = 'LankaLux Itinerary') {
+  const host = setupPreviewClone(node)
+  const clone = host.querySelector('.journey-root') as HTMLElement | null
+  if (!clone) {
+    host.remove()
+    throw new Error('Preview is not ready yet.')
+  }
 
   try {
     await waitForImages(clone)
-    await new Promise((r) => setTimeout(r, 250))
+    // Layout pass before baking object-fit
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    bakeObjectFitImages(clone)
+    await waitForImages(clone)
+    await new Promise((r) => setTimeout(r, 150))
 
     const canvas = await html2canvas(clone, {
       scale: 2,
@@ -226,10 +256,7 @@ export async function downloadJourneyPdf(node: HTMLElement, title = 'LankaLux It
       backgroundColor: IVORY,
       logging: false,
       imageTimeout: 15000,
-      width: clone.scrollWidth,
-      height: clone.scrollHeight,
-      windowWidth: clone.scrollWidth,
-      windowHeight: clone.scrollHeight,
+      // Do not pass custom width/height — that stretches the capture
     })
 
     if (!canvas.width || !canvas.height) {
@@ -262,7 +289,7 @@ export async function downloadJourneyPdf(node: HTMLElement, title = 'LankaLux It
       ctx.fillRect(0, 0, slice.width, slice.height)
       ctx.drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH)
 
-      const dataUrl = slice.toDataURL('image/jpeg', 0.92)
+      const dataUrl = slice.toDataURL('image/jpeg', 0.93)
       const base64 = dataUrl.split(',', 2)[1]
       if (!base64) throw new Error('Could not encode PDF page.')
       const binary = atob(base64)
@@ -279,25 +306,16 @@ export async function downloadJourneyPdf(node: HTMLElement, title = 'LankaLux It
       })
 
       const naturalH = sliceH / pxPerPt
-      if (naturalH <= contentHeight) {
-        page.drawImage(jpg, {
-          x: MARGIN_PT,
-          y: A4_HEIGHT_PT - MARGIN_PT - naturalH,
-          width: contentWidth,
-          height: naturalH,
-        })
-      } else {
-        // Rare: keep an oversized block whole by scaling the whole page slice down
-        const fit = contentHeight / naturalH
-        const drawW = contentWidth * fit
-        const drawH = contentHeight
-        page.drawImage(jpg, {
-          x: MARGIN_PT + (contentWidth - drawW) / 2,
-          y: A4_HEIGHT_PT - MARGIN_PT - drawH,
-          width: drawW,
-          height: drawH,
-        })
-      }
+      // Always preserve aspect ratio of the captured slice
+      const fit = Math.min(1, contentHeight / naturalH)
+      const drawW = contentWidth * fit
+      const drawH = naturalH * fit
+      page.drawImage(jpg, {
+        x: MARGIN_PT + (contentWidth - drawW) / 2,
+        y: A4_HEIGHT_PT - MARGIN_PT - drawH,
+        width: drawW,
+        height: drawH,
+      })
 
       y = end
     }
