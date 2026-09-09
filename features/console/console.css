@@ -604,6 +604,29 @@ button.ll-card,
   padding: 24px;
 }
 
+.ll-preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--ivory);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.ll-preview-toolbar .ll-row {
+  margin: 0;
+}
+
+.ll-preview-toolbar .ll-muted {
+  margin: 0;
+  font-size: 12px;
+}
+
 .ll-tabs { display: flex; flex-wrap: wrap; gap: 16px; margin: 18px 0; border-bottom: 1px solid var(--line); }
 .ll-tabs button {
   background: transparent;

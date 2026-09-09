@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { consoleFetch } from '@/lib/console-api'
+import { printJourneyPreview } from '@/lib/print-journey'
 import { STYLE_META, STATUS_LABEL, REQUEST_STATUSES, normalizeStatus, type ItineraryStyle } from '@/config/status'
 import { BRAND } from '@/config/brand'
 import { allLibraryImages } from '@/services/image-map.service'
@@ -251,6 +252,9 @@ export function RequestWorkspace() {
   const [editOption, setEditOption] = useState<1 | 2 | 3>(1)
   const [draft, setDraft] = useState<StructuredItinerary | null>(null)
   const [preview, setPreview] = useState<CanonicalJourney | null>(null)
+  const [previewBusy, setPreviewBusy] = useState<string | null>(null)
+  const [linkCopied, setLinkCopied] = useState(false)
+  const previewRootRef = useRef<HTMLDivElement | null>(null)
   const [emailOpen, setEmailOpen] = useState(false)
   const [waOpen, setWaOpen] = useState(false)
   const [emailIntro, setEmailIntro] = useState('')
@@ -554,6 +558,7 @@ export function RequestWorkspace() {
   async function previewClientJourney() {
     setBusy('Loading preview…')
     setError(null)
+    setLinkCopied(false)
     try {
       const json = await consoleFetch(`/api/v2/requests/${id}/published`)
       const sending = emailOpen || waOpen
@@ -574,6 +579,54 @@ export function RequestWorkspace() {
       setError(e instanceof Error ? e.message : 'Preview failed')
     } finally {
       setBusy(null)
+    }
+  }
+
+  function previewShareBody() {
+    const sending = emailOpen || waOpen
+    if (!sending) return {}
+    return {
+      includeHotels,
+      includeVehicle: includeVehicle && !!sendVehiclePayload,
+      vehicle: includeVehicle ? sendVehiclePayload : null,
+      includePrice,
+      price: includePrice ? sendPrice.trim() : null,
+    }
+  }
+
+  async function copyPreviewLink() {
+    setPreviewBusy('Copying link…')
+    setError(null)
+    setLinkCopied(false)
+    try {
+      const json = await consoleFetch(`/api/v2/requests/${id}/share-link`, {
+        method: 'POST',
+        body: JSON.stringify(previewShareBody()),
+      })
+      const url = String(json.url || '')
+      if (!url) throw new Error('No itinerary link returned.')
+      await navigator.clipboard.writeText(url)
+      setLinkCopied(true)
+      setNotice('Itinerary link copied.')
+      window.setTimeout(() => setLinkCopied(false), 2500)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not copy link')
+    } finally {
+      setPreviewBusy(null)
+    }
+  }
+
+  async function savePreviewPdf() {
+    setPreviewBusy('Preparing PDF…')
+    setError(null)
+    try {
+      const node = previewRootRef.current?.querySelector('.journey-root') as HTMLElement | null
+      if (!node) throw new Error('Preview is not ready yet.')
+      await printJourneyPreview(node, preview?.title ? `${preview.title} · LankaLux` : 'LankaLux Itinerary')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not prepare PDF')
+    } finally {
+      setPreviewBusy(null)
     }
   }
 
@@ -1378,12 +1431,30 @@ export function RequestWorkspace() {
       {preview && (
         <div className="ll-modal-back" onClick={() => setPreview(null)}>
           <div className="ll-modal" style={{ maxWidth: 820, padding: 0 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ padding: 12, textAlign: 'right' }}>
-              <button className="ll-btn secondary" onClick={() => setPreview(null)}>
-                Close preview
-              </button>
+            <div className="ll-preview-toolbar no-print">
+              <p className="ll-muted">{linkCopied ? 'Link copied' : previewBusy || 'Client journey preview'}</p>
+              <div className="ll-row">
+                <button className="ll-btn secondary" disabled={!!previewBusy} onClick={copyPreviewLink}>
+                  {linkCopied ? 'Copied' : 'Copy link'}
+                </button>
+                <button className="ll-btn" disabled={!!previewBusy} onClick={savePreviewPdf}>
+                  Save as PDF
+                </button>
+                <button
+                  className="ll-btn secondary"
+                  onClick={() => {
+                    setPreview(null)
+                    setLinkCopied(false)
+                    setPreviewBusy(null)
+                  }}
+                >
+                  Close
+                </button>
+              </div>
             </div>
-            <JourneyView journey={preview} showDistance={false} />
+            <div ref={previewRootRef}>
+              <JourneyView journey={preview} showDistance={false} />
+            </div>
           </div>
         </div>
       )}

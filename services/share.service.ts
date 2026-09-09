@@ -70,3 +70,56 @@ export async function createShareLink(opts: {
 export function journeyUrl(token: string) {
   return `${appUrl()}/journey/${token}`
 }
+
+export async function latestShareToken(requestId: string): Promise<string | null> {
+  const supabase = getServiceClient()
+  const { data, error } = await supabase
+    .from('share_links')
+    .select('token')
+    .eq('request_id', requestId)
+    .is('revoked_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error && !isMissingTableError(error)) return null
+  return data?.token ? String(data.token) : null
+}
+
+/** Reuse the latest share URL, or create one when none exists / when send options differ. */
+export async function getOrCreateShareLink(opts: {
+  requestId: string
+  actor?: string
+  forceNew?: boolean
+  sendOptions?: {
+    channel?: string
+    includeHotels?: boolean
+    includeVehicle?: boolean
+    vehicle?: CanonicalJourney['vehicle']
+    includePrice?: boolean
+    price?: string | null
+  }
+}): Promise<{ token: string; url: string; journey: CanonicalJourney; created: boolean }> {
+  const hasCustomSend =
+    !!opts.sendOptions &&
+    (opts.sendOptions.includeVehicle !== undefined ||
+      opts.sendOptions.includePrice !== undefined ||
+      opts.sendOptions.vehicle !== undefined ||
+      opts.sendOptions.price !== undefined ||
+      opts.sendOptions.includeHotels !== undefined)
+
+  if (!opts.forceNew && !hasCustomSend) {
+    const existing = await latestShareToken(opts.requestId)
+    if (existing) {
+      const journey = await getPublishedItinerary(opts.requestId)
+      return {
+        token: existing,
+        url: journeyUrl(existing),
+        journey: { ...journey, shareToken: existing },
+        created: false,
+      }
+    }
+  }
+
+  const share = await createShareLink(opts)
+  return { ...share, created: true }
+}

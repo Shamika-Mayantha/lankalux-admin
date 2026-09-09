@@ -275,3 +275,95 @@ html:has(.journey-root) body {
     margin: 0 0 20px;
   }
 }
+
+/* PDF / print — keep ivory + gold look; avoid ugly mid-block cuts */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm 14mm;
+  }
+
+  html,
+  body,
+  .journey-root,
+  .journey-hotel {
+    background: #f9f4eb !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  .journey-hotel {
+    background: #f1e9da !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .journey-root {
+    min-height: 0 !important;
+  }
+
+  .journey-hero,
+  .journey-days,
+  .journey-footer {
+    max-width: none;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .journey-photo-wrap {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .journey-photo {
+    max-height: 260px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .journey-day-num,
+  .journey-day-title,
+  .journey-day-loc,
+  .journey-list-title,
+  .journey-hotel,
+  .journey-v-name,
+  .journey-v-photos,
+  .journey-logo,
+  .journey-contact {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .journey-acts li,
+  .journey-foot-list li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .journey-day {
+    break-before: auto;
+    break-after: auto;
+    page-break-before: auto;
+    page-break-after: auto;
+  }
+
+  .journey-footer section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  p,
+  li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  a {
+    text-decoration: none !important;
+  }
+}
