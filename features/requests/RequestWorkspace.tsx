@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { consoleFetch } from '@/lib/console-api'
-import { printJourneyPreview } from '@/lib/print-journey'
+import { downloadJourneyPdf } from '@/lib/print-journey'
 import { STYLE_META, STATUS_LABEL, REQUEST_STATUSES, normalizeStatus, type ItineraryStyle } from '@/config/status'
 import { BRAND } from '@/config/brand'
 import { allLibraryImages } from '@/services/image-map.service'
@@ -622,7 +622,8 @@ export function RequestWorkspace() {
     try {
       const node = previewRootRef.current?.querySelector('.journey-root') as HTMLElement | null
       if (!node) throw new Error('Preview is not ready yet.')
-      await printJourneyPreview(node, preview?.title ? `${preview.title} · LankaLux` : 'LankaLux Itinerary')
+      await downloadJourneyPdf(node, preview?.title ? `${preview.title} · LankaLux` : 'LankaLux Itinerary')
+      setNotice('PDF downloaded.')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not prepare PDF')
     } finally {
