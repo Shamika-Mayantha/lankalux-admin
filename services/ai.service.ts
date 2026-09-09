@@ -1,3 +1,4 @@
+import { ITINERARY_DETAIL_GUIDANCE } from '@/config/itinerary-detail'
 import OpenAI from 'openai'
 import { openaiModel, requireOpenAiKey } from '@/config/env'
 import { PROMPT_VERSION, STYLE_META, type ItineraryStyle } from '@/config/status'
@@ -59,6 +60,8 @@ HARD RULES
 - Activities are timed strings in 12-hour format with AM/PM: "09:00 AM - Description".
 - Each day "description" must include useful place insight (what guests will see, local character, and why this stop is special) in 2-4 clear sentences.
 - Do NOT include image URLs. The server maps photographs.
+
+${ITINERARY_DETAIL_GUIDANCE}
 
 JSON SHAPE
 {

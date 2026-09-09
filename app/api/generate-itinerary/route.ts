@@ -1,3 +1,4 @@
+import { ITINERARY_DETAIL_GUIDANCE } from '@/config/itinerary-detail'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@supabase/supabase-js'
@@ -215,6 +216,8 @@ export async function POST(request: Request) {
 
     const prompt = `You are an experienced and passionate luxury travel consultant who creates personalized, memorable journeys through Sri Lanka. Write naturally, as if you're personally crafting this itinerary for a dear friend. Generate exactly 3 distinct, premium itinerary options for the following client:
 
+${ITINERARY_DETAIL_GUIDANCE}
+
 CLIENT INFORMATION:
 - Client Name: ${requestData.client_name || 'Not specified'}
 - Origin Country: ${requestData.origin_country || 'Not specified'}
@@ -268,7 +271,7 @@ ${requestData.additional_preferences && requestData.additional_preferences.trim(
 - Use ALL the information provided: travel dates, duration, passenger info, and additional preferences
 - Plan locations naturally based on the route - use appropriate location names that fit the geographic flow
 - Include clear location field for each day
-- Activities must be an array of strings (include 4-6 main activities per day)
+- Activities must be an array of strings (choose a feasible number using ROUTE-AWARE SIGHTSEEING DETAIL; no minimum quota)
 - CRITICAL: Each activity MUST include a timestamp in the format "HH:MM - Activity description" (e.g., "09:00 - Morning breakfast at hotel", "14:30 - Guided tour of ancient temple")
 - Create a proper, professional itinerary plan with realistic timing:
   * Morning activities: 08:00-12:00
@@ -279,7 +282,7 @@ ${requestData.additional_preferences && requestData.additional_preferences.trim(
 - Each day MUST include (ALL ARE REQUIRED - NO EXCEPTIONS):
   * "image": MANDATORY - Every day must have an image that showcases the day's highlight. Analyze the day's title, location, and activities to identify the PRIMARY experience. Select the image that best visually represents what the client will see and experience on that day. Choose from location photos (primary or alternatives) or activity-specific photos. The image should make the client excited about that day. This field is REQUIRED for every single day - no exceptions.
   * "what_to_expect": Write a warm, engaging paragraph (3-4 sentences) that describes what the client will experience, see, and feel on this day. Write it as if you're personally sharing insights about the day ahead. Include cultural context, highlights, and what makes this day special. Be descriptive and inviting, helping them visualize the experience.
-  * "optional_activities": An array of 2-4 optional activities that can be done if time allows (e.g., spa treatments, additional tours, special dining experiences, adventure activities). Format as "HH:MM - Activity description" or just "Activity description" if time-flexible. Write these naturally and conversationally, as friendly suggestions for enhancing their experience. Do not mention any charges or costs - simply present them as wonderful opportunities if they have extra time.
+  * "optional_activities": An array of 0-2 optional alternatives that can be done if time allows (e.g., spa treatments, additional tours, special dining experiences, adventure activities). Format as "HH:MM - Activity description" or just "Activity description" if time-flexible. Write these naturally and conversationally, as friendly suggestions for enhancing their experience. Do not mention any charges or costs - simply present them as wonderful opportunities if they have extra time.
 - Keep tone warm, elegant, premium, and human - write as if you're personally guiding them through their journey
 - Ensure logical travel flow between destinations
 - Make activities detailed, specific, and realistic (not generic)
