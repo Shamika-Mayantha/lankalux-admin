@@ -1,0 +1,6 @@
+'use client'
+import { JourneyPreview } from '@/features/journey/JourneyPreview'
+import '@/features/console/console.css'
+export default function Check() {
+  return <JourneyPreview onClose={() => {}} journey={{requestId:'test-only',clientName:'Preview Test',email:null,whatsapp:null,title:'Hills and Coast',summary:'A relaxed journey with scenic stops and time to explore. This sample contains no client information.',startDate:'2026-10-01',endDate:'2026-10-03',durationDays:3,durationLabel:'3 days',party:{adults:2,children:0,childrenAges:[]},days:Array.from({length:3},(_,i)=>({day:i+1,date:`2026-10-0${i+1}`,location:'Kandy',overnight_location:'Kandy',title:'Discover the hill country',description:'Explore at an unhurried pace, with time for local food, welcoming streets and beautiful scenery.',recommended_images:['/brand/lankalux-logo.png'],activities:Array.from({length:7},(_,n)=>`09:00 AM - Sample experience ${n+1}: take time to explore the scenery and enjoy a relaxed visit with your chauffeur-guide.`),optional_activities:['A gentle evening walk if time permits.'],travel:{from:'Kandy',to:'Nuwara Eliya',estimated_distance:'',estimated_duration:'Allow time for sightseeing'}})),vehicle:null,hotels:[],includedServices:['Private chauffeur-guide','Airport meet and greet'],importantInformation:['Entrance tickets are not included.'],price:'USD 900'}} />
+}

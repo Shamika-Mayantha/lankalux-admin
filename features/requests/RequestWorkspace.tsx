@@ -7,7 +7,7 @@ import { STYLE_META, STATUS_LABEL, REQUEST_STATUSES, normalizeStatus, type Itine
 import { BRAND } from '@/config/brand'
 import { allLibraryImages } from '@/services/image-map.service'
 import { formatKilometers, totalKilometersFor } from '@/services/kilometers.service'
-import { JourneyView } from '@/features/journey/JourneyView'
+import { JourneyPreview } from '@/features/journey/JourneyPreview'
 import { PhotoPicker } from '@/features/console/PhotoPicker'
 import { InvoiceWorkspace } from '@/features/invoices/InvoiceWorkspace'
 import '@/features/journey/journey.css'
@@ -1375,18 +1375,7 @@ export function RequestWorkspace() {
         </div>
       )}
 
-      {preview && (
-        <div className="ll-modal-back" onClick={() => setPreview(null)}>
-          <div className="ll-modal" style={{ maxWidth: 820, padding: 0 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ padding: 12, textAlign: 'right' }}>
-              <button className="ll-btn secondary" onClick={() => setPreview(null)}>
-                Close preview
-              </button>
-            </div>
-            <JourneyView journey={preview} showDistance={false} />
-          </div>
-        </div>
-      )}
+      {preview && <JourneyPreview journey={preview} onClose={() => setPreview(null)} />}
     </div>
   )
 }
