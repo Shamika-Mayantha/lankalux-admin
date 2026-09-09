@@ -8,6 +8,10 @@ const IVORY_RGB = rgb(249 / 255, 244 / 255, 235 / 255)
 const A4_WIDTH_PT = 595.28
 const A4_HEIGHT_PT = 841.89
 const MARGIN_PT = 28
+/** Prefer leaving empty space at the bottom over splitting a photo. */
+const MIN_PAGE_CONTENT_PX = 48
+
+type Range = { top: number; bottom: number }
 
 function waitForImages(root: ParentNode, timeoutMs = 12000): Promise<void> {
   const images = Array.from(root.querySelectorAll('img'))
@@ -48,6 +52,32 @@ function absolutizeUrls(root: HTMLElement, base: string) {
   })
 }
 
+/** Keep day photos short enough that they usually fit under a day header on one page. */
+function prepareCloneForPdf(root: HTMLElement) {
+  root.querySelectorAll('.journey-photo').forEach((el) => {
+    const img = el as HTMLElement
+    img.style.maxHeight = '200px'
+    img.style.width = '100%'
+    img.style.objectFit = 'cover'
+    img.style.display = 'block'
+  })
+  root.querySelectorAll('.journey-photo-wrap').forEach((el) => {
+    const wrap = el as HTMLElement
+    wrap.style.marginLeft = '0'
+    wrap.style.marginRight = '0'
+    wrap.style.breakInside = 'avoid'
+  })
+  root.querySelectorAll('.journey-v-photos img').forEach((el) => {
+    const img = el as HTMLElement
+    img.style.height = '72px'
+    img.style.objectFit = 'cover'
+  })
+  root.querySelectorAll('.journey-logo').forEach((el) => {
+    const img = el as HTMLElement
+    img.style.maxHeight = '48px'
+  })
+}
+
 function slugifyFilename(title: string) {
   const base = title
     .replace(/\s·\sLankaLux$/i, '')
@@ -58,32 +88,103 @@ function slugifyFilename(title: string) {
   return `${base || 'lankalux-itinerary'}.pdf`
 }
 
-function collectBreakYs(root: HTMLElement, scale: number): number[] {
+function layoutMetrics(root: HTMLElement, scale: number): { breaks: number[]; blocked: Range[] } {
   const rootRect = root.getBoundingClientRect()
-  const points = [0]
+  const yAt = (el: Element, edge: 'top' | 'bottom') => {
+    const r = el.getBoundingClientRect()
+    const y = edge === 'top' ? r.top : r.bottom
+    return Math.max(0, Math.round((y - rootRect.top) * scale))
+  }
+
+  const breaks = new Set<number>([0])
+  const blocked: Range[] = []
+
+  // Never slice through photos / logo / vehicle thumbnails
+  root.querySelectorAll('.journey-photo-wrap, .journey-logo, .journey-v-photos').forEach((el) => {
+    const top = yAt(el, 'top')
+    const bottom = yAt(el, 'bottom')
+    if (bottom > top) {
+      blocked.push({ top, bottom })
+      breaks.add(top)
+      breaks.add(bottom)
+    }
+  })
+
+  // Prefer starting new pages at these boundaries
   root
     .querySelectorAll(
-      '.journey-hero, .journey-day, .journey-footer, .journey-footer section, .journey-hotel, .journey-photo-wrap, .journey-contact'
+      '.journey-hero, .journey-day, .journey-footer, .journey-footer section, .journey-hotel, .journey-contact, .journey-desc, .journey-list-title, .journey-acts, .journey-travel'
     )
     .forEach((el) => {
-      const r = el.getBoundingClientRect()
-      const y = Math.max(0, Math.round((r.top - rootRect.top) * scale))
-      if (y > 0) points.push(y)
+      breaks.add(yAt(el, 'top'))
+      breaks.add(yAt(el, 'bottom'))
     })
-  return Array.from(new Set(points)).sort((a, b) => a - b)
+
+  return {
+    breaks: Array.from(breaks).sort((a, b) => a - b),
+    blocked: blocked.sort((a, b) => a.top - b.top),
+  }
 }
 
-function nextSliceEnd(start: number, maxEnd: number, breaks: number[], totalHeight: number): number {
-  const hardEnd = Math.min(maxEnd, totalHeight)
-  if (hardEnd >= totalHeight) return totalHeight
-  let best = hardEnd
+function avoidBlockedEnd(start: number, end: number, blocked: Range[]): number {
+  let next = end
+  for (const zone of blocked) {
+    // Slice would cut through a protected block → end before it when possible
+    if (zone.top < next && zone.bottom > next) {
+      if (zone.top > start + MIN_PAGE_CONTENT_PX) {
+        next = zone.top
+      } else {
+        // Block already began on this page — keep it whole on this page
+        next = Math.max(next, zone.bottom)
+      }
+    }
+  }
+  return next
+}
+
+function nextSliceEnd(
+  start: number,
+  maxEnd: number,
+  breaks: number[],
+  blocked: Range[],
+  totalHeight: number
+): number {
+  if (maxEnd >= totalHeight) return totalHeight
+
+  let hardEnd = avoidBlockedEnd(start, Math.min(maxEnd, totalHeight), blocked)
+
+  // If including a full photo pushed us past a page, still don't cut the photo —
+  // but try to start the photo on the next page instead when it hasn't begun yet.
+  for (const zone of blocked) {
+    if (zone.top >= start && zone.top < hardEnd && zone.bottom > maxEnd) {
+      // Photo cannot fit in remaining page budget
+      if (zone.top > start + MIN_PAGE_CONTENT_PX) {
+        hardEnd = zone.top
+      }
+    }
+  }
+
+  hardEnd = avoidBlockedEnd(start, hardEnd, blocked)
+
+  // Prefer the latest clean break at or before hardEnd
+  let chosen = hardEnd
   for (const y of breaks) {
-    if (y <= start + 8) continue
-    if (y <= hardEnd) best = y
+    if (y <= start + MIN_PAGE_CONTENT_PX) continue
+    if (y <= hardEnd) chosen = y
     else break
   }
-  if (totalHeight - best < 40) return totalHeight
-  return best > start ? best : hardEnd
+
+  chosen = avoidBlockedEnd(start, chosen, blocked)
+
+  // Final guard: never return an end that sits inside a photo
+  for (const zone of blocked) {
+    if (chosen > zone.top && chosen < zone.bottom) {
+      chosen = zone.top > start + MIN_PAGE_CONTENT_PX ? zone.top : zone.bottom
+    }
+  }
+
+  if (totalHeight - chosen < 24) return totalHeight
+  return Math.min(Math.max(chosen, start + 1), totalHeight)
 }
 
 function triggerDownload(bytes: Uint8Array, filename: string) {
@@ -110,12 +211,13 @@ export async function downloadJourneyPdf(node: HTMLElement, title = 'LankaLux It
   clone.style.minHeight = '0'
   clone.style.background = IVORY
   absolutizeUrls(clone, window.location.href)
+  prepareCloneForPdf(clone)
   host.appendChild(clone)
   document.body.appendChild(host)
 
   try {
     await waitForImages(clone)
-    await new Promise((r) => setTimeout(r, 200))
+    await new Promise((r) => setTimeout(r, 250))
 
     const canvas = await html2canvas(clone, {
       scale: 2,
@@ -138,12 +240,17 @@ export async function downloadJourneyPdf(node: HTMLElement, title = 'LankaLux It
     const contentHeight = A4_HEIGHT_PT - MARGIN_PT * 2
     const pxPerPt = canvas.width / contentWidth
     const pageSlicePx = Math.floor(contentHeight * pxPerPt)
-    const breaks = collectBreakYs(clone, canvas.width / Math.max(clone.scrollWidth, 1))
+    const scale = canvas.width / Math.max(clone.scrollWidth, 1)
+    const { breaks, blocked } = layoutMetrics(clone, scale)
 
     const pdf = await PDFDocument.create()
     let y = 0
+    let guard = 0
     while (y < canvas.height - 1) {
-      const end = nextSliceEnd(y, y + pageSlicePx, breaks, canvas.height)
+      guard += 1
+      if (guard > 80) throw new Error('PDF pagination failed.')
+
+      const end = nextSliceEnd(y, y + pageSlicePx, breaks, blocked, canvas.height)
       const sliceH = Math.max(1, end - y)
 
       const slice = document.createElement('canvas')
@@ -163,7 +270,6 @@ export async function downloadJourneyPdf(node: HTMLElement, title = 'LankaLux It
       for (let i = 0; i < binary.length; i += 1) jpgBytes[i] = binary.charCodeAt(i)
       const jpg = await pdf.embedJpg(jpgBytes)
       const page = pdf.addPage([A4_WIDTH_PT, A4_HEIGHT_PT])
-      const drawH = sliceH / pxPerPt
       page.drawRectangle({
         x: 0,
         y: 0,
@@ -171,12 +277,27 @@ export async function downloadJourneyPdf(node: HTMLElement, title = 'LankaLux It
         height: A4_HEIGHT_PT,
         color: IVORY_RGB,
       })
-      page.drawImage(jpg, {
-        x: MARGIN_PT,
-        y: A4_HEIGHT_PT - MARGIN_PT - drawH,
-        width: contentWidth,
-        height: drawH,
-      })
+
+      const naturalH = sliceH / pxPerPt
+      if (naturalH <= contentHeight) {
+        page.drawImage(jpg, {
+          x: MARGIN_PT,
+          y: A4_HEIGHT_PT - MARGIN_PT - naturalH,
+          width: contentWidth,
+          height: naturalH,
+        })
+      } else {
+        // Rare: keep an oversized block whole by scaling the whole page slice down
+        const fit = contentHeight / naturalH
+        const drawW = contentWidth * fit
+        const drawH = contentHeight
+        page.drawImage(jpg, {
+          x: MARGIN_PT + (contentWidth - drawW) / 2,
+          y: A4_HEIGHT_PT - MARGIN_PT - drawH,
+          width: drawW,
+          height: drawH,
+        })
+      }
 
       y = end
     }
