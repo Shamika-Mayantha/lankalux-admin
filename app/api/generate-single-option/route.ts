@@ -1,4 +1,3 @@
-import { ITINERARY_DETAIL_GUIDANCE } from '@/config/itinerary-detail'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@supabase/supabase-js'
@@ -267,8 +266,6 @@ export async function POST(request: Request) {
     
     const prompt = `You are an experienced and passionate luxury travel consultant who creates personalized, memorable journeys through Sri Lanka. Generate ONE distinct, premium itinerary option for the following client:
 
-${ITINERARY_DETAIL_GUIDANCE}
-
 CLIENT INFORMATION:
 - Client Name: ${requestData.client_name || 'Not specified'}
 - Origin Country: ${requestData.origin_country || 'Not specified'}
@@ -322,12 +319,12 @@ ${dayDatesBlock}
 
 - Use ALL the information provided: travel dates, passenger info, and additional preferences
 - Plan locations naturally based on the route - use appropriate location names that fit the geographic flow
-- Activities must be an array of strings (choose a feasible number using ROUTE-AWARE SIGHTSEEING DETAIL; no minimum quota)
+- Activities must be an array of strings (include 4-6 main activities per day)
 - CRITICAL: Each activity MUST include a timestamp in the format "HH:MM - Activity description"
 - Each day MUST include:
   * "image": MANDATORY - Select the most appropriate UNIQUE image path based on the day's MAIN HIGHLIGHT (the primary experience/attraction). Each day must have a DIFFERENT photo - NO REPEATS. Match the photo to what makes this day special (the highlight from the day title), not just the location.
   * "what_to_expect": Write a warm, engaging paragraph (3-4 sentences)
-  * "optional_activities": An array of 0-2 optional alternatives
+  * "optional_activities": An array of 2-4 optional activities
 - Keep tone warm, elegant, premium, and human
 - Make activities detailed, specific, and realistic
 ${requestData.number_of_children && requestData.number_of_children > 0 ? `- IMPORTANT: Consider child-friendly activities for ${requestData.number_of_children} child${requestData.number_of_children > 1 ? 'ren' : ''}` : ''}
