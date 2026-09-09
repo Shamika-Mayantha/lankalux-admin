@@ -2,6 +2,7 @@ import { jsonErr, jsonOk, readJson, requireAdmin } from '@/app/api/v2/_guard'
 import { normalizeStatus } from '@/config/status'
 import { listActivity } from '@/services/activity.service'
 import { publishSoldItinerary } from '@/services/companion-publish.service'
+import { listRequestHotels } from '@/services/catalog.service'
 import { listGenerationLogs, listItineraries } from '@/services/itinerary.service'
 import { getRequest, restoreRequest, updateRequest } from '@/services/request.service'
 import type { RequestInput } from '@/types/domain'
@@ -16,7 +17,8 @@ export async function GET(request: Request, ctx: Ctx) {
     const itineraries = await listItineraries(id)
     const activity = await listActivity(id)
     const generations = await listGenerationLogs(id)
-    return jsonOk({ request: row, itineraries, activity, generations })
+    const hotels = await listRequestHotels(id)
+    return jsonOk({ request: row, itineraries, activity, generations, hotels })
   } catch (err) {
     return jsonErr(err)
   }

@@ -1,6 +1,6 @@
 import { FLEET } from '@/config/fleet'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
-import type { DriverRecord, HotelRecord, VehicleRecord } from '@/types/domain'
+import type { DriverRecord, HotelRecord, RequestHotel, VehicleRecord } from '@/types/domain'
 import { logActivity } from '@/services/activity.service'
 
 function asHotel(row: Record<string, unknown>): HotelRecord {
@@ -60,6 +60,13 @@ export async function attachHotel(requestId: string, hotelId: string, actor?: st
   const supabase = getServiceClient()
   const { data: hotel, error: hErr } = await supabase.from('hotels').select('*').eq('id', hotelId).single()
   if (hErr || !hotel) throw new AppError('Hotel not found', 404)
+  const { data: existing } = await supabase
+    .from('request_hotels')
+    .select('id')
+    .eq('request_id', requestId)
+    .eq('hotel_id', hotelId)
+    .maybeSingle()
+  if (existing?.id) return asHotel(hotel as Record<string, unknown>)
   const { error } = await supabase.from('request_hotels').insert({
     request_id: requestId,
     hotel_id: hotelId,
@@ -67,6 +74,49 @@ export async function attachHotel(requestId: string, hotelId: string, actor?: st
   })
   if (error) throw new AppError(error.message, 500)
   await logActivity({ request_id: requestId, actor, event_type: 'hotel_proposal_attached', detail: { hotelId, name: hotel.name } })
+  return asHotel(hotel as Record<string, unknown>)
+}
+
+export async function listRequestHotels(requestId: string): Promise<RequestHotel[]> {
+  const supabase = getServiceClient()
+  const { data, error } = await supabase
+    .from('request_hotels')
+    .select('id, hotel_id, snapshot, hotels(*)')
+    .eq('request_id', requestId)
+    .order('created_at')
+  if (error) {
+    if (isMissingTableError(error)) return []
+    throw new AppError(`Supabase request failed: ${error.message}`, 500)
+  }
+  return (data || []).map((row: Record<string, unknown>) => {
+    const related = row.hotels
+    const raw = ((Array.isArray(related) ? related[0] : related) || row.snapshot || {}) as Record<string, unknown>
+    const hotel = asHotel({ ...raw, id: raw.id || row.hotel_id })
+    return {
+      ...hotel,
+      id: String(hotel.id || row.hotel_id || ''),
+      attachment_id: String(row.id),
+    }
+  })
+}
+
+export async function detachRequestHotel(requestId: string, attachmentId: string, actor?: string) {
+  const supabase = getServiceClient()
+  const { data, error } = await supabase
+    .from('request_hotels')
+    .delete()
+    .eq('id', attachmentId)
+    .eq('request_id', requestId)
+    .select('hotel_id, snapshot')
+    .maybeSingle()
+  if (error) throw new AppError(error.message, 500)
+  const snapshot = (data?.snapshot || {}) as Record<string, unknown>
+  await logActivity({
+    request_id: requestId,
+    actor,
+    event_type: 'hotel_proposal_removed',
+    detail: { hotelId: data?.hotel_id, name: snapshot.name },
+  })
 }
 
 export async function listVehicles(): Promise<VehicleRecord[]> {

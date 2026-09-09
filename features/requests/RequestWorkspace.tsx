@@ -12,7 +12,7 @@ import { JourneyView } from '@/features/journey/JourneyView'
 import { PhotoPicker } from '@/features/console/PhotoPicker'
 import { InvoiceWorkspace } from '@/features/invoices/InvoiceWorkspace'
 import '@/features/journey/journey.css'
-import type { ActivityEvent, CanonicalJourney, ClientRequestRow, DriverRecord, ItineraryDay, ItineraryRecord, StructuredItinerary, VehicleRecord } from '@/types/domain'
+import type { ActivityEvent, CanonicalJourney, ClientRequestRow, DriverRecord, HotelRecord, ItineraryDay, ItineraryRecord, RequestHotel, StructuredItinerary, VehicleRecord } from '@/types/domain'
 import {
   FOLLOW_UP_TEMPLATES,
   buildHtmlFromBody,
@@ -35,6 +35,8 @@ function emptyDay(n: number): ItineraryDay {
     optional_activities: [],
     travel: { ...EMPTY_TRAVEL },
     recommended_images: [],
+    hotel_id: null,
+    hotel_name: null,
   }
 }
 
@@ -233,7 +235,9 @@ function activityLabel(eventType: string) {
     payment_edited: 'Payment edited',
     payment_deleted: 'Payment deleted',
     invoice_marked_paid: 'Invoice marked paid',
-    invoice_revised: 'Revised invoice created',
+    hotel_proposal_attached: 'Hotel attached',
+    hotel_proposal_removed: 'Hotel removed',
+    hotels_applied_to_itineraries: 'Hotels inserted into itineraries',
   }
   return labels[eventType] || eventType.replace(/_/g, ' ')
 }
@@ -245,7 +249,7 @@ export function RequestWorkspace() {
   const [itineraries, setItineraries] = useState<ItineraryRecord[]>([])
   const [activity, setActivity] = useState<ActivityEvent[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<'overview' | 'itineraries' | 'editor' | 'invoices' | 'activity'>('overview')
+  const [tab, setTab] = useState<'overview' | 'itineraries' | 'editor' | 'hotels' | 'invoices' | 'activity'>('overview')
   const [generating, setGenerating] = useState<Record<number, boolean>>({})
   const [genError, setGenError] = useState<Record<number, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
@@ -268,6 +272,9 @@ export function RequestWorkspace() {
   const [waHref, setWaHref] = useState('')
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([])
   const [drivers, setDrivers] = useState<DriverRecord[]>([])
+  const [attachedHotels, setAttachedHotels] = useState<RequestHotel[]>([])
+  const [catalogueHotels, setCatalogueHotels] = useState<HotelRecord[]>([])
+  const [hotelToAdd, setHotelToAdd] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
   const [overviewDraft, setOverviewDraft] = useState<OverviewDraft | null>(null)
   const [templateId, setTemplateId] = useState<TemplateId>('friendly_checkin')
@@ -280,6 +287,7 @@ export function RequestWorkspace() {
     setRow(json.request)
     setItineraries(json.itineraries || [])
     setActivity(json.activity || [])
+    setAttachedHotels(json.hotels || [])
   }
 
   useEffect(() => {
@@ -290,6 +298,9 @@ export function RequestWorkspace() {
       .catch(() => {})
     consoleFetch('/api/v2/drivers')
       .then((d) => setDrivers(d.drivers || []))
+      .catch(() => {})
+    consoleFetch('/api/v2/hotels')
+      .then((d) => setCatalogueHotels((d.hotels || []).filter((h: HotelRecord) => h.active !== false)))
       .catch(() => {})
   }, [id])
 
@@ -338,6 +349,12 @@ export function RequestWorkspace() {
     [sendVehicle]
   )
   const missingVehicleSelection = includeVehicle && !sendVehiclePayload
+  const availableCatalogue = catalogueHotels.filter((hotel) => !attachedHotels.some((attached) => attached.id === hotel.id))
+  const generatedCount = itineraries.filter((rec) => rec.payload?.days?.length).length
+
+  useEffect(() => {
+    if (attachedHotels.length) setIncludeHotels(true)
+  }, [attachedHotels.length])
 
   async function generate(n: 1 | 2 | 3, style: ItineraryStyle) {
     setGenError((e) => ({ ...e, [n]: '' }))
@@ -361,6 +378,64 @@ export function RequestWorkspace() {
       generate(2, 'relaxed'),
       generate(3, 'experience'),
     ])
+  }
+
+  async function attachSelectedHotel() {
+    if (!hotelToAdd) return
+    setBusy('Attaching hotel…')
+    setError(null)
+    try {
+      const json = await consoleFetch('/api/v2/request-hotels', {
+        method: 'POST',
+        body: JSON.stringify({ requestId: id, hotelId: hotelToAdd }),
+      })
+      setAttachedHotels(json.hotels || [])
+      setHotelToAdd('')
+      setNotice('Hotel attached. Generate or insert it onto matching overnight days.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not attach hotel')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function removeAttachedHotel(attachmentId: string) {
+    setBusy('Removing hotel…')
+    setError(null)
+    try {
+      const json = await consoleFetch(
+        `/api/v2/request-hotels?requestId=${encodeURIComponent(id)}&attachmentId=${encodeURIComponent(attachmentId)}`,
+        { method: 'DELETE' }
+      )
+      setAttachedHotels(json.hotels || [])
+      setNotice('Hotel removed from this request.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not remove hotel')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function insertHotelsIntoItineraries() {
+    setBusy('Inserting hotels…')
+    setError(null)
+    try {
+      const json = await consoleFetch('/api/v2/request-hotels', {
+        method: 'POST',
+        body: JSON.stringify({ requestId: id, action: 'apply' }),
+      })
+      await reload()
+      const n = Number(json.matchCount || 0)
+      setNotice(
+        n > 0
+          ? `Inserted stays onto ${n} itinerary day${n === 1 ? '' : 's'}.`
+          : 'No overnight towns matched a hotel destination. Check hotel destinations against day locations.'
+      )
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not insert hotels')
+    } finally {
+      setBusy(null)
+    }
   }
 
   async function selectOption(n: 1 | 2 | 3) {
@@ -703,13 +778,23 @@ export function RequestWorkspace() {
       })(),
       days: draft.days,
       vehicle: vehicle ? { id: vehicle.id, name: vehicle.name, description: vehicle.description || '', photos: vehicle.photos } : null,
-      hotels: [],
+      hotels: attachedHotels.map((hotel) => ({
+        id: hotel.id,
+        name: hotel.name,
+        destination: hotel.destination || '',
+        star_category: hotel.star_category || '',
+        description: hotel.description || '',
+        room_category: hotel.room_category || '',
+        meal_plan: hotel.meal_plan || '',
+        images: hotel.images || [],
+        website: hotel.website,
+      })),
       includedServices: BRAND.includedServices,
       importantInformation: BRAND.importantInformation,
       price: draft.price || null,
       totalKilometers: totalKilometersFor(draft.days),
     }
-  }, [row, draft, itineraries, editOption, vehicles])
+  }, [row, draft, itineraries, editOption, vehicles, attachedHotels])
 
   if (error && !row) return <div className="ll-error">{error}</div>
   if (!row) return <p>Loading request…</p>
@@ -784,6 +869,7 @@ export function RequestWorkspace() {
             ['overview', 'Overview'],
             ['itineraries', 'Itineraries'],
             ['editor', 'Editor'],
+            ['hotels', 'Hotels'],
             ['invoices', 'Invoices & Payments'],
             ['activity', 'Activity'],
           ] as const
@@ -1134,7 +1220,7 @@ export function RequestWorkspace() {
             <button className="ll-btn" disabled={Object.values(generating).some(Boolean)} onClick={generateAll}>
               Generate itineraries
             </button>
-            <span className="ll-muted">Each option is a separate job. A failure will not erase the others.</span>
+            <span className="ll-muted">Each option is a separate job. A failure will not erase the others. Attached hotels are optional and will be named on matching overnight days.</span>
           </div>
           <div className="ll-option-grid">
             {([1, 2, 3] as const).map((n) => {
@@ -1192,10 +1278,67 @@ export function RequestWorkspace() {
           option={editOption}
           setOption={setEditOption}
           vehicles={vehicles}
+          hotels={attachedHotels}
           onSave={saveDraft}
           busy={!!busy}
           onPreview={() => previewJourney && setPreview(previewJourney)}
         />
+      )}
+
+      {tab === 'hotels' && (
+        <div>
+          <p className="ll-muted" style={{ marginTop: 0 }}>
+            Hotels are optional. Attach stays from the catalogue when you want them named on overnight days. Generate will use them automatically, or insert them into itineraries already written.
+          </p>
+          <div className="ll-form" style={{ maxWidth: 640, marginBottom: 24 }}>
+            <label>
+              Add a hotel
+              <select value={hotelToAdd} onChange={(e) => setHotelToAdd(e.target.value)}>
+                <option value="">Select from catalogue</option>
+                {availableCatalogue.map((hotel) => (
+                  <option key={hotel.id} value={hotel.id}>
+                    {hotel.name}
+                    {hotel.destination ? ` · ${hotel.destination}` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="ll-row">
+              <button className="ll-btn" disabled={!hotelToAdd || !!busy} onClick={attachSelectedHotel}>
+                Attach hotel
+              </button>
+              <button
+                className="ll-btn secondary"
+                disabled={!attachedHotels.length || !generatedCount || !!busy}
+                onClick={insertHotelsIntoItineraries}
+              >
+                Insert into itineraries
+              </button>
+              <a className="ll-btn ghost" href="/console/hotels">
+                Manage catalogue
+              </a>
+            </div>
+          </div>
+          {attachedHotels.length === 0 ? (
+            <p className="ll-muted">No hotels on this request. Generation still works — overnight towns only.</p>
+          ) : (
+            <div className="ll-grid">
+              {attachedHotels.map((hotel) => (
+                <div className="ll-card" key={hotel.attachment_id}>
+                  <h3>{hotel.destination || 'Stay'}</h3>
+                  <p className="ll-card-title">{hotel.name}</p>
+                  <p className="ll-muted">
+                    {[hotel.star_category, hotel.room_category, hotel.meal_plan].filter(Boolean).join(' · ') || 'No extra details'}
+                  </p>
+                  {hotel.description ? <p>{hotel.description}</p> : null}
+                  <button className="ll-btn secondary" disabled={!!busy} onClick={() => removeAttachedHotel(hotel.attachment_id)}>
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {tab === 'invoices' && (
@@ -1469,6 +1612,7 @@ function Editor({
   option,
   setOption,
   vehicles,
+  hotels,
   onSave,
   busy,
   onPreview,
@@ -1478,6 +1622,7 @@ function Editor({
   option: 1 | 2 | 3
   setOption: (n: 1 | 2 | 3) => void
   vehicles: VehicleRecord[]
+  hotels: RequestHotel[]
   onSave: () => void
   busy: boolean
   onPreview: () => void
@@ -1615,6 +1760,25 @@ function Editor({
                     <input value={day.overnight_location} onChange={(e) => patchDay(i, { overnight_location: e.target.value })} />
                   </label>
                 </div>
+                <label>
+                  Overnight hotel (optional)
+                  <select
+                    value={day.hotel_id || ''}
+                    onChange={(e) => {
+                      const nextId = e.target.value
+                      const hotel = hotels.find((h) => h.id === nextId)
+                      patchDay(i, { hotel_id: nextId || null, hotel_name: hotel?.name || null })
+                    }}
+                  >
+                    <option value="">No hotel on this day</option>
+                    {hotels.map((hotel) => (
+                      <option key={hotel.attachment_id} value={hotel.id}>
+                        {hotel.name}
+                        {hotel.destination ? ` · ${hotel.destination}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label>
                   What happens this day
                   <textarea rows={4} value={day.description} onChange={(e) => patchDay(i, { description: e.target.value })} />

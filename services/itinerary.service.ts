@@ -6,6 +6,10 @@ import { applyJourneyKilometers, totalKilometersFor } from '@/services/kilometer
 import { logActivity } from '@/services/activity.service'
 import { getRequest, parseChildrenAges } from '@/services/request.service'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
+import { listRequestHotels } from '@/services/catalog.service'
+import { applyHotelsToDays, type StayCandidate } from '@/services/hotel-match.service'
+import { parseHotelOptions } from '@/lib/hotel-types'
+import { imageSrcs, normalizeManagedImages } from '@/lib/managed-image'
 import type {
   CanonicalJourney,
   ClientRequestRow,
@@ -58,6 +62,7 @@ export function toStructured(raw: unknown, startDate?: string | null): Structure
       : d.image
         ? [d.image]
         : []
+    const extra = d as { hotel_id?: unknown; hotel_name?: unknown }
     return {
       day: i + 1,
       date,
@@ -74,7 +79,8 @@ export function toStructured(raw: unknown, startDate?: string | null): Structure
         estimated_duration: d.travel?.estimated_duration || '',
       },
       recommended_images: recommended,
-      hotel_id: null,
+      hotel_id: typeof extra.hotel_id === 'string' && extra.hotel_id.trim() ? extra.hotel_id.trim() : null,
+      hotel_name: typeof extra.hotel_name === 'string' && extra.hotel_name.trim() ? extra.hotel_name.trim() : null,
     }
   })
   const km = applyJourneyKilometers(days)
@@ -208,6 +214,8 @@ async function syncLegacyJson(requestId: string, records: ItineraryRecord[]) {
         optional_activities: d.optional_activities,
         what_to_expect: d.description,
         travel: d.travel,
+        hotel_id: d.hotel_id || null,
+        hotel_name: d.hotel_name || null,
       })),
     }
   })
@@ -539,28 +547,61 @@ async function getVehicle(id: string | null | undefined): Promise<VehicleRecord 
   return FLEET.find((v) => v.id === id) || null
 }
 
-async function hotelsForRequest(requestId: string) {
-  const supabase = getServiceClient()
-  const { data, error } = await supabase
-    .from('request_hotels')
-    .select('id, hotel_id, snapshot, hotels(*)')
-    .eq('request_id', requestId)
-  if (error || !data) return []
-  return data.map((row: Record<string, unknown>) => {
-    const hotel = (row.hotels || row.snapshot || {}) as Record<string, unknown>
-    const images = Array.isArray(hotel.images) ? (hotel.images as string[]) : []
-    return {
-      id: String(hotel.id || row.hotel_id || row.id),
-      name: String(hotel.name || 'Hotel'),
-      destination: String(hotel.destination || ''),
-      star_category: String(hotel.star_category || ''),
-      description: String(hotel.description || ''),
-      room_category: String(hotel.room_category || ''),
-      meal_plan: String(hotel.meal_plan || ''),
-      images,
-      website: (hotel.website as string) || null,
-    }
+export async function hotelsForRequest(requestId: string): Promise<StayCandidate[]> {
+  const attached = await listRequestHotels(requestId)
+  if (attached.length) {
+    return attached.map((hotel) => ({
+      id: hotel.id,
+      name: hotel.name,
+      destination: hotel.destination || '',
+      star_category: hotel.star_category,
+      room_category: hotel.room_category,
+      meal_plan: hotel.meal_plan,
+      description: hotel.description,
+      images: hotel.images || [],
+      website: hotel.website,
+    }))
+  }
+  try {
+    const request = await getRequest(requestId)
+    return parseHotelOptions(request.hotel_options).hotels.map((hotel) => ({
+      id: hotel.id,
+      name: hotel.name,
+      destination: hotel.location || '',
+      star_category: hotel.starRating,
+      room_category: hotel.roomType,
+      meal_plan: null,
+      description: hotel.description,
+      images: imageSrcs(normalizeManagedImages(hotel.images)),
+      website: hotel.mapsUrl || null,
+    }))
+  } catch {
+    return []
+  }
+}
+
+export async function applyHotelsToRequestItineraries(requestId: string, actor?: string) {
+  const hotels = await hotelsForRequest(requestId)
+  if (!hotels.length) throw new AppError('Add hotels first. Stays are optional — attach one when you want it on the itinerary.', 400)
+  const all = await listItineraries(requestId)
+  const withDays = all.filter((rec) => rec.payload?.days?.length)
+  if (!withDays.length) throw new AppError('Generate itineraries first, then insert hotels onto matching overnight days.', 400)
+  let matchCount = 0
+  const saved: ItineraryRecord[] = []
+  for (const rec of withDays) {
+    const applied = applyHotelsToDays(rec.payload.days, hotels, { replace: true })
+    matchCount += applied.matchCount
+    saved.push(
+      await updateItineraryDraft(requestId, rec.option_number, { ...rec.payload, days: applied.days }, undefined, actor)
+    )
+  }
+  await logActivity({
+    request_id: requestId,
+    actor,
+    event_type: 'hotels_applied_to_itineraries',
+    detail: { matchCount, hotelCount: hotels.length },
   })
+  return { matchCount, itineraries: saved }
 }
 
 export async function getPublishedItinerary(requestId: string): Promise<CanonicalJourney> {
@@ -611,7 +652,17 @@ export async function getClientItinerary(
 
 export async function toCanonical(request: ClientRequestRow, itinerary: ItineraryRecord): Promise<CanonicalJourney> {
   const vehicle = await getVehicle(itinerary.vehicle_id || itinerary.payload.vehicle_id)
-  const hotels = await hotelsForRequest(request.id)
+  const hotels = (await hotelsForRequest(request.id)).map((hotel) => ({
+    id: hotel.id,
+    name: hotel.name,
+    destination: hotel.destination || '',
+    star_category: hotel.star_category || '',
+    description: hotel.description || '',
+    room_category: hotel.room_category || '',
+    meal_plan: hotel.meal_plan || '',
+    images: hotel.images || [],
+    website: hotel.website || null,
+  }))
   const ages = parseChildrenAges(request.children_ages)
   return {
     requestId: request.id,

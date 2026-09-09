@@ -101,6 +101,11 @@ export function JourneyView({
                   : ''}
                 {day.date ? ` · ${day.date}` : ''}
               </p>
+              {day.hotel_name || (day.hotel_id && journey.hotels.find((h) => h.id === day.hotel_id)) ? (
+                <p className="journey-day-stay">
+                  Stay · {day.hotel_name || journey.hotels.find((h) => h.id === day.hotel_id)?.name}
+                </p>
+              ) : null}
               {img ? (
                 <div className="journey-photo-wrap">
                   <img src={img} alt={day.location || day.title} className="journey-photo" />

@@ -19,6 +19,7 @@ export type ItineraryDay = {
   travel: TravelInfo
   recommended_images: string[]
   hotel_id?: string | null
+  hotel_name?: string | null
 }
 
 export type StructuredItinerary = {
@@ -258,6 +259,10 @@ export type HotelRecord = {
   contact: string | null
   internal_notes: string | null
   active: boolean
+}
+
+export type RequestHotel = HotelRecord & {
+  attachment_id: string
 }
 
 export type VehicleRecord = {
