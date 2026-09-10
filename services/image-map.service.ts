@@ -116,7 +116,13 @@ export function assignDayImages(
 ): string[][] {
   const used = new Set<string>()
   return days.map((day) => {
-    const existing = (day.recommended_images || []).filter((src) => src.startsWith('/images/') || src.startsWith('/Fleet/'))
+    const existing = (day.recommended_images || []).filter(
+      (src) =>
+        src.startsWith('/images/') ||
+        src.startsWith('/Fleet/') ||
+        src.startsWith('/uploads/') ||
+        src.includes('/storage/v1/object/public/')
+    )
     if (existing.length) {
       existing.forEach((s) => used.add(s))
       return existing

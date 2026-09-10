@@ -724,6 +724,15 @@ button.ll-card,
   gap: 8px;
 }
 
+.ll-photos.is-drop {
+  outline: 2px dashed var(--gold);
+  outline-offset: 4px;
+}
+
+.ll-file-hidden {
+  display: none;
+}
+
 .ll-photo-tile {
   aspect-ratio: 1;
   border: 1px solid var(--line);

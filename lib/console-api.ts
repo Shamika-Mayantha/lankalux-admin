@@ -10,7 +10,8 @@ export async function consoleFetch(path: string, init: RequestInit = {}) {
   }
   const headers = new Headers(init.headers)
   headers.set('Authorization', `Bearer ${token}`)
-  if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+  const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData
+  if (init.body && !headers.has('Content-Type') && !isFormData) headers.set('Content-Type', 'application/json')
   const res = await fetch(path, { ...init, headers })
   const json = await res.json().catch(() => ({ success: false, error: `Server error (${res.status})` }))
   if (!res.ok || json.success === false) {
