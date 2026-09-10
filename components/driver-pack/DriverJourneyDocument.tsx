@@ -10,6 +10,8 @@ const styles = StyleSheet.create({
     color: DOC.forest,
     fontFamily: DOC.fontBody,
     fontSize: 10,
+    fontWeight: 400,
+    fontStyle: 'normal',
     paddingTop: 36,
     paddingBottom: 48,
     paddingHorizontal: 42,
@@ -215,7 +217,8 @@ const styles = StyleSheet.create({
   },
   tbc: {
     color: DOC.muted,
-    fontStyle: 'italic',
+    fontFamily: DOC.fontBody,
+    fontWeight: 400,
   },
 })
 

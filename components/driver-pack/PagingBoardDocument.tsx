@@ -8,88 +8,91 @@ const styles = StyleSheet.create({
     backgroundColor: DOC.background,
     color: DOC.forest,
     fontFamily: DOC.fontDisplay,
-    padding: 48,
+    paddingTop: 28,
+    paddingBottom: 24,
+    paddingHorizontal: 32,
   },
-  frame: {
+  sheet: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: DOC.borderSoft,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 48,
-    paddingVertical: 36,
+    justifyContent: 'space-between',
   },
-  inner: {
+  top: {
     width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  rule: {
-    width: 120,
-    height: 1.5,
-    backgroundColor: DOC.gold,
-    marginVertical: 18,
-  },
-  tagline: {
+  motto: {
     marginTop: 10,
-    fontFamily: DOC.fontBody,
-    fontSize: 11,
-    letterSpacing: 1.6,
-    color: DOC.muted,
+    fontFamily: DOC.fontDisplay,
+    fontSize: 16,
+    letterSpacing: 3.2,
+    color: DOC.forest,
+    fontWeight: 600,
     textAlign: 'center',
   },
+  rule: {
+    width: 220,
+    height: 2,
+    backgroundColor: DOC.gold,
+  },
   welcome: {
-    fontSize: 16,
-    letterSpacing: 4.2,
-    color: DOC.gold,
-    fontWeight: 600,
+    fontFamily: DOC.fontDisplay,
+    fontSize: 36,
+    letterSpacing: 3.4,
+    color: DOC.forest,
+    fontWeight: 700,
     textAlign: 'center',
   },
   names: {
-    marginTop: 10,
-    alignItems: 'center',
     width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 8,
   },
   guest: {
-    fontSize: 64,
-    fontWeight: 600,
+    fontFamily: DOC.fontDisplay,
+    fontWeight: 700,
     color: DOC.forest,
     textAlign: 'center',
-    letterSpacing: 2,
+    letterSpacing: 1.4,
     lineHeight: 1.05,
   },
-  guestCompact: {
-    fontSize: 46,
-  },
   amp: {
+    fontFamily: DOC.fontDisplay,
     fontSize: 28,
-    color: DOC.gold,
+    color: DOC.forest,
     textAlign: 'center',
-    marginVertical: 6,
-    fontWeight: 400,
+    marginVertical: 4,
+    fontWeight: 600,
   },
 })
 
+function guestFontSize(count: number) {
+  if (count <= 1) return 88
+  if (count === 2) return 72
+  return 48
+}
+
 export function PagingBoardDocument({ data, logoSrc }: { data: DriverPackData; logoSrc: string | null }) {
   const names = data.guestNames.length ? data.guestNames : [data.guestName]
-  const compact = names.length > 2
+  const nameSize = guestFontSize(names.length)
   return (
     <Document title={`LankaLux Paging Board — ${data.guestName}`} author="LankaLux" subject="Airport paging board">
-      <Page size="A3" orientation="landscape" style={styles.page}>
-        <View style={styles.frame}>
-          <View style={styles.inner}>
-            <DriverPackLogo src={logoSrc} height={72} maxWidth={360} align="center" />
-            <Text style={styles.tagline}>{DOC.tagline.toUpperCase()}</Text>
-            <View style={styles.rule} />
-            <Text style={styles.welcome}>WELCOME TO SRI LANKA</Text>
-            <View style={styles.names}>
-              {names.map((name, index) => (
-                <View key={`${name}-${index}`} style={{ alignItems: 'center', width: '100%' }}>
-                  {index > 0 ? <Text style={styles.amp}>&</Text> : null}
-                  <Text style={[styles.guest, compact ? styles.guestCompact : {}]}>{name.toUpperCase()}</Text>
-                </View>
-              ))}
-            </View>
+      <Page size="A4" orientation="landscape" style={styles.page}>
+        <View style={styles.sheet}>
+          <View style={styles.top}>
+            <DriverPackLogo src={logoSrc} height={118} maxWidth={640} align="center" />
+            <Text style={styles.motto}>{DOC.tagline.toUpperCase()}</Text>
+          </View>
+          <View style={styles.rule} />
+          <Text style={styles.welcome}>WELCOME TO SRI LANKA</Text>
+          <View style={styles.names}>
+            {names.map((name, index) => (
+              <View key={`${name}-${index}`} style={{ alignItems: 'center', width: '100%' }}>
+                {index > 0 ? <Text style={styles.amp}>&</Text> : null}
+                <Text style={[styles.guest, { fontSize: nameSize }]}>{name.toUpperCase()}</Text>
+              </View>
+            ))}
           </View>
         </View>
       </Page>
