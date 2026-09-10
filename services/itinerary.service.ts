@@ -10,6 +10,7 @@ import { listRequestHotels } from '@/services/catalog.service'
 import { applyHotelsToDays, type StayCandidate } from '@/services/hotel-match.service'
 import { parseHotelOptions } from '@/lib/hotel-types'
 import { imageSrcs, normalizeManagedImages } from '@/lib/managed-image'
+import { ensureMinimumDayActivities } from '@/config/sri-lanka-places'
 import type {
   CanonicalJourney,
   ClientRequestRow,
@@ -83,7 +84,8 @@ export function toStructured(raw: unknown, startDate?: string | null): Structure
       hotel_name: typeof extra.hotel_name === 'string' && extra.hotel_name.trim() ? extra.hotel_name.trim() : null,
     }
   })
-  const km = applyJourneyKilometers(days)
+  const padded = ensureMinimumDayActivities(days)
+  const km = applyJourneyKilometers(padded)
   return {
     title: data.title.trim(),
     summary: data.summary.trim(),

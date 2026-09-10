@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
+import { BRAND } from "@/config/brand";
 
 export const metadata: Metadata = {
   title: "LankaLux Journey",
   description: "Your personalized Sri Lanka itinerary",
   icons: {
     icon: [
+      { url: BRAND.shareImageSrc, type: 'image/png' },
       { url: '/favicon.ico', sizes: 'any' },
-      { url: '/favicon.png', type: 'image/png' },
     ],
-    apple: '/favicon.png',
+    apple: BRAND.shareImageSrc,
   },
   appleWebApp: {
     capable: true,

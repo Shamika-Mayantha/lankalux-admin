@@ -67,6 +67,9 @@ export const REGIONS: RegionGuide[] = [
       { name: 'Village tank & home cookery', note: 'A real rural welcome: paddy paths, a catamaran on the tank, lunch in a family kitchen. Keep it unscripted.', kind: 'in_place' },
       { name: 'Minneriya or Kaudulla', note: 'Seasonal wild elephants on the tanks. Choose the park that is gathering that month — never both in one afternoon.', kind: 'optional' },
       { name: 'Polonnaruwa', note: 'Half-day of galleries and reclining Buddha if the stay is two nights.', kind: 'optional' },
+      { name: 'Hurulu Eco Park', note: 'A quieter tank-edge jeep if Minneriya is crowded — still wild elephants, fewer vehicles.', kind: 'optional' },
+      { name: 'Kaludiya Pokuna', note: 'Forest monastery ruins near Dambulla; a short, almost empty walk.', kind: 'en_route' },
+      { name: 'Mihintale', note: 'The stair and white dagoba above Anuradhapura if the stay stretches north.', kind: 'optional' },
     ],
   },
   {
@@ -82,6 +85,8 @@ export const REGIONS: RegionGuide[] = [
       { name: 'Kandy market', note: 'Fruit, spices and everyday city life — ten to twenty minutes, not a shopping tour.', kind: 'in_place' },
       { name: 'Kandyan dance performance', note: 'An evening cultural show if they enjoy music; skip if the day was already long.', kind: 'optional' },
       { name: 'Ambuluwawa Tower', note: 'Spiral white tower and hill views toward Gampola — experience days only, not for rushed stays.', kind: 'optional' },
+      { name: 'Embekke Devale', note: 'Carved wooden pillars in a quiet village shrine south-west of Kandy.', kind: 'optional' },
+      { name: 'Gadaladeniya & Lankatilaka', note: 'A pair of hill temples on the same loop as Embekke — pick one if time is short.', kind: 'optional' },
     ],
   },
   {
@@ -97,6 +102,8 @@ export const REGIONS: RegionGuide[] = [
       { name: 'Strawberry garden', note: 'A light, family-friendly pause for fruit and a view. Not a full afternoon.', kind: 'optional' },
       { name: 'Gregory Lake & park', note: 'Boat, lawn and the hill-station promenade at the end of the day.', kind: 'in_place' },
       { name: 'Ambewela dairy country', note: 'Open pasture and cool air on the road south of town if they have spare time.', kind: 'optional' },
+      { name: 'Moon Plains', note: 'A 360-degree hill-country lookout above town — short walk, wide sky.', kind: 'in_place' },
+      { name: 'Lover’s Leap Falls', note: 'A hidden cascade on the edge of Nuwara Eliya; ten minutes from the car.', kind: 'in_place' },
     ],
   },
   {
@@ -111,6 +118,9 @@ export const REGIONS: RegionGuide[] = [
       { name: 'Ravana Falls', note: 'Roadside cascade on the way into or out of Ella; a swim only if the flow is kind.', kind: 'en_route' },
       { name: 'Ella Gap viewpoint', note: 'The drop toward the southern plains — a two-minute pull-over that earns the drive.', kind: 'en_route' },
       { name: 'Hill-country tea trail', note: 'A short walk through bushes above town, not a second factory tour.', kind: 'optional' },
+      { name: 'Dowa Rock Temple', note: 'Unfinished Buddha carved into a cliff between Bandarawela and Ella.', kind: 'en_route' },
+      { name: 'Lipton’s Seat', note: 'Dawn lookout above Haputale if they overnight nearby; skip on a tight Ella transfer.', kind: 'optional' },
+      { name: 'Diyaluma Falls', note: 'Sri Lanka’s second-highest fall, a short detour off the Wellawaya road.', kind: 'en_route' },
     ],
   },
   {
@@ -139,6 +149,9 @@ export const REGIONS: RegionGuide[] = [
       { name: 'Koggala lagoon & folklore museum', note: 'A calmer water afternoon than jet-skis, with a glimpse of southern literary history.', kind: 'optional' },
       { name: 'Hummanaya blowhole', note: 'A five-minute roadside wonder between Yala and Tangalle when swell is up.', kind: 'en_route' },
       { name: 'Mulkirigala Rock Temple', note: 'Cave murals on a laterite stair — a cultured pause on the same south-east road.', kind: 'en_route' },
+      { name: 'Weligama stilt fishermen', note: 'The iconic pose at first light — a respectful photo stop, not a performance.', kind: 'in_place' },
+      { name: 'Japanese Peace Pagoda, Unawatuna', note: 'White stupa above Jungle Beach with a bay view.', kind: 'optional' },
+      { name: 'Rumassala & Jungle Beach', note: 'A short forest walk to a hidden cove if they want sea without the main strip.', kind: 'optional' },
     ],
   },
   {
@@ -205,7 +218,8 @@ export const CORRIDORS: CorridorGuide[] = [
       { name: 'Nanu Oya to Ella train', note: 'When tickets exist, this is the day’s gift. Vehicle meets the party at Ella station.', kind: 'en_route' },
       { name: 'Ella Gap viewpoint', note: 'The first look down to the south.', kind: 'en_route' },
       { name: 'Nine Arches Bridge', note: 'On arrival in Demodara / Ella.', kind: 'en_route' },
-      { name: 'Ravana Falls', note: 'The roadside veil just before town.', kind: 'en_route' },
+      { name: 'Rawana Falls', note: 'The roadside veil just before town.', kind: 'en_route' },
+      { name: 'Diyaluma Falls', note: 'A taller cascade on the descent toward Wellawaya if the route heads south-east.', kind: 'en_route' },
     ],
   },
   {
@@ -216,6 +230,7 @@ export const CORRIDORS: CorridorGuide[] = [
     stops: [
       { name: 'Wellawaya plains', note: 'The landscape shift from tea to dry zone — worth naming in the day copy.', kind: 'en_route' },
       { name: 'Buduruwagala', note: 'Forest Buddhas off the Wellawaya road.', kind: 'en_route' },
+      { name: 'Diyaluma Falls', note: 'Upper pools and the big drop — worth the short walk if they have an hour.', kind: 'en_route' },
       { name: 'Rawana already done in Ella', note: 'Do not repeat the falls if they were visited yesterday.', kind: 'optional' },
     ],
   },
@@ -297,9 +312,10 @@ function expandAlongClassicLine(hit: RegionGuide[]): RegionGuide[] {
   return REGIONS.filter((region) => ids.has(region.id))
 }
 
-export function matchRegions(text: string): RegionGuide[] {
+export function matchRegions(text: string, opts?: { expand?: boolean }): RegionGuide[] {
   const hay = text.toLowerCase()
   const hit = REGIONS.filter((region) => region.match.some((token) => hay.includes(token)))
+  if (opts?.expand === false) return hit
   const base = hit.length ? hit : REGIONS.filter((region) => CLASSIC_REGION_IDS.includes(region.id))
   return expandAlongClassicLine(base)
 }
@@ -336,4 +352,113 @@ export function formatPlacesCatalog(regions: RegionGuide[], corridors: CorridorG
     .map((corridor) => `DRIVE ${corridor.drive}\n${formatStops(corridor.stops)}`)
     .join('\n\n')
   return [regionBlock, corridorBlock].filter(Boolean).join('\n\n')
+}
+
+export const MIN_DAY_ACTIVITIES = 4
+
+export function stopsForDay(day: {
+  location?: string
+  overnight_location?: string
+  title?: string
+  travel?: { from?: string; to?: string }
+}): PlaceStop[] {
+  const here = haystackOf([day.location, day.overnight_location, day.title])
+  const fromText = haystackOf([day.travel?.from, day.location])
+  const toText = haystackOf([day.travel?.to, day.overnight_location, day.location])
+  const hereRegions = matchRegions(here, { expand: false })
+  const fromRegions = matchRegions(fromText, { expand: false })
+  const toRegions = matchRegions(toText, { expand: false })
+  const regionIds = new Set([...hereRegions, ...fromRegions, ...toRegions].map((region) => region.id))
+  const regions = REGIONS.filter((region) => regionIds.has(region.id))
+  const corridors = CORRIDORS.filter((corridor) => {
+    const forward = fromRegions.some((r) => r.id === corridor.from) && toRegions.some((r) => r.id === corridor.to)
+    const reverse = fromRegions.some((r) => r.id === corridor.to) && toRegions.some((r) => r.id === corridor.from)
+    return forward || reverse
+  })
+
+  const seen = new Set<string>()
+  const out: PlaceStop[] = []
+  const push = (stop: PlaceStop) => {
+    if (/already done/i.test(stop.name)) return
+    const key = stop.name.toLowerCase()
+    if (seen.has(key)) return
+    seen.add(key)
+    out.push(stop)
+  }
+  for (const corridor of corridors) {
+    for (const stop of corridor.stops) if (stop.kind === 'en_route') push(stop)
+  }
+  for (const region of regions) {
+    for (const stop of region.stops) if (stop.kind === 'en_route') push(stop)
+  }
+  for (const region of regions) {
+    for (const stop of region.stops) if (stop.kind === 'in_place') push(stop)
+  }
+  for (const corridor of corridors) {
+    for (const stop of corridor.stops) push(stop)
+  }
+  for (const region of regions) {
+    for (const stop of region.stops) push(stop)
+  }
+  return out
+}
+
+function mentionedIn(lines: string[], name: string) {
+  const hay = lines.join(' · ').toLowerCase()
+  const tokens = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter((token) => token.length > 3)
+  if (!tokens.length) return hay.includes(name.toLowerCase().slice(0, 8))
+  const hits = tokens.filter((token) => hay.includes(token)).length
+  return hits >= Math.min(2, tokens.length)
+}
+
+function parseActivityMinutes(line: string): number | null {
+  const match = line.match(/^(\d{1,2}):(\d{2})\s*([aApP][mM])?/)
+  if (!match) return null
+  let hour = Number(match[1])
+  const minute = Number(match[2])
+  const ampm = match[3]?.toUpperCase()
+  if (ampm === 'PM' && hour < 12) hour += 12
+  if (ampm === 'AM' && hour === 12) hour = 0
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null
+  return hour * 60 + minute
+}
+
+function formatActivityClock(totalMinutes: number) {
+  const wrapped = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60)
+  const hour24 = Math.floor(wrapped / 60)
+  const minute = wrapped % 60
+  const suffix = hour24 >= 12 ? 'PM' : 'AM'
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12
+  return `${hour12}:${String(minute).padStart(2, '0')} ${suffix}`
+}
+
+export function ensureMinimumDayActivities<T extends { activities: string[]; optional_activities?: string[]; location?: string; overnight_location?: string; title?: string; travel?: { from?: string; to?: string } }>(
+  days: T[]
+): T[] {
+  return days.map((day) => {
+    const activities = [...(day.activities || [])]
+    if (activities.length >= MIN_DAY_ACTIVITIES) return day
+    const used = [...activities, ...(day.optional_activities || [])]
+    let cursor = 9 * 60
+    for (const line of activities) {
+      const mins = parseActivityMinutes(line)
+      if (mins != null) cursor = Math.max(cursor, mins + 90)
+    }
+    for (const stop of stopsForDay(day)) {
+      if (activities.length >= MIN_DAY_ACTIVITIES) break
+      if (mentionedIn(used, stop.name)) continue
+      const prefix = stop.kind === 'en_route' ? 'En route: ' : ''
+      const note = stop.note.replace(/\s+/g, ' ').trim()
+      const line = `${formatActivityClock(cursor)} - ${prefix}${stop.name}${note ? ` — ${note}` : ''}`
+      activities.push(line)
+      used.push(line)
+      cursor += 90
+    }
+    return { ...day, activities }
+  })
 }

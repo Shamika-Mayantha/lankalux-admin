@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Be_Vietnam_Pro, Open_Sans } from 'next/font/google'
 import { BrandDocument } from '@/features/console/BrandDocument'
+import { BRAND } from '@/config/brand'
 import '@/features/console/console.css'
 
 const display = Be_Vietnam_Pro({
@@ -22,10 +23,10 @@ export const metadata: Metadata = {
   title: 'LankaLux Admin Console',
   icons: {
     icon: [
+      { url: BRAND.shareImageSrc, type: 'image/png' },
       { url: '/brand/lankalux-favicon.ico', sizes: 'any' },
-      { url: '/brand/lankalux-favicon.png', type: 'image/png' },
     ],
-    apple: '/brand/lankalux-favicon.png',
+    apple: BRAND.shareImageSrc,
   },
 }
 

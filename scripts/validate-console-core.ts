@@ -11,7 +11,7 @@ import {
 } from '../services/invoice-math'
 import { renderFollowUpEmail, renderInvoiceEmail } from '../services/journey-copy'
 import { getTemplate, normalizeEditableBody } from '../lib/email-templates'
-import { placesForJourney } from '../config/sri-lanka-places'
+import { placesForJourney, ensureMinimumDayActivities } from '../config/sri-lanka-places'
 import { buildItineraryPrompt, enRouteDesignRules } from '../services/itinerary-prompt'
 import { applyHotelsToDays, hotelsPromptSection } from '../services/hotel-match.service'
 
@@ -232,8 +232,10 @@ assert(prompt.includes('Ramboda Falls'), 'prompt includes Ramboda as a named sto
 assert(prompt.includes('Peradeniya'), 'prompt includes Peradeniya on the triangle-to-Kandy drive')
 assert(prompt.includes('Do not copy competitor wording'), 'prompt forbids copying competitor copy')
 assert(!prompt.toLowerCase().includes('olanka'), 'generated prompt must not name the competitor')
-assert(enRouteDesignRules('relaxed').includes('1–2 scenic pauses'), 'relaxed density is lighter')
-assert(enRouteDesignRules('experience').includes('3–4 distinctive stops'), 'experience density is richer')
+assert(prompt.includes('at least 4'), 'prompt requires at least four activities per day')
+assert(prompt.includes('HARD MINIMUM'), 'prompt states a hard activity minimum')
+assert(enRouteDesignRules('relaxed').includes('at least 4 timed, named activities'), 'relaxed days still need four activities')
+assert(enRouteDesignRules('experience').includes('at least 4 timed, named activities'), 'experience days still need four activities')
 assert(prompt.includes('Stays are optional'), 'prompt keeps hotels optional when none are attached')
 assert(hotelsPromptSection([]).includes('Do not invent hotel names'), 'empty hotel section forbids invented names')
 
@@ -275,6 +277,19 @@ const sampleDays = [
     recommended_images: [],
   },
 ]
+const filledDays = ensureMinimumDayActivities(sampleDays)
+assert(
+  filledDays.every((day) => day.activities.length >= 4),
+  'thin generated days are padded to at least four activities'
+)
+assert(
+  filledDays[0].activities.some((line) => /dambulla|pidurangala|village|polonnaruwa|hurulu|kaludiya/i.test(line)),
+  'Sigiriya day is filled with nearby cultural-triangle places'
+)
+assert(
+  filledDays[1].activities.some((line) => /lake|udawattakele|market|bahirawakanda|embakke|gadaladeniya/i.test(line)),
+  'Kandy day is filled with nearby Kandy places'
+)
 const untouched = applyHotelsToDays(sampleDays, [])
 assert(untouched.matchCount === 0, 'no hotels means no matches')
 assert(untouched.days[0].hotel_id == null, 'days stay hotel-free when none attached')

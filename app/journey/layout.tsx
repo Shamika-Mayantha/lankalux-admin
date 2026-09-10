@@ -25,9 +25,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(publicJourneyUrl()),
   icons: {
     icon: [
+      { url: BRAND.shareImageSrc, type: 'image/png' },
       { url: '/brand/lankalux-favicon.ico', sizes: 'any' },
-      { url: '/brand/lankalux-favicon.png', type: 'image/png' },
     ],
+    apple: BRAND.shareImageSrc,
   },
   openGraph: {
     siteName: 'LankaLux',

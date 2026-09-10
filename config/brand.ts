@@ -10,7 +10,7 @@ export const BRAND = {
   logoSrc: '/brand/lankalux-logo.png',
   logoMarkSrc: '/brand/lankalux-mark.png',
   logoStackedSrc: '/brand/lankalux-logo-stacked.png',
-  faviconSrc: '/brand/lankalux-favicon.png',
+  faviconSrc: '/brand/lankalux-share.png',
   /** Used as the WhatsApp / social preview thumbnail for public journey links */
   shareImageSrc: '/brand/lankalux-share.png',
 

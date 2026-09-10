@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { InactivityProvider } from "@/components/InactivityProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { BRAND } from "@/config/brand";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,10 +20,14 @@ export const metadata: Metadata = {
   description: "LankaLux Admin CRM System",
   icons: {
     icon: [
+      { url: BRAND.shareImageSrc, type: 'image/png' },
       { url: '/favicon.ico', sizes: 'any' },
-      { url: '/favicon.png', type: 'image/png' },
     ],
-    apple: '/favicon.png',
+    apple: BRAND.shareImageSrc,
+  },
+  openGraph: {
+    siteName: 'LankaLux',
+    images: [{ url: BRAND.shareImageSrc, alt: 'LankaLux — Private journeys, exceptional care' }],
   },
   appleWebApp: {
     capable: true,

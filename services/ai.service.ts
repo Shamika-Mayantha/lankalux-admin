@@ -48,7 +48,7 @@ export async function generateOneItinerary(opts: {
         {
           role: 'system',
           content:
-            'You design LankaLux itineraries. Reply with a single valid JSON object matching the requested schema. Never wrap in markdown. Transfer days must include named en-route places, written in LankaLux voice — never copied from another operator.',
+            'You design LankaLux itineraries. Reply with a single valid JSON object matching the requested schema. Never wrap in markdown. Every day must include at least 4 timed activities that match that day, including named en-route or nearby hidden places. Write in LankaLux voice — never copied from another operator.',
         },
         { role: 'user', content: buildItineraryPrompt(opts.request, opts.style, expectedDays, hotels) },
       ],

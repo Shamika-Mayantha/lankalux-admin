@@ -28,11 +28,11 @@ const STYLE_INSTRUCTIONS: Record<ItineraryStyle, string> = {
 
 const STYLE_STOP_DENSITY: Record<ItineraryStyle, string> = {
   balanced:
-    'Transfer days: 2–3 named en-route stops. Stay days: 6–8 timed highlights. Leave real breathing room.',
+    'Every day: at least 4 timed, named activities. Transfer days: 2 of those must be En route: hidden or roadside places. Stay days: 4–7 timed highlights including nearby lesser-known stops, with real breathing room.',
   relaxed:
-    'Transfer days: 1–2 scenic pauses only. Stay days: 5–7 timed highlights with a long lunch or hotel window. Never stack climbs.',
+    'Every day: at least 4 timed, named activities. Transfer days: 2 scenic En route: pauses plus a gentle arrival. Stay days: 4–6 timed highlights with a long lunch or hotel window. Never stack climbs.',
   experience:
-    'Transfer days: 3–4 distinctive stops (train, village, walk, lesser-known shrine). Stay days: 7–9 timed highlights. Still finish before guests are exhausted.',
+    'Every day: at least 4 timed, named activities. Transfer days: 2–4 distinctive En route: stops (train, village, walk, lesser-known shrine). Stay days: 5–8 timed highlights. Still finish before guests are exhausted.',
 }
 
 export function formatDate(iso: string | null) {
@@ -42,12 +42,13 @@ export function formatDate(iso: string | null) {
 
 export function enRouteDesignRules(style: ItineraryStyle): string {
   return `ALONG-THE-WAY DESIGN (this is what makes a LankaLux day feel complete)
-- A day is not only the overnight town. On every transfer, weave in the worthwhile places that sit ON THAT ROAD — waterfalls, working tea factories, gardens, cave temples, village tanks, viewpoints, bridges, hatcheries, mangrove boats.
+- A day is not only the overnight town. On every transfer, weave in the worthwhile places that sit ON THAT ROAD — waterfalls, working tea factories, gardens, cave temples, village tanks, viewpoints, bridges, hatcheries, mangrove boats. Also add lesser-known nearby places that sit a short detour off the day's route.
 - ${STYLE_STOP_DENSITY[style]}
-- Prefix roadside pauses with "En route:" so the client can see them in the highlights list. Example: "10:30 AM - En route: pause at Ramboda Falls — a roadside cascade in the tea hairpins, ten minutes from the car."
-- Name the specific place. Never write "scenic drive" or "visit local attractions" without a proper name.
-- Choose the best-fit stops for this party's ages, energy and interests. Do not dump every possible sight onto one day.
-- Optional_activities are the extras if time and mood allow — a second hike, a cultural show, a garden, a boat. They must also be real named places.
+- HARD MINIMUM: every day's "activities" array must contain at least 4 timed items that geographically match that day (overnight town, nearby sights, or the road being driven). Arrival and departure days still need 4 — airport, a city or coast pause, and two named nearby stops.
+- Prefix roadside or hidden-nearby pauses with "En route:" so the client can see them in the highlights list. Example: "10:30 AM - En route: pause at Ramboda Falls — a roadside cascade in the tea hairpins, ten minutes from the car."
+- Name the specific place. Never write "scenic drive", "free time", "leisure at hotel" or "visit local attractions" without a proper place name.
+- Choose the best-fit stops for this party's ages, energy and interests. Prefer real hidden gems over repeating the same headline twice.
+- Optional_activities are extras if time and mood allow — a second hike, a cultural show, a garden, a boat. They must also be real named places and do not count toward the 4 required activities.
 - One headline experience per day (the fortress, the temple, the safari, the train). Supporting stops sit around it, not in competition with it.
 - Ethical wildlife only: observation and conservation. No elephant riding, no bathing shows, no handling baby turtles for photos.
 - Do not invent hotels. Do not copy competitor wording, hotel names, meal-plan labels, or shopping-mall lists.
@@ -111,6 +112,7 @@ HARD RULES
 - At most one major location transfer per day.
 - Do not invent hotels that must be booked; describe overnight towns only.
 - Activities are timed strings in 12-hour format with AM/PM: "09:00 AM - Description".
+- Each day's "activities" MUST have at least 4 items. They must match that day's geography (the town, nearby hidden places, or en-route stops on that day's drive).
 - Each day "description" must include useful place insight (what guests will see, local character, and why this stop is special) in 2-4 clear sentences. Mention the most interesting en-route pause when it is a transfer day.
 - Do NOT include image URLs. The server maps photographs.
 
@@ -133,7 +135,12 @@ JSON SHAPE
       "overnight_location": "",
       "title": "",
       "description": "",
-      "activities": ["08:00 AM - Timed highlight with a named place"],
+      "activities": [
+        "08:00 AM - Headline named place for this day",
+        "10:30 AM - En route: nearby or roadside hidden place",
+        "01:00 PM - Second named place that matches this region",
+        "03:30 PM - Third nearby stop, garden, temple, village or viewpoint"
+      ],
       "optional_activities": ["Named extra if time allows"],
       "travel": { "from": "", "to": "", "estimated_distance": "", "estimated_duration": "" }
     }
