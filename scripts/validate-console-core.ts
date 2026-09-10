@@ -14,6 +14,10 @@ import { getTemplate, normalizeEditableBody } from '../lib/email-templates'
 import { placesForJourney, ensureMinimumDayActivities } from '../config/sri-lanka-places'
 import { buildItineraryPrompt, enRouteDesignRules } from '../services/itinerary-prompt'
 import { applyHotelsToDays, hotelsPromptSection } from '../services/hotel-match.service'
+import { driverPackFilenames, sanitizeFilename, splitGuestNames } from '../lib/driver-pack/filenameHelpers'
+import { googleMapsSearchUrl } from '../lib/driver-pack/mapLinkHelpers'
+import { detectTrainOperation, operationalStopsForDay, TBC } from '../lib/driver-pack/routeHelpers'
+import { buildDriverPackData } from '../lib/driver-pack/buildDriverPackData'
 
 function assert(cond: unknown, msg: string) {
   if (!cond) throw new Error(msg)
@@ -311,5 +315,115 @@ const hotelPrompt = hotelsPromptSection([
 ])
 assert(hotelPrompt.includes('Aliya Resort'), 'attached hotels are named in the prompt')
 assert(hotelPrompt.includes('optional extras'), 'attached hotels stay optional')
+
+const names = splitGuestNames('Sergey & Tatyana')
+assert(names.length === 2 && names[0] === 'Sergey' && names[1] === 'Tatyana', 'guest names split for paging board')
+const files = driverPackFilenames({ guestNames: names, startDate: '2026-09-12', endDate: '2026-09-20' })
+assert(files.journey === 'LankaLux_Driver_Journey_Sergey_Tatyana_12-20_Sep_2026.pdf', 'journey filename')
+assert(files.log === 'LankaLux_Driver_Log_Sergey_Tatyana_12-20_Sep_2026.pdf', 'log filename')
+assert(files.paging === 'LankaLux_Paging_Board_Sergey_Tatyana.pdf', 'paging filename')
+assert(sanitizeFilename('Sergey / Tatyana:*?') === 'Sergey_Tatyana', 'illegal filename characters stripped')
+assert(googleMapsSearchUrl('Agandau House', 'Negombo').includes('google.com/maps/search'), 'maps link is a standard Google search URL')
+
+const trainDay = {
+  day: 5,
+  date: '2026-09-16',
+  location: 'Ella',
+  overnight_location: 'Ella',
+  title: 'Nanu Oya to Ella by train',
+  description: 'Guests take the hill-country train. Vehicle meets them in Ella.',
+  activities: ['Morning transfer to Nanu Oya station', 'Train to Ella'],
+  optional_activities: [],
+  travel: { from: 'Nuwara Eliya', to: 'Ella', estimated_distance: '50 km', estimated_duration: '' },
+  recommended_images: [],
+}
+const train = detectTrainOperation(trainDay)
+assert(train?.kind === 'train', 'train day is detected')
+assert(train?.trainNumber === TBC, 'missing train numbers stay TBC')
+assert(train?.notes.some((line) => /does not travel on the train/i.test(line)), 'vehicle does not travel on the train')
+
+const originalActivities = [...trainDay.activities]
+const stops = operationalStopsForDay(trainDay)
+assert(stops.length > 0, 'en-route operational stops are suggested')
+assert(JSON.stringify(trainDay.activities) === JSON.stringify(originalActivities), 'driver pack must not mutate itinerary activities')
+
+const packed = buildDriverPackData({
+  form: {
+    guestNames: 'Sergey & Tatyana',
+    startDate: '2026-09-12',
+    endDate: '2026-09-20',
+    chauffeurName: 'Sameera Prabath',
+    chauffeurPhone: '',
+    vehicleName: 'Toyota Voxy',
+    vehicleRegistration: '',
+    arrivalFlight: '',
+    arrivalDate: '2026-09-12',
+    arrivalTime: '',
+    departureFlight: '',
+    departureDate: '2026-09-20',
+    departureTime: '',
+    notes: '',
+  },
+  itinerary: {
+    id: 'it-1',
+    request_id: 'LLX001',
+    option_number: 1,
+    style: 'balanced',
+    status: 'draft',
+    is_selected: true,
+    title: 'Classic',
+    summary: '',
+    duration: '9 days',
+    payload: {
+      title: 'Classic',
+      summary: '',
+      duration: '9 days',
+      days: [
+        {
+          day: 1,
+          date: '2026-09-12',
+          location: 'Negombo',
+          overnight_location: 'Negombo',
+          title: 'Arrival',
+          description: 'Airport to Negombo',
+          activities: ['Airport meet'],
+          optional_activities: [],
+          travel: { from: 'Airport', to: 'Negombo', estimated_distance: '30 km', estimated_duration: '45 minutes' },
+          recommended_images: [],
+          hotel_name: 'Agandau House',
+        },
+        {
+          day: 2,
+          date: '2026-09-13',
+          location: 'Habarana',
+          overnight_location: 'Habarana',
+          title: 'Cultural triangle',
+          description: 'Drive north',
+          activities: ['Dambulla Cave Temple'],
+          optional_activities: [],
+          travel: { from: 'Negombo', to: 'Habarana', estimated_distance: '170 km', estimated_duration: '' },
+          recommended_images: [],
+          hotel_name: 'Elephant Fence Habarana',
+        },
+      ],
+    },
+    vehicle_id: 'voxy',
+    internal_notes: '',
+    prompt_version: null,
+    model: null,
+    error: null,
+    created_at: '',
+    updated_at: '',
+  },
+  hotels: [{ id: 'h1', name: 'Agandau House', destination: 'Negombo', description: '15/A/A Basiyawatta, Thalahena, Negombo', contact: null, website: null }],
+})
+assert(packed.pagingReady === true, 'paging board only needs guest names')
+assert(packed.missing.includes('Vehicle registration'), 'registration can be missing without blocking paging')
+assert(packed.missing.includes('Arrival flight'), 'arrival flight is listed when missing')
+assert(packed.logRows[0].routeDuty.toLowerCase().includes('airport'), 'log starts at the airport')
+assert(packed.logRows.every((row) => !/fuel/i.test(row.routeDuty)), 'log rows do not mention fuel')
+assert(packed.days[1].hotel?.name === 'Elephant Fence Habarana', 'tonight hotel comes from the sold itinerary')
+assert(packed.days[1].stops.every((stop) => stop.classification !== undefined), 'stops are classified')
+assert(!JSON.stringify(packed).toLowerCase().includes('fuel cost'), 'driver pack data has no fuel fields')
 
 console.log('console core checks passed')

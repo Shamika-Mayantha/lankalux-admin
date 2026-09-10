@@ -2,7 +2,14 @@ import { ID_PREFIX, shouldExpireRequest, isStartDateExpired, normalizeStatus } f
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
 import { resolveAssignedDriver } from '@/services/catalog.service'
 import { logActivity } from '@/services/activity.service'
+import { parseDriverPack } from '@/lib/driver-pack/fields'
 import type { ClientRequestRow, RequestInput } from '@/types/domain'
+
+export { parseDriverPack } from '@/lib/driver-pack/fields'
+
+function withDriverPack(row: ClientRequestRow): ClientRequestRow {
+  return { ...row, driver_pack: parseDriverPack(row.driver_pack) }
+}
 
 export function inclusiveDuration(start: string | null | undefined, end: string | null | undefined): number | null {
   if (!start || !end) return null
@@ -73,14 +80,14 @@ export async function listRequests(): Promise<ClientRequestRow[]> {
   const supabase = getServiceClient()
   const { data, error } = await supabase.from('Client Requests').select('*').order('created_at', { ascending: false })
   if (error) throw new AppError(`Supabase request failed: ${error.message}`, 500)
-  return applyExpiry((data || []) as ClientRequestRow[])
+  return applyExpiry(((data || []) as ClientRequestRow[]).map(withDriverPack))
 }
 
 export async function getRequest(id: string): Promise<ClientRequestRow> {
   const supabase = getServiceClient()
   const { data, error } = await supabase.from('Client Requests').select('*').eq('id', id).single()
   if (error || !data) throw new AppError('Request not found', 404)
-  const [row] = await applyExpiry([data as ClientRequestRow])
+  const [row] = await applyExpiry([withDriverPack(data as ClientRequestRow)])
   return row
 }
 
@@ -141,7 +148,7 @@ export async function createRequest(input: RequestInput, actor?: string): Promis
 
   if (error || !data) throw new AppError(error?.message || 'Failed to create request', 500)
   await logActivity({ request_id: id, actor, event_type: 'request_created', detail: { client_name: input.client_name } })
-  return data as ClientRequestRow
+  return withDriverPack(data as ClientRequestRow)
 }
 
 export async function updateRequest(id: string, patch: Partial<RequestInput> & { status?: string; cancellation_reason?: string | null }, actor?: string): Promise<ClientRequestRow> {
@@ -172,6 +179,7 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
     ['requested_destinations', 'requested_destinations'],
     ['notes', 'notes'],
     ['sold_price', 'sold_price'],
+    ['driver_pack', 'driver_pack'],
   ]
   for (const [k, col] of map) {
     if (k in patch) next[col] = patch[k] ?? null
@@ -185,6 +193,9 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
     next.client_name = name
   }
   if (patch.status) next.status = patch.status
+  if ('driver_pack' in patch) {
+    next.driver_pack = parseDriverPack(patch.driver_pack)
+  }
   if ('sold_price' in patch && patch.sold_price != null) {
     next.sold_price = String(patch.sold_price).trim() || null
     if (!('budget' in patch)) next.budget = next.sold_price
@@ -236,6 +247,12 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
     data = retry.data
     error = retry.error
   }
+  if (error && 'driver_pack' in next && /driver_pack|schema cache|PGRST204/i.test(error.message || '')) {
+    const { driver_pack: _pack, ...withoutPack } = next
+    const retry = await supabase.from('Client Requests').update(withoutPack).eq('id', id).select('*').single()
+    data = retry.data
+    error = retry.error
+  }
   if (error || !data) throw new AppError(error?.message || 'Failed to update request', 500)
 
   if (patch.status && patch.status !== current.status) {
@@ -279,8 +296,11 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
       },
     })
   }
+  if ('driver_pack' in patch) {
+    await logActivity({ request_id: id, actor, event_type: 'driver_pack_updated' })
+  }
 
-  return data as ClientRequestRow
+  return withDriverPack(data as ClientRequestRow)
 }
 
 export async function restoreRequest(id: string, actor?: string): Promise<ClientRequestRow> {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useParams } from 'next/navigation'
 import { consoleFetch } from '@/lib/console-api'
 import { downloadJourneyPdf } from '@/lib/print-journey'
@@ -20,6 +21,11 @@ import {
   getTemplate,
   type TemplateId,
 } from '@/lib/email-templates'
+
+const DriverPackSection = dynamic(
+  () => import('@/components/driver-pack/DriverPackModal').then((mod) => mod.DriverPackSection),
+  { ssr: false }
+)
 
 const EMPTY_TRAVEL = { from: '', to: '', estimated_distance: '', estimated_duration: '' }
 
@@ -238,6 +244,7 @@ function activityLabel(eventType: string) {
     hotel_proposal_attached: 'Hotel attached',
     hotel_proposal_removed: 'Hotel removed',
     hotels_applied_to_itineraries: 'Hotels inserted into itineraries',
+    driver_pack_updated: 'Driver Pack details saved',
   }
   return labels[eventType] || eventType.replace(/_/g, ' ')
 }
@@ -281,6 +288,7 @@ export function RequestWorkspace() {
   const [templateOpen, setTemplateOpen] = useState(false)
   const [templateSubject, setTemplateSubject] = useState('')
   const [templateBody, setTemplateBody] = useState('')
+  const [driverPackOpen, setDriverPackOpen] = useState(false)
 
   async function reload() {
     const json = await consoleFetch(`/api/v2/requests/${id}`)
@@ -852,6 +860,11 @@ export function RequestWorkspace() {
           <button className="ll-btn secondary" disabled={!selected} onClick={() => setTab('invoices')}>
             Create invoice
           </button>
+          {status === 'sold' ? (
+            <button className="ll-btn secondary" onClick={() => setDriverPackOpen(true)}>
+              Driver Pack
+            </button>
+          ) : null}
         </div>
       </div>
       {status === 'expired' && (
@@ -940,6 +953,20 @@ export function RequestWorkspace() {
               </button>
             </div>
           </div>
+          {status === 'sold' ? (
+            <DriverPackSection
+              request={row}
+              itinerary={selected || null}
+              vehicle={selectedVehicle}
+              driver={assignedDriver}
+              drivers={drivers}
+              hotels={attachedHotels}
+              open={driverPackOpen}
+              onOpen={() => setDriverPackOpen(true)}
+              onClose={() => setDriverPackOpen(false)}
+              onSaved={reload}
+            />
+          ) : null}
           <div className="ll-card" style={{ maxWidth: 'none' }}>
             <h3>Follow-up email</h3>
             <p className="ll-muted">

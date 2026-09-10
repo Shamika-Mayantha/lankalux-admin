@@ -1,0 +1,50 @@
+.ll-driver-card {
+  max-width: none;
+}
+
+.ll-driver-status {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--forest);
+  background: var(--gold-soft);
+  padding: 4px 8px;
+}
+
+.ll-driver-status.warn {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.ll-driver-docs .ll-driver-doc:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.ll-driver-doc {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.ll-driver-modal {
+  max-width: min(1080px, 96vw);
+}
+
+.ll-driver-preview {
+  width: 100%;
+  height: min(72vh, 820px);
+  border: 1px solid var(--line);
+  background: #f9f4eb;
+}
+
+.ll-driver-missing {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+}

@@ -102,6 +102,22 @@ export type CanonicalJourney = {
   totalKilometers?: number
 }
 
+export type DriverPackFields = {
+  guest_names?: string | null
+  travel_start?: string | null
+  travel_end?: string | null
+  chauffeur_guide_name?: string | null
+  chauffeur_guide_phone?: string | null
+  vehicle_registration?: string | null
+  arrival_flight?: string | null
+  arrival_date?: string | null
+  arrival_time?: string | null
+  departure_flight?: string | null
+  departure_date?: string | null
+  departure_time?: string | null
+  notes?: string | null
+}
+
 export type ClientRequestRow = {
   id: string
   client_name: string | null
@@ -135,6 +151,8 @@ export type ClientRequestRow = {
   selected_itinerary_id: string | null
   published_itinerary_id: string | null
   sold_price?: string | null
+  /** Per-trip operational overlay for Driver Pack. Does not replace itinerary data. */
+  driver_pack?: DriverPackFields | null
   sent_at: string | null
   last_sent_at: string | null
   email_sent_count: number | null
@@ -169,6 +187,7 @@ export type RequestInput = {
   notes?: string | null
   status?: RequestStatus
   sold_price?: string | null
+  driver_pack?: DriverPackFields | null
 }
 
 export type ActivityEvent = {
