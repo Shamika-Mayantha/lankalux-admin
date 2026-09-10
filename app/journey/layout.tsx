@@ -1,6 +1,8 @@
 import { Be_Vietnam_Pro, Open_Sans } from 'next/font/google'
 import type { Metadata } from 'next'
 import { BrandDocument } from '@/features/console/BrandDocument'
+import { BRAND } from '@/config/brand'
+import { appUrl, publicJourneyUrl } from '@/config/env'
 
 const display = Be_Vietnam_Pro({
   subsets: ['latin'],
@@ -19,11 +21,17 @@ const body = Open_Sans({
 
 export const metadata: Metadata = {
   title: 'LankaLux Journey',
+  description: BRAND.tagline,
+  metadataBase: new URL(publicJourneyUrl()),
   icons: {
     icon: [
       { url: '/brand/lankalux-favicon.ico', sizes: 'any' },
       { url: '/brand/lankalux-favicon.png', type: 'image/png' },
     ],
+  },
+  openGraph: {
+    siteName: 'LankaLux',
+    images: [{ url: `${appUrl()}${BRAND.shareImageSrc}`, alt: 'LankaLux — Private journeys, exceptional care' }],
   },
 }
 

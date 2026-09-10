@@ -22,6 +22,11 @@ export function appUrl(): string {
   ).replace(/\/$/, '')
 }
 
+/** Public guest itinerary host. Admin console stays on appUrl(). */
+export function publicJourneyUrl(): string {
+  return (process.env.NEXT_PUBLIC_JOURNEY_URL || 'https://journey.lankalux.com').replace(/\/$/, '')
+}
+
 export function openaiModel(): string {
   return process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini'
 }

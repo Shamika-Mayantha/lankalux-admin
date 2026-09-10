@@ -119,7 +119,7 @@ const invoiceEmail = renderInvoiceEmail({
   travelDates: '12-Sep-2026 – 20-Sep-2026',
   packageTotal: 'USD 1,850',
   balanceDue: 'USD 1,350',
-  shareUrl: 'https://admin.lankalux.com/journey/abc',
+  shareUrl: 'https://journey.lankalux.com/journey/abc',
   logoUrl: 'https://admin.lankalux.com/brand/lankalux-logo.png',
 })
 assert(invoiceEmail.subject === 'LankaLux Invoice — LL-INV-001', 'invoice email subject')

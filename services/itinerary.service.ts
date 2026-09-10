@@ -1,5 +1,5 @@
 import { BRAND } from '@/config/brand'
-import { appUrl } from '@/config/env'
+import { publicJourneyUrl } from '@/config/env'
 import { PROMPT_VERSION, STYLE_META, styleFromNumber, type ItineraryStyle } from '@/config/status'
 import { assignDayImages } from '@/services/image-map.service'
 import { applyJourneyKilometers, totalKilometersFor } from '@/services/kilometers.service'
@@ -635,7 +635,7 @@ export async function getClientItinerary(
           event_type: 'itinerary_link_opened',
           detail: {
             shareToken,
-            url: `${appUrl()}/journey/${shareToken}`,
+            url: `${publicJourneyUrl()}/journey/${shareToken}`,
           },
         })
       }

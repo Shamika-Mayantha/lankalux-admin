@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto'
-import { appUrl } from '@/config/env'
+import { publicJourneyUrl } from '@/config/env'
 import { logActivity } from '@/services/activity.service'
 import { getPublishedItinerary } from '@/services/itinerary.service'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
@@ -64,11 +64,11 @@ export async function createShareLink(opts: {
     detail: { token },
   })
 
-  return { token, url: `${appUrl()}/journey/${token}`, journey: snapshot }
+  return { token, url: journeyUrl(token), journey: snapshot }
 }
 
 export function journeyUrl(token: string) {
-  return `${appUrl()}/journey/${token}`
+  return `${publicJourneyUrl()}/journey/${token}`
 }
 
 export async function latestShareToken(requestId: string): Promise<string | null> {

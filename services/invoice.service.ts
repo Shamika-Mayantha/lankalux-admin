@@ -16,7 +16,7 @@ import {
 } from '@/services/invoice-math'
 import { listItineraries } from '@/services/itinerary.service'
 import { getRequest, parseChildrenAges } from '@/services/request.service'
-import { createShareLink } from '@/services/share.service'
+import { createShareLink, journeyUrl } from '@/services/share.service'
 import { getServiceClient, isMissingTableError } from '@/services/supabase.server'
 import type {
   ClientRequestRow,
@@ -220,7 +220,7 @@ async function latestShareToken(requestId: string): Promise<string | null> {
 
 async function resolveJourneyLink(requestId: string, actor?: string): Promise<{ token: string | null; url: string | null }> {
   const existing = await latestShareToken(requestId)
-  if (existing) return { token: existing, url: `${appUrl()}/journey/${existing}` }
+  if (existing) return { token: existing, url: journeyUrl(existing) }
   try {
     const share = await createShareLink({ requestId, actor })
     return { token: share.token, url: share.url }
@@ -533,12 +533,12 @@ export async function previewInvoiceSource(requestId: string) {
     const itinerary = selectedItineraryForInvoice(await listItineraries(requestId))
     const vehicle = await resolveVehicle(request, itinerary)
     const token = await latestShareToken(requestId)
-    const journeyUrl = token ? `${appUrl()}/journey/${token}` : null
+    const journeyUrlValue = token ? journeyUrl(token) : null
     const settings = await getInvoiceSettings()
     const snapshots = buildSnapshots({
       request,
       itinerary,
-      journeyUrl,
+      journeyUrl: journeyUrlValue,
       vehicle,
       settings,
     })

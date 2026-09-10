@@ -11,6 +11,8 @@ export const BRAND = {
   logoMarkSrc: '/brand/lankalux-mark.png',
   logoStackedSrc: '/brand/lankalux-logo-stacked.png',
   faviconSrc: '/brand/lankalux-favicon.png',
+  /** Used as the WhatsApp / social preview thumbnail for public journey links */
+  shareImageSrc: '/brand/lankalux-share.png',
 
   /** Warm ivory page background */
   background: '#F9F4EB',

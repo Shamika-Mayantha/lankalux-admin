@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { appUrl, requireSmtp } from '@/config/env'
+import { appUrl, publicJourneyUrl, requireSmtp } from '@/config/env'
 import { BRAND } from '@/config/brand'
 import { logActivity } from '@/services/activity.service'
 import { getPublishedItinerary } from '@/services/itinerary.service'
@@ -110,7 +110,7 @@ export async function previewJourneyEmail(opts: {
   const compiled = renderJourneyEmail({
     journey,
     introduction,
-    shareUrl: `${appUrl()}/journey`,
+    shareUrl: `${publicJourneyUrl()}/journey`,
     includeHotels: opts.includeHotels,
     logoUrl: `${appUrl()}${BRAND.logoSrc}`,
   })
