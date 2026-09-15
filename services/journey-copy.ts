@@ -92,6 +92,18 @@ function renderCtaBlock(ctas: EmailCta[]) {
     .join('')
 }
 
+function emailLogoHeader(logoUrl: string) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;background:#FFFFFF;">
+      <tr>
+        <td align="center" valign="middle" style="padding:28px 24px;background:#FFFFFF;text-align:center;">
+          <a href="${esc(BRAND.websiteUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;border:0;outline:none;">
+            <img src="${esc(logoUrl)}" alt="LankaLux" width="300" height="72" border="0" style="display:block;margin:0 auto;width:300px;max-width:86%;height:auto;border:0;outline:none;text-decoration:none;background-color:#ffffff;" />
+          </a>
+        </td>
+      </tr>
+    </table>`
+}
+
 function renderBrandedClientEmail(opts: {
   firstName: string
   introduction?: string
@@ -122,12 +134,10 @@ function renderBrandedClientEmail(opts: {
       : ''
 
   const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
-<body style="margin:0;background:#FFFFFF;font-family:'Open Sans',Segoe UI,Arial,sans-serif;color:#252523;">
+<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="color-scheme" content="light"/><meta name="supported-color-schemes" content="light"/></head>
+<body style="margin:0;background:#F9F4EB;font-family:'Open Sans',Segoe UI,Arial,sans-serif;color:#252523;">
   <div style="max-width:620px;margin:24px auto;background:#fff;border:1px solid rgba(26,42,29,0.12);">
-    <div style="background:#F9F4EB;padding:28px 20px;text-align:center;">
-      <img src="${esc(opts.logoUrl)}" alt="LankaLux" width="220" style="display:block;width:220px;height:auto;margin:0 auto;"/>
-    </div>
+    ${emailLogoHeader(opts.logoUrl)}
     <div style="height:1px;background:#B18544;"></div>
     <div style="padding:28px;">
       <p>Dear ${esc(opts.firstName)},</p>

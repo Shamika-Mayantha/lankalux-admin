@@ -123,6 +123,8 @@ assert(parseClientFacingPrice('USD 1,850').amount === 1850, 'parse package quote
 assert(parseClientFacingPrice('USD 1,850').currency === 'USD', 'parse currency')
 assert(uniqueInOrder(['Sigiriya', 'Kandy', 'Ella', 'Yala', 'Mirissa', 'Sigiriya']).join(',') === 'Sigiriya,Kandy,Ella,Yala,Mirissa', 'route unique in order')
 
+const EMAIL_LOGO_URL = 'https://admin.lankalux.com/brand/lankalux-logo-email.jpg'
+
 const invoiceEmail = renderInvoiceEmail({
   clientName: 'Sergey Ivanov',
   invoiceNumber: 'LL-INV-001',
@@ -131,12 +133,14 @@ const invoiceEmail = renderInvoiceEmail({
   packageTotal: 'USD 1,850',
   balanceDue: 'USD 1,350',
   shareUrl: 'https://journey.lankalux.com/journey/abc',
-  logoUrl: 'https://admin.lankalux.com/brand/lankalux-logo.png',
+  logoUrl: EMAIL_LOGO_URL,
 })
 assert(invoiceEmail.subject === 'LankaLux Invoice — LL-INV-001', 'invoice email subject')
 assert(invoiceEmail.html.includes('View your LankaLux Journey'), 'invoice email uses itinerary CTA')
-assert(invoiceEmail.html.includes('/brand/lankalux-logo.png'), 'invoice email uses brand logo')
-assert(invoiceEmail.html.includes('F9F4EB'), 'invoice email uses ivory header')
+assert(invoiceEmail.html.includes('/brand/lankalux-logo-email.jpg'), 'invoice email uses opaque email logo')
+assert(invoiceEmail.html.includes('href="https://lankalux.com"'), 'invoice logo links to lankalux.com')
+assert(invoiceEmail.html.includes('align="center"'), 'invoice logo is table-centred')
+assert(invoiceEmail.html.includes('F9F4EB'), 'invoice email uses ivory canvas')
 assert(invoiceEmail.text.includes('Balance due USD 1,350'), 'invoice email text includes balance')
 
 assert(normalizeEditableBody('Dear Anna,\n\nHello there.\n\nWarm regards,\nLankaLux Team') === 'Hello there.', 'strip greeting and signature')
@@ -144,12 +148,14 @@ assert(normalizeEditableBody('Just checking in.') === 'Just checking in.', 'plai
 
 const followUpHtml = getTemplate('friendly_checkin')!.getHtml({
   clientName: 'Anna Silva',
-  logoUrl: 'https://admin.lankalux.com/brand/lankalux-logo.png',
+  logoUrl: EMAIL_LOGO_URL,
 })
-assert(followUpHtml.includes('F9F4EB'), 'follow-up uses ivory header')
+assert(followUpHtml.includes('F9F4EB'), 'follow-up uses ivory canvas')
 assert(followUpHtml.includes('B18544'), 'follow-up uses gold rule')
 assert(followUpHtml.includes('1A2A1D'), 'follow-up uses forest')
-assert(followUpHtml.includes('/brand/lankalux-logo.png'), 'follow-up uses brand logo')
+assert(followUpHtml.includes('/brand/lankalux-logo-email.jpg'), 'follow-up uses opaque email logo')
+assert(followUpHtml.includes('href="https://lankalux.com"'), 'follow-up logo links to lankalux.com')
+assert(followUpHtml.includes('align="center"'), 'follow-up logo is table-centred')
 assert(!followUpHtml.includes('Georgia'), 'follow-up does not use old serif chrome')
 assert(!followUpHtml.includes('#c8a45d'), 'follow-up does not use old gold')
 assert(!followUpHtml.includes('View your itinerary'), 'follow-up has no itinerary CTA')
@@ -157,7 +163,7 @@ assert(!followUpHtml.includes('View your itinerary'), 'follow-up has no itinerar
 const followUpCompiled = renderFollowUpEmail({
   clientName: 'Anna Silva',
   bodyText: 'Hello there.',
-  logoUrl: 'https://admin.lankalux.com/brand/lankalux-logo.png',
+  logoUrl: EMAIL_LOGO_URL,
 })
 assert(followUpCompiled.html.includes('Hello there.'), 'follow-up includes body')
 assert(followUpCompiled.text.includes('Private journeys, exceptional care'), 'follow-up uses brand tagline')
@@ -172,13 +178,15 @@ assert(postTripCtas[1]?.ctaLabel === 'Leave a Trustpilot review', 'post-trip Tru
 assert(followUpCtas('friendly_checkin').length === 0, 'other follow-up templates have no review CTAs')
 const postTripHtml = getTemplate('post_trip_feedback')!.getHtml({
   clientName: 'Anna Silva',
-  logoUrl: 'https://admin.lankalux.com/brand/lankalux-logo.png',
+  logoUrl: EMAIL_LOGO_URL,
 })
 assert(postTripHtml.includes(GOOGLE_REVIEW_URL), 'post-trip email includes Google review URL')
 assert(postTripHtml.includes('Leave a Google review'), 'post-trip email includes Google review button')
 assert(postTripHtml.includes(TRUSTPILOT_REVIEW_URL), 'post-trip email includes Trustpilot review URL')
 assert(postTripHtml.includes('Leave a Trustpilot review'), 'post-trip email includes Trustpilot review button')
 assert(postTripHtml.includes('Google or Trustpilot'), 'post-trip copy mentions both review sites')
+assert(postTripHtml.includes('/brand/lankalux-logo-email.jpg'), 'post-trip uses opaque email logo')
+assert(postTripHtml.includes('href="https://lankalux.com"'), 'post-trip logo links to lankalux.com')
 assert(!postTripHtml.includes('mailto:hello@lankalux.com'), 'post-trip CTA is not the old mailto')
 const postTripText = getTemplate('post_trip_feedback')!.getText({ clientName: 'Anna Silva' })
 assert(postTripText.includes('Google or Trustpilot'), 'post-trip plain text mentions both review sites')

@@ -105,7 +105,7 @@ export async function POST(request: Request) {
     const compiled = renderFollowUpEmail({
       clientName,
       bodyText: normalizedBody,
-      logoUrl: `${appUrl()}${BRAND.logoSrc}`,
+      logoUrl: `${appUrl()}${BRAND.logoEmailSrc}`,
       ctas,
     })
     const emailHtml = compiled.html

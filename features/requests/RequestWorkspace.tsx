@@ -820,7 +820,7 @@ export function RequestWorkspace() {
       ? buildHtmlFromBody({
           clientName: row.client_name || 'Valued Client',
           bodyText: templateBody,
-          logoUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}${BRAND.logoSrc}`,
+          logoUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}${BRAND.logoEmailSrc}`,
           ctas: templateCtas,
         })
       : null

@@ -287,7 +287,7 @@ export async function POST(request: Request) {
     const subjectSeed = (requestData.id || requestId || '').split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0)
     const emailSubject = journeyTitle ? `LankaLux Journey - ${journeyTitle}` : premiumSubjects[subjectSeed % premiumSubjects.length]
     const preheader = 'Your personalised LankaLux Journey is ready.'
-    const logoUrl = `${baseUrl}/favicon.png`
+    const logoUrl = `${baseUrl}/brand/lankalux-logo-email.jpg`
     const ctaText = 'View your LankaLux Journey'
     const emailHtml = `
       <!DOCTYPE html>
@@ -324,17 +324,18 @@ export async function POST(request: Request) {
               border: 1px solid rgba(26, 42, 29, 0.12);
             }
             .header {
-              background: #F9F4EB;
-              padding: 28px 20px 24px;
+              background: #ffffff;
+              padding: 28px 24px;
               text-align: center;
               border-bottom: 1px solid #b18544;
             }
             .logo {
-              width: 220px;
-              max-width: 80%;
+              width: 300px;
+              max-width: 86%;
               height: auto;
               display: block;
               margin: 0 auto;
+              background-color: #ffffff;
             }
             .content { padding: 30px 28px; }
             .greeting {
@@ -418,8 +419,8 @@ export async function POST(request: Request) {
           <div class="preheader">${preheader}</div>
           <div class="email-container">
             <div class="header">
-              <a href="https://lankalux.com" style="text-decoration: none; display: block;">
-                <img src="${logoUrl}" alt="LankaLux" class="logo" />
+              <a href="https://lankalux.com" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-block;">
+                <img src="${logoUrl}" alt="LankaLux" class="logo" width="300" height="72" border="0" />
               </a>
             </div>
             <div class="content">
