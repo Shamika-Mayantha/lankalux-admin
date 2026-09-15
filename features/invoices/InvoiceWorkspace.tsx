@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { authedFetch } from '@/lib/authed-fetch'
 import { consoleFetch } from '@/lib/console-api'
 import { InvoicePreview, type InvoicePreviewModel } from '@/components/invoices/InvoicePreview'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { clampEndOnOrAfterStart } from '@/lib/dates'
 import '@/components/invoices/invoice.css'
 
 type PaymentMethod = 'bank_transfer' | 'card' | 'cash' | 'online_payment' | 'other'
@@ -468,24 +470,47 @@ export function InvoiceWorkspace({
             <div className="ll-grid-2" style={{ marginTop: 18, alignItems: 'start' }}>
               <div className="ll-form" style={{ maxWidth: 'none' }}>
                 <div className="ll-fields-2">
-                  <label>
-                    Invoice date
-                    <input
-                      type="date"
-                      value={selected.invoice.invoice_date}
-                      disabled={!isDraft}
-                      onChange={(e) => updateSelected((row) => ({ ...row, invoice: { ...row.invoice, invoice_date: e.target.value } }))}
-                    />
-                  </label>
-                  <label>
-                    Payment due date
-                    <input
-                      type="date"
-                      value={selected.invoice.due_date || ''}
-                      disabled={!isDraft}
-                      onChange={(e) => updateSelected((row) => ({ ...row, invoice: { ...row.invoice, due_date: e.target.value || null } }))}
-                    />
-                  </label>
+                  <DatePicker
+                    id="invoice-date"
+                    theme="brand"
+                    label="Invoice date"
+                    value={selected.invoice.invoice_date}
+                    disabled={!isDraft}
+                    onChange={(date) =>
+                      updateSelected((row) => ({
+                        ...row,
+                        invoice: {
+                          ...row.invoice,
+                          invoice_date: date,
+                          due_date: row.invoice.due_date
+                            ? clampEndOnOrAfterStart(date, row.invoice.due_date)
+                            : row.invoice.due_date,
+                        },
+                      }))
+                    }
+                    rangeStart={selected.invoice.invoice_date}
+                    rangeEnd={selected.invoice.due_date || undefined}
+                  />
+                  <DatePicker
+                    id="invoice-due"
+                    theme="brand"
+                    label="Payment due date"
+                    value={selected.invoice.due_date || ''}
+                    disabled={!isDraft}
+                    onChange={(date) =>
+                      updateSelected((row) => ({
+                        ...row,
+                        invoice: {
+                          ...row.invoice,
+                          due_date: date ? clampEndOnOrAfterStart(row.invoice.invoice_date, date) : null,
+                        },
+                      }))
+                    }
+                    min={selected.invoice.invoice_date || undefined}
+                    rangeStart={selected.invoice.invoice_date}
+                    rangeEnd={selected.invoice.due_date || undefined}
+                    placeholder="Select due date"
+                  />
                   <label>
                     Currency
                     <input
@@ -635,14 +660,13 @@ export function InvoiceWorkspace({
                     Balance: {selected.preview.formatted.balanceDue}
                   </p>
                   <div className="ll-fields-2" style={{ marginTop: 12 }}>
-                    <label>
-                      Date
-                      <input
-                        type="date"
-                        value={paymentDraft.payment_date}
-                        onChange={(e) => setPaymentDraft((p) => ({ ...p, payment_date: e.target.value }))}
-                      />
-                    </label>
+                    <DatePicker
+                      id="payment-date"
+                      theme="brand"
+                      label="Date"
+                      value={paymentDraft.payment_date}
+                      onChange={(date) => setPaymentDraft((p) => ({ ...p, payment_date: date }))}
+                    />
                     <label>
                       Method
                       <select

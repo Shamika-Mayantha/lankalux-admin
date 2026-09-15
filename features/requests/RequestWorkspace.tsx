@@ -6,6 +6,8 @@ import { useParams } from 'next/navigation'
 import { consoleFetch } from '@/lib/console-api'
 import { downloadJourneyPdf } from '@/lib/print-journey'
 import { STYLE_META, STATUS_LABEL, REQUEST_STATUSES, normalizeStatus, type ItineraryStyle } from '@/config/status'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { clampEndOnOrAfterStart } from '@/lib/dates'
 import { BRAND } from '@/config/brand'
 import { allLibraryImages } from '@/services/image-map.service'
 import { formatKilometers, totalKilometersFor } from '@/services/kilometers.service'
@@ -513,6 +515,10 @@ export function RequestWorkspace() {
     }
     if (overviewDraft.status === 'sold' && !soldPrice) {
       setError('Enter the sold price. The guest app shows that itinerary; invoices use this amount.')
+      return
+    }
+    if (overviewDraft.start_date && overviewDraft.end_date && overviewDraft.end_date < overviewDraft.start_date) {
+      setError('Departure cannot be earlier than arrival.')
       return
     }
     const clientName = overviewDraft.client_name.trim()
@@ -1094,22 +1100,38 @@ export function RequestWorkspace() {
             </div>
           ) : null}
           <div className="ll-fields-2">
-            <label>
-              Arrival
-              <input
-                type="date"
-                value={overviewDraft.start_date}
-                onChange={(e) => setOverviewDraft({ ...overviewDraft, start_date: e.target.value })}
-              />
-            </label>
-            <label>
-              Departure
-              <input
-                type="date"
-                value={overviewDraft.end_date}
-                onChange={(e) => setOverviewDraft({ ...overviewDraft, end_date: e.target.value })}
-              />
-            </label>
+            <DatePicker
+              id="overview-arrival"
+              theme="brand"
+              label="Arrival"
+              value={overviewDraft.start_date}
+              onChange={(start) =>
+                setOverviewDraft({
+                  ...overviewDraft,
+                  start_date: start,
+                  end_date: clampEndOnOrAfterStart(start, overviewDraft.end_date),
+                })
+              }
+              rangeStart={overviewDraft.start_date}
+              rangeEnd={overviewDraft.end_date}
+              placeholder="Select arrival"
+            />
+            <DatePicker
+              id="overview-departure"
+              theme="brand"
+              label="Departure"
+              value={overviewDraft.end_date}
+              onChange={(end) =>
+                setOverviewDraft({
+                  ...overviewDraft,
+                  end_date: clampEndOnOrAfterStart(overviewDraft.start_date, end),
+                })
+              }
+              min={overviewDraft.start_date || undefined}
+              rangeStart={overviewDraft.start_date}
+              rangeEnd={overviewDraft.end_date}
+              placeholder="Select departure"
+            />
           </div>
           <label>
             Duration

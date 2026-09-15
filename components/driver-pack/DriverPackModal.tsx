@@ -16,6 +16,8 @@ import {
 import { driverPackFilenames } from '@/lib/driver-pack/filenameHelpers'
 import { attachHotelQrCodes, downloadBlob, loadBrandLogoDataUrl, renderPdfBlob, zipPdfs } from '@/lib/driver-pack/pdf'
 import type { ClientRequestRow, DriverRecord, HotelRecord, ItineraryRecord, VehicleRecord } from '@/types/domain'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { clampEndOnOrAfterStart } from '@/lib/dates'
 import '@/components/driver-pack/driver-pack.css'
 
 type DocKey = 'journey' | 'log' | 'paging'
@@ -333,22 +335,47 @@ export function DriverPackSection({
                   Vehicle Registration Number
                   <input value={form.vehicleRegistration} onChange={(e) => set('vehicleRegistration', e.target.value)} />
                 </label>
-                <label>
-                  Travel Start Date
-                  <input type="date" value={form.startDate} onChange={(e) => set('startDate', e.target.value)} />
-                </label>
-                <label>
-                  Travel End Date
-                  <input type="date" value={form.endDate} onChange={(e) => set('endDate', e.target.value)} />
-                </label>
+                <DatePicker
+                  id="driver-start"
+                  theme="brand"
+                  label="Travel Start Date"
+                  value={form.startDate}
+                  onChange={(start) => {
+                    set('startDate', start)
+                    set('endDate', clampEndOnOrAfterStart(start, form.endDate))
+                  }}
+                  rangeStart={form.startDate}
+                  rangeEnd={form.endDate}
+                  placeholder="Select start"
+                />
+                <DatePicker
+                  id="driver-end"
+                  theme="brand"
+                  label="Travel End Date"
+                  value={form.endDate}
+                  onChange={(end) => set('endDate', clampEndOnOrAfterStart(form.startDate, end))}
+                  min={form.startDate || undefined}
+                  rangeStart={form.startDate}
+                  rangeEnd={form.endDate}
+                  placeholder="Select end"
+                />
                 <label>
                   Arrival Flight Number
                   <input value={form.arrivalFlight} onChange={(e) => set('arrivalFlight', e.target.value)} />
                 </label>
-                <label>
-                  Arrival Date
-                  <input type="date" value={form.arrivalDate} onChange={(e) => set('arrivalDate', e.target.value)} />
-                </label>
+                <DatePicker
+                  id="driver-arrival"
+                  theme="brand"
+                  label="Arrival Date"
+                  value={form.arrivalDate}
+                  onChange={(start) => {
+                    set('arrivalDate', start)
+                    set('departureDate', clampEndOnOrAfterStart(start, form.departureDate))
+                  }}
+                  rangeStart={form.arrivalDate}
+                  rangeEnd={form.departureDate}
+                  placeholder="Select arrival"
+                />
                 <label>
                   Arrival Time
                   <input type="time" value={form.arrivalTime} onChange={(e) => set('arrivalTime', e.target.value)} />
@@ -357,10 +384,17 @@ export function DriverPackSection({
                   Departure Flight Number
                   <input value={form.departureFlight} onChange={(e) => set('departureFlight', e.target.value)} />
                 </label>
-                <label>
-                  Departure Date
-                  <input type="date" value={form.departureDate} onChange={(e) => set('departureDate', e.target.value)} />
-                </label>
+                <DatePicker
+                  id="driver-departure"
+                  theme="brand"
+                  label="Departure Date"
+                  value={form.departureDate}
+                  onChange={(end) => set('departureDate', clampEndOnOrAfterStart(form.arrivalDate, end))}
+                  min={form.arrivalDate || undefined}
+                  rangeStart={form.arrivalDate}
+                  rangeEnd={form.departureDate}
+                  placeholder="Select departure"
+                />
                 <label>
                   Departure Time
                   <input type="time" value={form.departureTime} onChange={(e) => set('departureTime', e.target.value)} />

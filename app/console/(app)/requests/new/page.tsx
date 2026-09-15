@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { consoleFetch } from '@/lib/console-api'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { clampEndOnOrAfterStart } from '@/lib/dates'
 
 const empty = {
   client_name: '',
@@ -81,8 +83,33 @@ export default function NewRequestPage() {
         <label>Phone / WhatsApp<input value={form.whatsapp} onChange={(e) => set('whatsapp', e.target.value)} /></label>
         <label>Country<input value={form.origin_country} onChange={(e) => set('origin_country', e.target.value)} /></label>
         <div className="ll-row">
-          <label>Arrival<input type="date" value={form.start_date} onChange={(e) => set('start_date', e.target.value)} /></label>
-          <label>Departure<input type="date" value={form.end_date} onChange={(e) => set('end_date', e.target.value)} /></label>
+          <DatePicker
+            id="new-arrival"
+            theme="brand"
+            label="Arrival"
+            value={form.start_date}
+            onChange={(start) =>
+              setForm((f) => ({
+                ...f,
+                start_date: start,
+                end_date: clampEndOnOrAfterStart(start, f.end_date),
+              }))
+            }
+            rangeStart={form.start_date}
+            rangeEnd={form.end_date}
+            placeholder="Select arrival"
+          />
+          <DatePicker
+            id="new-departure"
+            theme="brand"
+            label="Departure"
+            value={form.end_date}
+            onChange={(end) => set('end_date', clampEndOnOrAfterStart(form.start_date, end))}
+            min={form.start_date || undefined}
+            rangeStart={form.start_date}
+            rangeEnd={form.end_date}
+            placeholder="Select departure"
+          />
           <label>Duration<input readOnly value={duration ? `${duration} days` : ''} /></label>
         </div>
         <label>Arrival flight<input value={form.arrival_flight} onChange={(e) => set('arrival_flight', e.target.value)} /></label>

@@ -29,6 +29,7 @@ import { driverPackFilenames, sanitizeFilename, splitGuestNames } from '../lib/d
 import { googleMapsSearchUrl } from '../lib/driver-pack/mapLinkHelpers'
 import { detectTrainOperation, operationalStopsForDay, TBC } from '../lib/driver-pack/routeHelpers'
 import { buildDriverPackData } from '../lib/driver-pack/buildDriverPackData'
+import { clampEndOnOrAfterStart } from '../lib/dates'
 
 function assert(cond: unknown, msg: string) {
   if (!cond) throw new Error(msg)
@@ -84,6 +85,12 @@ assert(shouldExpireRequest({ start_date: '2026-08-11', status: 'new' }, '2026-08
 assert(shouldExpireRequest({ start_date: '2026-08-12', status: 'new' }, '2026-08-14') === false, 'do not expire at 2 days')
 assert(shouldExpireRequest({ start_date: '2026-08-10', status: 'sold' }, '2026-08-14') === false, 'sold trips do not expire')
 assert(shouldExpireRequest({ start_date: '2026-08-20', status: 'follow_up' }, '2026-08-14') === false, 'future dates stay open')
+
+assert(clampEndOnOrAfterStart('2026-09-12', '2026-09-10') === '2026-09-12', 'end snaps up to start')
+assert(clampEndOnOrAfterStart('2026-09-12', '2026-09-21') === '2026-09-21', 'later end is kept')
+assert(clampEndOnOrAfterStart('2026-09-12', '2026-09-12') === '2026-09-12', 'same-day trip is allowed')
+assert(clampEndOnOrAfterStart('', '2026-09-10') === '2026-09-10', 'empty start keeps end')
+assert(clampEndOnOrAfterStart('2026-09-12', '') === '', 'empty end stays empty')
 
 const classic = calculateTotalKilometers([
   { location: 'Sigiriya' },
