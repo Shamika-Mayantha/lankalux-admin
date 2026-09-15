@@ -9,7 +9,7 @@ import { getInvoice, invoicePreviewModel, markInvoiceSent } from '@/services/inv
 import { renderInvoicePdf } from '@/services/invoice-pdf'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
 import { getRequest } from '@/services/request.service'
-import { getTemplate, followUpCta, normalizeEditableBody, type TemplateId } from '@/lib/email-templates'
+import { getTemplate, followUpCtas, normalizeEditableBody, type TemplateId } from '@/lib/email-templates'
 
 const FROM_EMAIL = 'hello@lankalux.com'
 
@@ -282,13 +282,12 @@ export async function sendFollowUpTemplateEmail(opts: {
       ? String(opts.body)
       : template.getText({ clientName })
   const normalizedBody = normalizeEditableBody(bodySource)
-  const cta = followUpCta(template.id)
+  const ctas = followUpCtas(template.id).map((cta) => ({ url: cta.ctaUrl, label: cta.ctaLabel }))
   const compiled = renderFollowUpEmail({
     clientName,
     bodyText: normalizedBody,
     logoUrl: `${appUrl()}${BRAND.logoSrc}`,
-    ctaUrl: cta?.ctaUrl,
-    ctaLabel: cta?.ctaLabel,
+    ctas,
   })
   const html = compiled.html
   const text = compiled.text

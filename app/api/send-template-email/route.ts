@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import nodemailer from 'nodemailer'
 import { BRAND } from '@/config/brand'
 import { appUrl } from '@/config/env'
-import { followUpCta, getTemplate, normalizeEditableBody, type TemplateId } from '@/lib/email-templates'
+import { followUpCtas, getTemplate, normalizeEditableBody, type TemplateId } from '@/lib/email-templates'
 import { renderFollowUpEmail } from '@/services/journey-copy'
 
 export async function POST(request: Request) {
@@ -101,13 +101,12 @@ export async function POST(request: Request) {
         ? String(customBody)
         : template.getText({ clientName })
     const normalizedBody = normalizeEditableBody(bodySource)
-    const cta = followUpCta(templateId)
+    const ctas = followUpCtas(templateId).map((cta) => ({ url: cta.ctaUrl, label: cta.ctaLabel }))
     const compiled = renderFollowUpEmail({
       clientName,
       bodyText: normalizedBody,
       logoUrl: `${appUrl()}${BRAND.logoSrc}`,
-      ctaUrl: cta?.ctaUrl,
-      ctaLabel: cta?.ctaLabel,
+      ctas,
     })
     const emailHtml = compiled.html
     const emailText = compiled.text

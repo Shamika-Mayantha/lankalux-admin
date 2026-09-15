@@ -58,6 +58,40 @@ function firstName(fullName: string) {
   return fullName.trim().split(' ')[0] || 'Guest'
 }
 
+export type EmailCta = { url: string; label: string }
+
+function resolveCtas(opts: {
+  ctas?: EmailCta[]
+  ctaUrl?: string | null
+  ctaLabel?: string | null
+}): EmailCta[] {
+  const fromArray = (opts.ctas || [])
+    .map((cta) => ({ url: cta.url?.trim() || '', label: cta.label?.trim() || '' }))
+    .filter((cta) => cta.url && cta.label)
+  if (fromArray.length) return fromArray
+  const url = opts.ctaUrl?.trim()
+  const label = opts.ctaLabel?.trim()
+  return url && label ? [{ url, label }] : []
+}
+
+function ctaButtonHtml(cta: EmailCta, variant: 'primary' | 'secondary') {
+  const style =
+    variant === 'primary'
+      ? "background:#1A2A1D;color:#F9F4EB;text-decoration:none;padding:14px 28px;border-radius:0;font-weight:500;letter-spacing:.02em;font-size:14px;font-family:'Open Sans',Arial,sans-serif;display:inline-block;border:1px solid #B18544;"
+      : "background:#F9F4EB;color:#1A2A1D;text-decoration:none;padding:14px 28px;border-radius:0;font-weight:500;letter-spacing:.02em;font-size:14px;font-family:'Open Sans',Arial,sans-serif;display:inline-block;border:1px solid #B18544;"
+  return `<a href="${esc(cta.url)}" style="${style}">${esc(cta.label)}</a>`
+}
+
+function renderCtaBlock(ctas: EmailCta[]) {
+  if (!ctas.length) return ''
+  return ctas
+    .map((cta, index) => {
+      const margin = index === 0 ? '28px 0 12px' : index === ctas.length - 1 ? '0 0 28px' : '0 0 12px'
+      return `<p style="text-align:center;margin:${margin};">${ctaButtonHtml(cta, index === 0 ? 'primary' : 'secondary')}</p>`
+    })
+    .join('')
+}
+
 function renderBrandedClientEmail(opts: {
   firstName: string
   introduction?: string
@@ -67,15 +101,11 @@ function renderBrandedClientEmail(opts: {
   extraHtml?: string
   ctaUrl?: string
   ctaLabel?: string
+  ctas?: EmailCta[]
   logoUrl: string
   textLines: string[]
 }): { html: string; text: string } {
-  const cta =
-    opts.ctaUrl && opts.ctaLabel
-      ? `<p style="text-align:center;margin:28px 0;">
-        <a href="${esc(opts.ctaUrl)}" style="background:#1A2A1D;color:#F9F4EB;text-decoration:none;padding:14px 28px;border-radius:0;font-weight:500;letter-spacing:.02em;font-size:14px;font-family:'Open Sans',Arial,sans-serif;display:inline-block;border:1px solid #B18544;">${esc(opts.ctaLabel)}</a>
-      </p>`
-      : ''
+  const cta = renderCtaBlock(resolveCtas(opts))
 
   const body = opts.bodyHtml
     ? opts.bodyHtml
@@ -120,6 +150,7 @@ export function renderFollowUpEmail(opts: {
   logoUrl: string
   ctaUrl?: string | null
   ctaLabel?: string | null
+  ctas?: EmailCta[]
 }): { html: string; text: string } {
   const name = firstName(opts.clientName)
   const paragraphs = opts.bodyText
@@ -130,20 +161,18 @@ export function renderFollowUpEmail(opts: {
   const bodyHtml = paragraphs
     .map((p) => `<p style="color:#6b6b66;line-height:1.75;">${esc(p).replace(/\n/g, '<br/>')}</p>`)
     .join('')
-  const ctaUrl = opts.ctaUrl?.trim() || undefined
-  const ctaLabel = opts.ctaLabel?.trim() || undefined
+  const ctas = resolveCtas(opts)
   return renderBrandedClientEmail({
     firstName: name,
     bodyHtml,
-    ctaUrl,
-    ctaLabel,
+    ctas,
     logoUrl: opts.logoUrl,
     textLines: [
       `Dear ${name},`,
       '',
       opts.bodyText.trim(),
       '',
-      ...(ctaUrl && ctaLabel ? [ctaLabel, ctaUrl, ''] : []),
+      ...ctas.flatMap((cta) => [cta.label, cta.url, '']),
       'If you would like any changes, simply reply to this email.',
       '',
       'Warm regards,',

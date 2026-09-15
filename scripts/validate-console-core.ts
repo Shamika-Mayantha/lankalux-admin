@@ -10,7 +10,14 @@ import {
   uniqueInOrder,
 } from '../services/invoice-math'
 import { renderFollowUpEmail, renderInvoiceEmail } from '../services/journey-copy'
-import { followUpCta, getTemplate, GOOGLE_REVIEW_URL, normalizeEditableBody } from '../lib/email-templates'
+import {
+  followUpCta,
+  followUpCtas,
+  getTemplate,
+  GOOGLE_REVIEW_URL,
+  TRUSTPILOT_REVIEW_URL,
+  normalizeEditableBody,
+} from '../lib/email-templates'
 import { placesForJourney, ensureMinimumDayActivities } from '../config/sri-lanka-places'
 import { buildItineraryPrompt, enRouteDesignRules } from '../services/itinerary-prompt'
 import { applyHotelsToDays, hotelsPromptSection } from '../services/hotel-match.service'
@@ -156,15 +163,25 @@ assert(followUpCompiled.html.includes('Hello there.'), 'follow-up includes body'
 assert(followUpCompiled.text.includes('Private journeys, exceptional care'), 'follow-up uses brand tagline')
 
 const postTripCta = followUpCta('post_trip_feedback')
-assert(postTripCta?.ctaUrl === GOOGLE_REVIEW_URL, 'post-trip CTA is the Google review link')
-assert(postTripCta?.ctaLabel === 'Leave a Google review', 'post-trip CTA label')
+const postTripCtas = followUpCtas('post_trip_feedback')
+assert(postTripCta?.ctaUrl === GOOGLE_REVIEW_URL, 'post-trip primary CTA is the Google review link')
+assert(postTripCta?.ctaLabel === 'Leave a Google review', 'post-trip primary CTA label')
+assert(postTripCtas.length === 2, 'post-trip email has Google and Trustpilot CTAs')
+assert(postTripCtas[1]?.ctaUrl === TRUSTPILOT_REVIEW_URL, 'post-trip second CTA is the Trustpilot review link')
+assert(postTripCtas[1]?.ctaLabel === 'Leave a Trustpilot review', 'post-trip Trustpilot CTA label')
+assert(followUpCtas('friendly_checkin').length === 0, 'other follow-up templates have no review CTAs')
 const postTripHtml = getTemplate('post_trip_feedback')!.getHtml({
   clientName: 'Anna Silva',
   logoUrl: 'https://admin.lankalux.com/brand/lankalux-logo.png',
 })
 assert(postTripHtml.includes(GOOGLE_REVIEW_URL), 'post-trip email includes Google review URL')
-assert(postTripHtml.includes('Leave a Google review'), 'post-trip email includes review button')
+assert(postTripHtml.includes('Leave a Google review'), 'post-trip email includes Google review button')
+assert(postTripHtml.includes(TRUSTPILOT_REVIEW_URL), 'post-trip email includes Trustpilot review URL')
+assert(postTripHtml.includes('Leave a Trustpilot review'), 'post-trip email includes Trustpilot review button')
+assert(postTripHtml.includes('Google or Trustpilot'), 'post-trip copy mentions both review sites')
 assert(!postTripHtml.includes('mailto:hello@lankalux.com'), 'post-trip CTA is not the old mailto')
+const postTripText = getTemplate('post_trip_feedback')!.getText({ clientName: 'Anna Silva' })
+assert(postTripText.includes('Google or Trustpilot'), 'post-trip plain text mentions both review sites')
 
 const classicPlaces = placesForJourney({
   destinations: 'Sigiriya → Kandy → Ella → Yala → Mirissa',
