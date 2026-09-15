@@ -121,7 +121,7 @@ export async function previewJourneyEmail(opts: {
     introduction,
     shareUrl: `${publicJourneyUrl()}/journey`,
     includeHotels: opts.includeHotels,
-    logoUrl: `${appUrl()}${BRAND.logoEmailSrc}`,
+    logoUrl: `${appUrl()}${BRAND.logoEmailHeaderSrc}`,
   })
   return { ...compiled, journey }
 }
@@ -144,7 +144,7 @@ export async function sendInvoiceEmail(opts: { invoiceId: string; to?: string; a
     packageTotal: model.formatted.packageTotal,
     balanceDue: model.formatted.balanceDue,
     shareUrl: model.journey.secureLink || null,
-    logoUrl: `${appUrl()}${BRAND.logoEmailSrc}`,
+    logoUrl: `${appUrl()}${BRAND.logoEmailHeaderSrc}`,
   })
   const pdfBytes = await renderInvoicePdf(model)
 
@@ -215,7 +215,7 @@ export async function sendJourneyEmail(opts: {
     opts.introduction?.trim() ||
     'We are delighted to share your personalised LankaLux Journey. Every day has been paced with care so you can travel beautifully, not hurriedly.'
 
-  const logoUrl = `${appUrl()}${BRAND.logoEmailSrc}`
+  const logoUrl = `${appUrl()}${BRAND.logoEmailHeaderSrc}`
   const compiled = journey
     ? renderJourneyEmail({
         journey: withVehicleIncluded(withQuotedPrice(journey, opts.includePrice, opts.price), opts.includeVehicle, opts.vehicle),
@@ -296,7 +296,7 @@ export async function sendFollowUpTemplateEmail(opts: {
   const compiled = renderFollowUpEmail({
     clientName,
     bodyText: normalizedBody,
-    logoUrl: `${appUrl()}${BRAND.logoEmailSrc}`,
+    logoUrl: `${appUrl()}${BRAND.logoEmailHeaderSrc}`,
     ctas,
     extraHtml: bcc ? trustpilotAfsSnippet({ recipientName: clientName, recipientEmail: to, referenceId: opts.requestId }) : undefined,
   })

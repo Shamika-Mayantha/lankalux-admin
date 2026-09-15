@@ -1067,7 +1067,7 @@ export function invoiceEmailBody(model: ReturnType<typeof invoicePreviewModel>) 
     packageTotal: model.formatted.packageTotal,
     balanceDue: model.formatted.balanceDue,
     shareUrl: model.journey.secureLink || null,
-    logoUrl: `${appUrl()}${BRAND.logoEmailSrc}`,
+    logoUrl: `${appUrl()}${BRAND.logoEmailHeaderSrc}`,
   })
 }
 

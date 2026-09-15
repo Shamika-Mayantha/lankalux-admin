@@ -287,7 +287,7 @@ export async function POST(request: Request) {
     const subjectSeed = (requestData.id || requestId || '').split('').reduce((a: number, c: string) => a + c.charCodeAt(0), 0)
     const emailSubject = journeyTitle ? `LankaLux Journey - ${journeyTitle}` : premiumSubjects[subjectSeed % premiumSubjects.length]
     const preheader = 'Your personalised LankaLux Journey is ready.'
-    const logoUrl = `${baseUrl}/brand/lankalux-logo-email.jpg`
+    const logoUrl = `${baseUrl}/brand/lankalux-email-header.jpg`
     const ctaText = 'View your LankaLux Journey'
     const emailHtml = `
       <!DOCTYPE html>
@@ -295,6 +295,8 @@ export async function POST(request: Request) {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="color-scheme" content="light only">
+          <meta name="supported-color-schemes" content="light">
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             .preheader {
@@ -314,6 +316,7 @@ export async function POST(request: Request) {
               line-height: 1.75;
               color: #252523;
               background: #ffffff;
+              background-color: #ffffff;
               margin: 0;
               padding: 18px 10px;
             }
@@ -321,17 +324,19 @@ export async function POST(request: Request) {
               max-width: 620px;
               margin: 0 auto;
               background: #ffffff;
-              border: 1px solid rgba(26, 42, 29, 0.12);
+              background-color: #ffffff;
             }
             .header {
               background: #ffffff;
-              padding: 28px 24px;
+              background-color: #ffffff;
+              padding: 0;
               text-align: center;
-              border-bottom: 1px solid #b18544;
+              line-height: 0;
+              font-size: 0;
             }
             .logo {
-              width: 300px;
-              max-width: 86%;
+              width: 100%;
+              max-width: 620px;
               height: auto;
               display: block;
               margin: 0 auto;
@@ -413,14 +418,18 @@ export async function POST(request: Request) {
               padding: 18px 16px;
               font-size: 12px;
             }
+            :root { color-scheme: light only; }
+            @media (prefers-color-scheme: dark) {
+              body, .email-container, .header, .content { background: #ffffff !important; background-color: #ffffff !important; color: #252523 !important; }
+            }
           </style>
         </head>
         <body>
           <div class="preheader">${preheader}</div>
           <div class="email-container">
             <div class="header">
-              <a href="https://lankalux.com" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: inline-block;">
-                <img src="${logoUrl}" alt="LankaLux" class="logo" width="300" height="72" border="0" />
+              <a href="https://lankalux.com" target="_blank" rel="noopener noreferrer" style="text-decoration: none; display: block; line-height: 0;">
+                <img src="${logoUrl}" alt="LankaLux" class="logo" width="620" border="0" />
               </a>
             </div>
             <div class="content">

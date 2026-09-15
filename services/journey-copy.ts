@@ -92,12 +92,24 @@ function renderCtaBlock(ctas: EmailCta[]) {
     .join('')
 }
 
+function emailWhitePixelUrl(logoUrl: string) {
+  if (/^https?:\/\//i.test(logoUrl)) {
+    try {
+      return `${new URL(logoUrl).origin}/brand/email-white.jpg`
+    } catch {
+      return 'https://admin.lankalux.com/brand/email-white.jpg'
+    }
+  }
+  if (logoUrl.startsWith('/')) return '/brand/email-white.jpg'
+  return logoUrl.replace(/[^/]+$/, 'email-white.jpg')
+}
+
 function emailLogoHeader(logoUrl: string) {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;background:#FFFFFF;">
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#FFFFFF" style="border-collapse:collapse;background-color:#FFFFFF;">
       <tr>
-        <td align="center" valign="middle" style="padding:28px 24px;background:#FFFFFF;text-align:center;">
-          <a href="${esc(BRAND.websiteUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;border:0;outline:none;">
-            <img src="${esc(logoUrl)}" alt="LankaLux" width="300" height="72" border="0" style="display:block;margin:0 auto;width:300px;max-width:86%;height:auto;border:0;outline:none;text-decoration:none;background-color:#ffffff;" />
+        <td align="center" valign="middle" bgcolor="#FFFFFF" style="padding:0;margin:0;background-color:#FFFFFF;text-align:center;line-height:0;font-size:0;">
+          <a href="${esc(BRAND.websiteUrl)}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;border:0;outline:none;line-height:0;">
+            <img src="${esc(logoUrl)}" alt="LankaLux" width="620" border="0" style="display:block;width:100%;max-width:620px;height:auto;border:0;outline:none;text-decoration:none;background-color:#ffffff;" />
           </a>
         </td>
       </tr>
@@ -122,33 +134,58 @@ function renderBrandedClientEmail(opts: {
   const body = opts.bodyHtml
     ? opts.bodyHtml
     : opts.introduction
-      ? `<p style="color:#6b6b66;line-height:1.75;">${esc(opts.introduction).replace(/\n/g, '<br/>')}</p>`
+      ? `<p class="ll-muted" style="color:#6b6b66;line-height:1.75;">${esc(opts.introduction).replace(/\n/g, '<br/>')}</p>`
       : ''
 
   const highlight =
     opts.highlightTitle && opts.highlightBodyHtml
-      ? `<div style="background:#F1E9DA;border-left:3px solid #B18544;padding:12px 14px;margin:20px 0;">
-        <p style="margin:0 0 8px;color:#1A2A1D;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(opts.highlightTitle)}</p>
-        <p style="margin:0;font-size:13px;color:#6b6b66;">${opts.highlightBodyHtml}</p>
+      ? `<div class="ll-cream" style="background-color:#F1E9DA;border-left:3px solid #B18544;padding:12px 14px;margin:20px 0;">
+        <p class="ll-ink" style="margin:0 0 8px;color:#1A2A1D;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(opts.highlightTitle)}</p>
+        <p class="ll-muted" style="margin:0;font-size:13px;color:#6b6b66;">${opts.highlightBodyHtml}</p>
       </div>`
       : ''
 
+  const whitePixel = emailWhitePixelUrl(opts.logoUrl)
   const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="color-scheme" content="light"/><meta name="supported-color-schemes" content="light"/></head>
-<body style="margin:0;background:#F9F4EB;font-family:'Open Sans',Segoe UI,Arial,sans-serif;color:#252523;">
-  <div style="max-width:620px;margin:24px auto;background:#fff;border:1px solid rgba(26,42,29,0.12);">
-    ${emailLogoHeader(opts.logoUrl)}
-    <div style="height:1px;background:#B18544;"></div>
-    <div style="padding:28px;">
-      <p>Dear ${esc(opts.firstName)},</p>
-      ${body}
-      ${highlight}
-      ${opts.extraHtml || ''}
-      ${cta}
-      <p style="font-size:13px;color:#6b6b66;">If you would like any changes, simply reply to this email.</p>
-      <p>Warm regards,<br/><strong style="color:#1A2A1D;">${esc(BRAND.name)}</strong><br/><span style="color:#B18544;">${esc(BRAND.tagline)}</span></p>
-    </div>
-  </div>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="color-scheme" content="light only"/><meta name="supported-color-schemes" content="light"/>
+<style type="text/css">
+:root { color-scheme: light only; }
+body, table, td, div, p { color-scheme: light only; }
+@media (prefers-color-scheme: dark) {
+  .ll-bg, .ll-card, .ll-pad, body { background-color:#ffffff !important; background:#ffffff !important; color:#252523 !important; }
+  .ll-cream { background-color:#F1E9DA !important; }
+  .ll-muted { color:#6b6b66 !important; }
+  .ll-ink { color:#1A2A1D !important; }
+  .ll-gold { color:#B18544 !important; }
+}
+[data-ogsc] .ll-bg, [data-ogsc] .ll-card, [data-ogsc] .ll-pad { background-color:#ffffff !important; color:#252523 !important; }
+</style>
+</head>
+<body class="ll-bg" bgcolor="#FFFFFF" style="margin:0;padding:0;background-color:#FFFFFF;background-image:url('${esc(whitePixel)}');font-family:'Open Sans',Segoe UI,Arial,sans-serif;color:#252523;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFFFFF" class="ll-bg" style="border-collapse:collapse;background-color:#FFFFFF;background-image:url('${esc(whitePixel)}');">
+    <tr>
+      <td align="center" bgcolor="#FFFFFF" class="ll-bg" style="padding:16px 10px;background-color:#FFFFFF;">
+        <table role="presentation" width="620" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFFFFF" class="ll-card" style="width:100%;max-width:620px;border-collapse:collapse;background-color:#FFFFFF;">
+          <tr>
+            <td bgcolor="#FFFFFF" class="ll-card" style="padding:0;background-color:#FFFFFF;">
+              ${emailLogoHeader(opts.logoUrl)}
+            </td>
+          </tr>
+          <tr>
+            <td bgcolor="#FFFFFF" class="ll-pad" style="padding:28px;background-color:#FFFFFF;color:#252523;">
+              <p class="ll-ink" style="color:#252523;">Dear ${esc(opts.firstName)},</p>
+              ${body}
+              ${highlight}
+              ${opts.extraHtml || ''}
+              ${cta}
+              <p class="ll-muted" style="font-size:13px;color:#6b6b66;">If you would like any changes, simply reply to this email.</p>
+              <p class="ll-ink" style="color:#252523;">Warm regards,<br/><strong style="color:#1A2A1D;">${esc(BRAND.name)}</strong><br/><span class="ll-gold" style="color:#B18544;">${esc(BRAND.tagline)}</span></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body></html>`
 
   return { html, text: opts.textLines.join('\n') }
@@ -170,7 +207,7 @@ export function renderFollowUpEmail(opts: {
     .map((p) => p.trim())
     .filter(Boolean)
   const bodyHtml = paragraphs
-    .map((p) => `<p style="color:#6b6b66;line-height:1.75;">${esc(p).replace(/\n/g, '<br/>')}</p>`)
+    .map((p) => `<p class="ll-muted" style="color:#6b6b66;line-height:1.75;">${esc(p).replace(/\n/g, '<br/>')}</p>`)
     .join('')
   const ctas = resolveCtas(opts)
   const compiled = renderBrandedClientEmail({

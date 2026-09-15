@@ -127,7 +127,7 @@ assert(parseClientFacingPrice('USD 1,850').amount === 1850, 'parse package quote
 assert(parseClientFacingPrice('USD 1,850').currency === 'USD', 'parse currency')
 assert(uniqueInOrder(['Sigiriya', 'Kandy', 'Ella', 'Yala', 'Mirissa', 'Sigiriya']).join(',') === 'Sigiriya,Kandy,Ella,Yala,Mirissa', 'route unique in order')
 
-const EMAIL_LOGO_URL = 'https://admin.lankalux.com/brand/lankalux-logo-email.jpg'
+const EMAIL_LOGO_URL = 'https://admin.lankalux.com/brand/lankalux-email-header.jpg'
 
 const invoiceEmail = renderInvoiceEmail({
   clientName: 'Sergey Ivanov',
@@ -141,10 +141,11 @@ const invoiceEmail = renderInvoiceEmail({
 })
 assert(invoiceEmail.subject === 'LankaLux Invoice — LL-INV-001', 'invoice email subject')
 assert(invoiceEmail.html.includes('View your LankaLux Journey'), 'invoice email uses itinerary CTA')
-assert(invoiceEmail.html.includes('/brand/lankalux-logo-email.jpg'), 'invoice email uses opaque email logo')
+assert(invoiceEmail.html.includes('/brand/lankalux-email-header.jpg'), 'invoice email uses full-width email header')
 assert(invoiceEmail.html.includes('href="https://lankalux.com"'), 'invoice logo links to lankalux.com')
-assert(invoiceEmail.html.includes('align="center"'), 'invoice logo is table-centred')
-assert(invoiceEmail.html.includes('F9F4EB'), 'invoice email uses ivory canvas')
+assert(invoiceEmail.html.includes('bgcolor="#FFFFFF"'), 'invoice email forces a white canvas')
+assert(invoiceEmail.html.includes('color-scheme'), 'invoice email asks clients to stay in light mode')
+assert(!invoiceEmail.html.includes('height:1px;background:#B18544'), 'invoice email does not use the expandable gold bar')
 assert(invoiceEmail.text.includes('Balance due USD 1,350'), 'invoice email text includes balance')
 
 assert(normalizeEditableBody('Dear Anna,\n\nHello there.\n\nWarm regards,\nLankaLux Team') === 'Hello there.', 'strip greeting and signature')
@@ -154,12 +155,13 @@ const followUpHtml = getTemplate('friendly_checkin')!.getHtml({
   clientName: 'Anna Silva',
   logoUrl: EMAIL_LOGO_URL,
 })
-assert(followUpHtml.includes('F9F4EB'), 'follow-up uses ivory canvas')
-assert(followUpHtml.includes('B18544'), 'follow-up uses gold rule')
+assert(followUpHtml.includes('F1E9DA') || followUpHtml.includes('FFFFFF') || followUpHtml.includes('ffffff'), 'follow-up uses brand whites')
+assert(followUpHtml.includes('B18544'), 'follow-up uses gold')
 assert(followUpHtml.includes('1A2A1D'), 'follow-up uses forest')
-assert(followUpHtml.includes('/brand/lankalux-logo-email.jpg'), 'follow-up uses opaque email logo')
+assert(followUpHtml.includes('/brand/lankalux-email-header.jpg'), 'follow-up uses full-width email header')
 assert(followUpHtml.includes('href="https://lankalux.com"'), 'follow-up logo links to lankalux.com')
-assert(followUpHtml.includes('align="center"'), 'follow-up logo is table-centred')
+assert(followUpHtml.includes('bgcolor="#FFFFFF"'), 'follow-up email forces a white canvas')
+assert(!followUpHtml.includes('height:1px;background:#B18544'), 'follow-up does not use the expandable gold bar')
 assert(!followUpHtml.includes('Georgia'), 'follow-up does not use old serif chrome')
 assert(!followUpHtml.includes('#c8a45d'), 'follow-up does not use old gold')
 assert(!followUpHtml.includes('View your itinerary'), 'follow-up has no itinerary CTA')
@@ -189,7 +191,7 @@ assert(postTripHtml.includes('Leave a Google review'), 'post-trip email includes
 assert(postTripHtml.includes(TRUSTPILOT_REVIEW_URL), 'post-trip email includes Trustpilot review URL')
 assert(postTripHtml.includes('Leave a Trustpilot review'), 'post-trip email includes Trustpilot review button')
 assert(postTripHtml.includes('Google or Trustpilot'), 'post-trip copy mentions both review sites')
-assert(postTripHtml.includes('/brand/lankalux-logo-email.jpg'), 'post-trip uses opaque email logo')
+assert(postTripHtml.includes('/brand/lankalux-email-header.jpg'), 'post-trip uses full-width email header')
 assert(postTripHtml.includes('href="https://lankalux.com"'), 'post-trip logo links to lankalux.com')
 assert(!postTripHtml.includes('mailto:hello@lankalux.com'), 'post-trip CTA is not the old mailto')
 const postTripText = getTemplate('post_trip_feedback')!.getText({ clientName: 'Anna Silva' })

@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     const compiled = renderFollowUpEmail({
       clientName,
       bodyText: normalizedBody,
-      logoUrl: `${appUrl()}${BRAND.logoEmailSrc}`,
+      logoUrl: `${appUrl()}${BRAND.logoEmailHeaderSrc}`,
       ctas,
       extraHtml: bcc
         ? trustpilotAfsSnippet({

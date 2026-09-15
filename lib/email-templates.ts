@@ -32,7 +32,7 @@ export interface TemplateConfig {
   getText: (opts: TemplateRenderOpts) => string
 }
 
-export const DEFAULT_BRAND_LOGO_URL = `https://admin.lankalux.com${BRAND.logoEmailSrc}`
+export const DEFAULT_BRAND_LOGO_URL = `https://admin.lankalux.com${BRAND.logoEmailHeaderSrc}`
 
 /** LankaLux Google Business review link used as the post-trip email CTA. */
 export const GOOGLE_REVIEW_URL = 'https://g.page/r/CUKc_7K7LBGAEAE/review'
