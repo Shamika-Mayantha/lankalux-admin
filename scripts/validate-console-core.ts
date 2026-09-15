@@ -10,7 +10,7 @@ import {
   uniqueInOrder,
 } from '../services/invoice-math'
 import { renderFollowUpEmail, renderInvoiceEmail } from '../services/journey-copy'
-import { getTemplate, normalizeEditableBody } from '../lib/email-templates'
+import { followUpCta, getTemplate, GOOGLE_REVIEW_URL, normalizeEditableBody } from '../lib/email-templates'
 import { placesForJourney, ensureMinimumDayActivities } from '../config/sri-lanka-places'
 import { buildItineraryPrompt, enRouteDesignRules } from '../services/itinerary-prompt'
 import { applyHotelsToDays, hotelsPromptSection } from '../services/hotel-match.service'
@@ -154,6 +154,17 @@ const followUpCompiled = renderFollowUpEmail({
 })
 assert(followUpCompiled.html.includes('Hello there.'), 'follow-up includes body')
 assert(followUpCompiled.text.includes('Private journeys, exceptional care'), 'follow-up uses brand tagline')
+
+const postTripCta = followUpCta('post_trip_feedback')
+assert(postTripCta?.ctaUrl === GOOGLE_REVIEW_URL, 'post-trip CTA is the Google review link')
+assert(postTripCta?.ctaLabel === 'Leave a Google review', 'post-trip CTA label')
+const postTripHtml = getTemplate('post_trip_feedback')!.getHtml({
+  clientName: 'Anna Silva',
+  logoUrl: 'https://admin.lankalux.com/brand/lankalux-logo.png',
+})
+assert(postTripHtml.includes(GOOGLE_REVIEW_URL), 'post-trip email includes Google review URL')
+assert(postTripHtml.includes('Leave a Google review'), 'post-trip email includes review button')
+assert(!postTripHtml.includes('mailto:hello@lankalux.com'), 'post-trip CTA is not the old mailto')
 
 const classicPlaces = placesForJourney({
   destinations: 'Sigiriya → Kandy → Ella → Yala → Mirissa',

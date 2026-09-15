@@ -33,14 +33,8 @@ export interface TemplateConfig {
 
 export const DEFAULT_BRAND_LOGO_URL = `https://admin.lankalux.com${BRAND.logoSrc}`
 
-/** Pre-filled feedback mailto; client can also reply to the message they received. */
-export const FEEDBACK_MAILTO_PLAIN =
-  'mailto:hello@lankalux.com?subject=' +
-  encodeURIComponent('Feedback on my Sri Lanka trip with LankaLux') +
-  '&body=' +
-  encodeURIComponent(
-    'Hello LankaLux team,\n\nI wanted to share a bit of feedback about my recent trip and how things went with the vehicle and driver.\n\n'
-  )
+/** LankaLux Google Business review link used as the post-trip email CTA. */
+export const GOOGLE_REVIEW_URL = 'https://g.page/r/CUKc_7K7LBGAEAE/review'
 
 function firstName(clientName: string) {
   return clientName?.trim() ? clientName.split(' ')[0] : 'there'
@@ -105,7 +99,7 @@ export function buildHtmlFromBody(opts: {
 
 export function followUpCta(templateId: TemplateId): { ctaUrl: string; ctaLabel: string } | null {
   if (templateId === 'post_trip_feedback') {
-    return { ctaUrl: FEEDBACK_MAILTO_PLAIN, ctaLabel: 'Send us a quick note' }
+    return { ctaUrl: GOOGLE_REVIEW_URL, ctaLabel: 'Leave a Google review' }
   }
   return null
 }
@@ -274,7 +268,7 @@ export const FOLLOW_UP_TEMPLATES: TemplateConfig[] = [
         [
           'We hope you are settling back in after your time with us. We are thinking of you and hoping Sri Lanka left you with good memories, beautiful views you will not forget, and maybe a few new favourite moments.',
           'If you have a spare minute, we would really appreciate hearing how it all felt in real life. How was your driver? Was the car comfortable and did you feel looked after on the road? Your honest take helps us thank people who did a great job and fix anything that was not quite right.',
-          'You do not need to write a lot. A few sentences is more than enough. Just reply to this email, or tap the button below if that is easier. Either way it comes straight to us.',
+          'You do not need to write a lot. A few sentences is more than enough. Reply to this email, or tap the button below to leave a Google review — that helps other travellers find us.',
           'Thank you for choosing LankaLux. Having you travel with us meant a great deal, and we hope we get to welcome you back one day.',
         ],
         { logoUrl, ...followUpCta('post_trip_feedback') }
@@ -283,7 +277,7 @@ export const FOLLOW_UP_TEMPLATES: TemplateConfig[] = [
       brandedText(clientName, [
         'We hope you are settling back in after your time with us. We are thinking of you and hoping Sri Lanka left you with good memories, beautiful views you will not forget, and maybe a few new favourite moments.',
         'If you have a spare minute, we would really appreciate hearing how it all felt in real life. How was your driver? Was the car comfortable and did you feel looked after on the road? Your honest take helps us thank people who did a great job and fix anything that was not quite right.',
-        'You do not need to write a lot. A few sentences is more than enough. Just reply to this email, or use the link in the email if you prefer. Either way it comes straight to us.',
+        'You do not need to write a lot. A few sentences is more than enough. Reply to this email, or use the Google review link in the email if you prefer.',
         'Thank you for choosing LankaLux. Having you travel with us meant a great deal, and we hope we get to welcome you back one day.',
       ]),
   },
