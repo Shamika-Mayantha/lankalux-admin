@@ -14,6 +14,7 @@ export type TemplateId =
   | 'your_trip_your_way'
   | 'spots_youll_love'
   | 'one_step_closer'
+  | 'ready_for_sri_lanka'
   | 'post_trip_feedback'
   | 'custom_email'
 
@@ -296,6 +297,27 @@ export const FOLLOW_UP_TEMPLATES: TemplateConfig[] = [
         'Everything is in place for your trip, and we are ready to proceed whenever you are.',
         'Once you are happy with the plan, we can move forward with securing the accommodations and arrangements for your dates.',
         'Just let us know, and we will guide you through the next step.',
+      ]),
+  },
+  {
+    id: 'ready_for_sri_lanka',
+    name: 'When you are ready for Sri Lanka',
+    subject: 'Whenever you are ready to enjoy Sri Lanka',
+    getHtml: ({ clientName, logoUrl }) =>
+      brandedHtml(
+        clientName,
+        [
+          'Plans change, and that is completely alright. We simply wanted to reach out and let you know we are still here if Sri Lanka is something you would like to look at again.',
+          'If you feel ready to enjoy the island, we would be happy to reopen what we had started, adjust the dates, or shape a new journey around the time that now feels right for you.',
+          'There is no rush at all. Whenever you would like to pick things up, just reply to this email and we will take it from there.',
+        ],
+        { logoUrl }
+      ),
+    getText: ({ clientName }) =>
+      brandedText(clientName, [
+        'Plans change, and that is completely alright. We simply wanted to reach out and let you know we are still here if Sri Lanka is something you would like to look at again.',
+        'If you feel ready to enjoy the island, we would be happy to reopen what we had started, adjust the dates, or shape a new journey around the time that now feels right for you.',
+        'There is no rush at all. Whenever you would like to pick things up, just reply to this email and we will take it from there.',
       ]),
   },
   {

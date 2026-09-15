@@ -16,6 +16,7 @@ import {
   followUpCtas,
   getTemplate,
   GOOGLE_REVIEW_URL,
+  FOLLOW_UP_TEMPLATES,
   TRUSTPILOT_AFS_BCC,
   TRUSTPILOT_REVIEW_URL,
   normalizeEditableBody,
@@ -210,6 +211,24 @@ assert(afsHtml.includes('application/json+trustpilot'), 'AFS snippet is in the H
 assert(afsHtml.includes('anna@example.com'), 'AFS snippet includes the guest email')
 assert(afsHtml.includes('req-id-123'), 'AFS snippet includes the request id')
 assert(!afsHtml.includes(TRUSTPILOT_AFS_BCC), 'AFS BCC address is not shown in the email body')
+
+const readyIds = FOLLOW_UP_TEMPLATES.map((t) => t.id)
+assert(
+  readyIds.indexOf('ready_for_sri_lanka') >= 0 &&
+    readyIds.indexOf('ready_for_sri_lanka') < readyIds.indexOf('post_trip_feedback'),
+  'cancelled-plans template sits before How was your trip?'
+)
+assert(followUpCtas('ready_for_sri_lanka').length === 0, 'cancelled-plans template has no review CTAs')
+assert(followUpBcc('ready_for_sri_lanka') === null, 'cancelled-plans template is not BCCd to Trustpilot')
+const readyHtml = getTemplate('ready_for_sri_lanka')!.getHtml({
+  clientName: 'Anna Silva',
+  logoUrl: EMAIL_LOGO_URL,
+})
+assert(readyHtml.includes('Plans change'), 'cancelled-plans email acknowledges changed plans')
+assert(readyHtml.includes('enjoy the island') || readyHtml.includes('enjoy Sri Lanka'), 'cancelled-plans email invites them back to Sri Lanka')
+assert(!readyHtml.includes('Leave a Google review'), 'cancelled-plans email has no Google review button')
+const readyText = getTemplate('ready_for_sri_lanka')!.getText({ clientName: 'Anna Silva' })
+assert(readyText.includes('Whenever you would like to pick things up'), 'cancelled-plans plain text invites a reply')
 
 const classicPlaces = placesForJourney({
   destinations: 'Sigiriya → Kandy → Ella → Yala → Mirissa',
