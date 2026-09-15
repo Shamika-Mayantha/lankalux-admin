@@ -1,17 +1,7 @@
-/* Design tokens from lankalux.com / lankalux-design.css */
+/* Design tokens from lankalux.com / lankalux-design.css.
+   Keep them on html as well as .ll-root so portaled calendars inherit brand colors. */
 html[data-ll-brand],
-html:has(.ll-root) {
-  zoom: 1;
-  background: #F9F4EB;
-}
-
-html[data-ll-brand] body,
-html:has(.ll-root) body {
-  background: #F9F4EB !important;
-  color: #252523;
-  font-family: var(--ll-font-body), "Open Sans", sans-serif;
-}
-
+html:has(.ll-root),
 .ll-root {
   --ivory: #F9F4EB;
   --forest: #1A2A1D;
@@ -32,6 +22,22 @@ html:has(.ll-root) body {
   --shadow: 0 16px 40px rgba(26, 42, 29, 0.08);
   --font-display: var(--ll-font-display), "Be Vietnam Pro", sans-serif;
   --font-body: var(--ll-font-body), "Open Sans", sans-serif;
+}
+
+html[data-ll-brand],
+html:has(.ll-root) {
+  zoom: 1;
+  background: #F9F4EB;
+}
+
+html[data-ll-brand] body,
+html:has(.ll-root) body {
+  background: #F9F4EB !important;
+  color: #252523;
+  font-family: var(--ll-font-body), "Open Sans", sans-serif;
+}
+
+.ll-root {
   min-height: 100%;
   font-family: var(--font-body);
   background: var(--ivory);
@@ -846,7 +852,7 @@ button.ll-card,
 .ll-dp-cal {
   position: fixed;
   z-index: 120;
-  background: var(--ivory);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-top: 2px solid var(--gold);
   box-shadow: 0 24px 60px rgba(26, 42, 29, 0.18);

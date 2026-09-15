@@ -337,7 +337,9 @@ export function DatePicker({
 
         {open && !isBrand ? renderCalendar() : null}
       </div>
-      {open && isBrand && calPos && typeof document !== 'undefined' ? createPortal(renderCalendar(), document.body) : null}
+      {open && isBrand && calPos && typeof document !== 'undefined'
+        ? createPortal(renderCalendar(), document.querySelector('.ll-root') || document.body)
+        : null}
     </div>
   )
 }
