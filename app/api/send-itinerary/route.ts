@@ -315,20 +315,20 @@ export async function POST(request: Request) {
               font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
               line-height: 1.75;
               color: #252523;
-              background: #ffffff;
-              background-color: #ffffff;
+              background: #F9F4EB;
+              background-color: #F9F4EB;
               margin: 0;
               padding: 18px 10px;
             }
             .email-container {
               max-width: 620px;
               margin: 0 auto;
-              background: #ffffff;
-              background-color: #ffffff;
+              background: #F9F4EB;
+              background-color: #F9F4EB;
             }
             .header {
-              background: #ffffff;
-              background-color: #ffffff;
+              background: #F9F4EB;
+              background-color: #F9F4EB;
               padding: 0;
               text-align: center;
               line-height: 0;
@@ -340,9 +340,9 @@ export async function POST(request: Request) {
               height: auto;
               display: block;
               margin: 0 auto;
-              background-color: #ffffff;
+              background-color: #F9F4EB;
             }
-            .content { padding: 30px 28px; }
+            .content { padding: 30px 28px; background-color: #F9F4EB; }
             .greeting {
               font-size: 16px;
               margin-bottom: 14px;
@@ -420,7 +420,7 @@ export async function POST(request: Request) {
             }
             :root { color-scheme: light only; }
             @media (prefers-color-scheme: dark) {
-              body, .email-container, .header, .content { background: #ffffff !important; background-color: #ffffff !important; color: #252523 !important; }
+              body, .email-container, .header, .content { background: #F9F4EB !important; background-color: #F9F4EB !important; color: #252523 !important; }
             }
           </style>
         </head>

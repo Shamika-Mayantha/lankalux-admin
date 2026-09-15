@@ -92,24 +92,24 @@ function renderCtaBlock(ctas: EmailCta[]) {
     .join('')
 }
 
-function emailWhitePixelUrl(logoUrl: string) {
+function emailIvoryPixelUrl(logoUrl: string) {
   if (/^https?:\/\//i.test(logoUrl)) {
     try {
-      return `${new URL(logoUrl).origin}/brand/email-white.jpg`
+      return `${new URL(logoUrl).origin}/brand/email-ivory.jpg`
     } catch {
-      return 'https://admin.lankalux.com/brand/email-white.jpg'
+      return 'https://admin.lankalux.com/brand/email-ivory.jpg'
     }
   }
-  if (logoUrl.startsWith('/')) return '/brand/email-white.jpg'
-  return logoUrl.replace(/[^/]+$/, 'email-white.jpg')
+  if (logoUrl.startsWith('/')) return '/brand/email-ivory.jpg'
+  return logoUrl.replace(/[^/]+$/, 'email-ivory.jpg')
 }
 
 function emailLogoHeader(logoUrl: string) {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#FFFFFF" style="border-collapse:collapse;background-color:#FFFFFF;">
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#F9F4EB" style="border-collapse:collapse;background-color:#F9F4EB;">
       <tr>
-        <td align="center" valign="middle" bgcolor="#FFFFFF" style="padding:0;margin:0;background-color:#FFFFFF;text-align:center;line-height:0;font-size:0;">
+        <td align="center" valign="middle" bgcolor="#F9F4EB" style="padding:0;margin:0;background-color:#F9F4EB;text-align:center;line-height:0;font-size:0;">
           <a href="${esc(BRAND.websiteUrl)}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;border:0;outline:none;line-height:0;">
-            <img src="${esc(logoUrl)}" alt="LankaLux" width="620" border="0" style="display:block;width:100%;max-width:620px;height:auto;border:0;outline:none;text-decoration:none;background-color:#ffffff;" />
+            <img src="${esc(logoUrl)}" alt="LankaLux" width="620" border="0" style="display:block;width:100%;max-width:620px;height:auto;border:0;outline:none;text-decoration:none;background-color:#F9F4EB;" />
           </a>
         </td>
       </tr>
@@ -145,34 +145,34 @@ function renderBrandedClientEmail(opts: {
       </div>`
       : ''
 
-  const whitePixel = emailWhitePixelUrl(opts.logoUrl)
+  const ivoryPixel = emailIvoryPixelUrl(opts.logoUrl)
   const html = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="color-scheme" content="light only"/><meta name="supported-color-schemes" content="light"/>
 <style type="text/css">
 :root { color-scheme: light only; }
 body, table, td, div, p { color-scheme: light only; }
 @media (prefers-color-scheme: dark) {
-  .ll-bg, .ll-card, .ll-pad, body { background-color:#ffffff !important; background:#ffffff !important; color:#252523 !important; }
+  .ll-bg, .ll-card, .ll-pad, body { background-color:#F9F4EB !important; background:#F9F4EB !important; color:#252523 !important; }
   .ll-cream { background-color:#F1E9DA !important; }
   .ll-muted { color:#6b6b66 !important; }
   .ll-ink { color:#1A2A1D !important; }
   .ll-gold { color:#B18544 !important; }
 }
-[data-ogsc] .ll-bg, [data-ogsc] .ll-card, [data-ogsc] .ll-pad { background-color:#ffffff !important; color:#252523 !important; }
+[data-ogsc] .ll-bg, [data-ogsc] .ll-card, [data-ogsc] .ll-pad { background-color:#F9F4EB !important; color:#252523 !important; }
 </style>
 </head>
-<body class="ll-bg" bgcolor="#FFFFFF" style="margin:0;padding:0;background-color:#FFFFFF;background-image:url('${esc(whitePixel)}');font-family:'Open Sans',Segoe UI,Arial,sans-serif;color:#252523;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFFFFF" class="ll-bg" style="border-collapse:collapse;background-color:#FFFFFF;background-image:url('${esc(whitePixel)}');">
+<body class="ll-bg" bgcolor="#F9F4EB" style="margin:0;padding:0;background-color:#F9F4EB;background-image:url('${esc(ivoryPixel)}');font-family:'Open Sans',Segoe UI,Arial,sans-serif;color:#252523;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F9F4EB" class="ll-bg" style="border-collapse:collapse;background-color:#F9F4EB;background-image:url('${esc(ivoryPixel)}');">
     <tr>
-      <td align="center" bgcolor="#FFFFFF" class="ll-bg" style="padding:16px 10px;background-color:#FFFFFF;">
-        <table role="presentation" width="620" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFFFFF" class="ll-card" style="width:100%;max-width:620px;border-collapse:collapse;background-color:#FFFFFF;">
+      <td align="center" bgcolor="#F9F4EB" class="ll-bg" style="padding:16px 10px;background-color:#F9F4EB;">
+        <table role="presentation" width="620" cellpadding="0" cellspacing="0" border="0" bgcolor="#F9F4EB" class="ll-card" style="width:100%;max-width:620px;border-collapse:collapse;background-color:#F9F4EB;">
           <tr>
-            <td bgcolor="#FFFFFF" class="ll-card" style="padding:0;background-color:#FFFFFF;">
+            <td bgcolor="#F9F4EB" class="ll-card" style="padding:0;background-color:#F9F4EB;">
               ${emailLogoHeader(opts.logoUrl)}
             </td>
           </tr>
           <tr>
-            <td bgcolor="#FFFFFF" class="ll-pad" style="padding:28px;background-color:#FFFFFF;color:#252523;">
+            <td bgcolor="#F9F4EB" class="ll-pad" style="padding:28px;background-color:#F9F4EB;color:#252523;">
               <p class="ll-ink" style="color:#252523;">Dear ${esc(opts.firstName)},</p>
               ${body}
               ${highlight}

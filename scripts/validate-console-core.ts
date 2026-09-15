@@ -143,7 +143,7 @@ assert(invoiceEmail.subject === 'LankaLux Invoice — LL-INV-001', 'invoice emai
 assert(invoiceEmail.html.includes('View your LankaLux Journey'), 'invoice email uses itinerary CTA')
 assert(invoiceEmail.html.includes('/brand/lankalux-email-header.jpg'), 'invoice email uses full-width email header')
 assert(invoiceEmail.html.includes('href="https://lankalux.com"'), 'invoice logo links to lankalux.com')
-assert(invoiceEmail.html.includes('bgcolor="#FFFFFF"'), 'invoice email forces a white canvas')
+assert(invoiceEmail.html.includes('bgcolor="#F9F4EB"'), 'invoice email uses the ivory canvas')
 assert(invoiceEmail.html.includes('color-scheme'), 'invoice email asks clients to stay in light mode')
 assert(!invoiceEmail.html.includes('height:1px;background:#B18544'), 'invoice email does not use the expandable gold bar')
 assert(invoiceEmail.text.includes('Balance due USD 1,350'), 'invoice email text includes balance')
@@ -155,12 +155,12 @@ const followUpHtml = getTemplate('friendly_checkin')!.getHtml({
   clientName: 'Anna Silva',
   logoUrl: EMAIL_LOGO_URL,
 })
-assert(followUpHtml.includes('F1E9DA') || followUpHtml.includes('FFFFFF') || followUpHtml.includes('ffffff'), 'follow-up uses brand whites')
+assert(followUpHtml.includes('F9F4EB'), 'follow-up uses ivory')
 assert(followUpHtml.includes('B18544'), 'follow-up uses gold')
 assert(followUpHtml.includes('1A2A1D'), 'follow-up uses forest')
 assert(followUpHtml.includes('/brand/lankalux-email-header.jpg'), 'follow-up uses full-width email header')
 assert(followUpHtml.includes('href="https://lankalux.com"'), 'follow-up logo links to lankalux.com')
-assert(followUpHtml.includes('bgcolor="#FFFFFF"'), 'follow-up email forces a white canvas')
+assert(followUpHtml.includes('bgcolor="#F9F4EB"'), 'follow-up email uses the ivory canvas')
 assert(!followUpHtml.includes('height:1px;background:#B18544'), 'follow-up does not use the expandable gold bar')
 assert(!followUpHtml.includes('Georgia'), 'follow-up does not use old serif chrome')
 assert(!followUpHtml.includes('#c8a45d'), 'follow-up does not use old gold')

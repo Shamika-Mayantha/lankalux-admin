@@ -11,7 +11,7 @@ export const BRAND = {
   logoSrc: '/brand/lankalux-logo.png',
   /** Opaque JPG for emails — transparent PNGs vanish on many phone dark-mode clients. */
   logoEmailSrc: '/brand/lankalux-logo-email.jpg',
-  /** Full-width white header so phone dark mode cannot crop the logo into a floating photo. */
+  /** Full-width ivory header so the logo blends and phone dark mode cannot crop it. */
   logoEmailHeaderSrc: '/brand/lankalux-email-header.jpg',
   logoMarkSrc: '/brand/lankalux-mark.png',
   logoStackedSrc: '/brand/lankalux-logo-stacked.png',
