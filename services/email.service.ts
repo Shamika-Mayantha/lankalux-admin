@@ -9,7 +9,14 @@ import { getInvoice, invoicePreviewModel, markInvoiceSent } from '@/services/inv
 import { renderInvoicePdf } from '@/services/invoice-pdf'
 import { getServiceClient, AppError, isMissingTableError } from '@/services/supabase.server'
 import { getRequest } from '@/services/request.service'
-import { getTemplate, followUpCtas, normalizeEditableBody, type TemplateId } from '@/lib/email-templates'
+import {
+  getTemplate,
+  followUpBcc,
+  followUpCtas,
+  normalizeEditableBody,
+  trustpilotAfsSnippet,
+  type TemplateId,
+} from '@/lib/email-templates'
 
 const FROM_EMAIL = 'hello@lankalux.com'
 
@@ -24,6 +31,7 @@ async function sendLankaLuxMail(opts: {
   subject: string
   text: string
   html: string
+  bcc?: string | null
   attachments?: MailAttachment[]
   requestId?: string
   shareToken?: string | null
@@ -49,6 +57,7 @@ async function sendLankaLuxMail(opts: {
       from: `"LankaLux" <${FROM_EMAIL}>`,
       replyTo: FROM_EMAIL,
       to: opts.to,
+      bcc: opts.bcc || undefined,
       subject: opts.subject,
       text: opts.text,
       html: opts.html,
@@ -283,17 +292,20 @@ export async function sendFollowUpTemplateEmail(opts: {
       : template.getText({ clientName })
   const normalizedBody = normalizeEditableBody(bodySource)
   const ctas = followUpCtas(template.id).map((cta) => ({ url: cta.ctaUrl, label: cta.ctaLabel }))
+  const bcc = followUpBcc(template.id)
   const compiled = renderFollowUpEmail({
     clientName,
     bodyText: normalizedBody,
     logoUrl: `${appUrl()}${BRAND.logoEmailSrc}`,
     ctas,
+    extraHtml: bcc ? trustpilotAfsSnippet({ recipientName: clientName, recipientEmail: to, referenceId: opts.requestId }) : undefined,
   })
   const html = compiled.html
   const text = compiled.text
 
   const { messageId } = await sendLankaLuxMail({
     to,
+    bcc,
     subject,
     text,
     html,
@@ -333,7 +345,7 @@ export async function sendFollowUpTemplateEmail(opts: {
     request_id: opts.requestId,
     actor: opts.actor,
     event_type: 'follow_up_email_sent',
-    detail: { to, subject, templateId: template.id, templateName: template.name },
+    detail: { to, subject, templateId: template.id, templateName: template.name, trustpilotAfs: Boolean(bcc) },
   })
 
   return { messageId, subject, to, templateName: template.name }

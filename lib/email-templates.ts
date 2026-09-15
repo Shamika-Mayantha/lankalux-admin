@@ -39,6 +39,9 @@ export const GOOGLE_REVIEW_URL = 'https://g.page/r/CUKc_7K7LBGAEAE/review'
 /** LankaLux Trustpilot review link used as a second post-trip email CTA. */
 export const TRUSTPILOT_REVIEW_URL = 'https://www.trustpilot.com/evaluate/lankalux.com'
 
+/** Trustpilot AFS unique address. BCC only on the post-trip email; the guest never sees it. */
+export const TRUSTPILOT_AFS_BCC = 'lankalux.com+4cba2ac5fd@invite.trustpilot.com'
+
 export type FollowUpCta = { ctaUrl: string; ctaLabel: string }
 
 function firstName(clientName: string) {
@@ -121,6 +124,24 @@ export function followUpCtas(templateId: TemplateId): FollowUpCta[] {
 
 export function followUpCta(templateId: TemplateId): FollowUpCta | null {
   return followUpCtas(templateId)[0] ?? null
+}
+
+export function followUpBcc(templateId: TemplateId): string | null {
+  if (templateId === 'post_trip_feedback') return TRUSTPILOT_AFS_BCC
+  return null
+}
+
+export function trustpilotAfsSnippet(opts: {
+  recipientName: string
+  recipientEmail: string
+  referenceId: string
+}): string {
+  const payload = {
+    recipientName: opts.recipientName.trim(),
+    recipientEmail: opts.recipientEmail.trim(),
+    referenceId: opts.referenceId.trim(),
+  }
+  return `<script type="application/json+trustpilot">${JSON.stringify(payload)}</script>`
 }
 
 export const FOLLOW_UP_TEMPLATES: TemplateConfig[] = [

@@ -11,12 +11,15 @@ import {
 } from '../services/invoice-math'
 import { renderFollowUpEmail, renderInvoiceEmail } from '../services/journey-copy'
 import {
+  followUpBcc,
   followUpCta,
   followUpCtas,
   getTemplate,
   GOOGLE_REVIEW_URL,
+  TRUSTPILOT_AFS_BCC,
   TRUSTPILOT_REVIEW_URL,
   normalizeEditableBody,
+  trustpilotAfsSnippet,
 } from '../lib/email-templates'
 import { placesForJourney, ensureMinimumDayActivities } from '../config/sri-lanka-places'
 import { buildItineraryPrompt, enRouteDesignRules } from '../services/itinerary-prompt'
@@ -190,6 +193,23 @@ assert(postTripHtml.includes('href="https://lankalux.com"'), 'post-trip logo lin
 assert(!postTripHtml.includes('mailto:hello@lankalux.com'), 'post-trip CTA is not the old mailto')
 const postTripText = getTemplate('post_trip_feedback')!.getText({ clientName: 'Anna Silva' })
 assert(postTripText.includes('Google or Trustpilot'), 'post-trip plain text mentions both review sites')
+assert(followUpBcc('post_trip_feedback') === TRUSTPILOT_AFS_BCC, 'post-trip BCC is the Trustpilot AFS address')
+assert(followUpBcc('friendly_checkin') === null, 'other follow-up templates are not BCCd to Trustpilot')
+assert(followUpBcc('custom_email') === null, 'custom emails are not BCCd to Trustpilot')
+const afsHtml = renderFollowUpEmail({
+  clientName: 'Anna Silva',
+  bodyText: 'Hello there.',
+  logoUrl: EMAIL_LOGO_URL,
+  extraHtml: trustpilotAfsSnippet({
+    recipientName: 'Anna Silva',
+    recipientEmail: 'anna@example.com',
+    referenceId: 'req-id-123',
+  }),
+}).html
+assert(afsHtml.includes('application/json+trustpilot'), 'AFS snippet is in the HTML source')
+assert(afsHtml.includes('anna@example.com'), 'AFS snippet includes the guest email')
+assert(afsHtml.includes('req-id-123'), 'AFS snippet includes the request id')
+assert(!afsHtml.includes(TRUSTPILOT_AFS_BCC), 'AFS BCC address is not shown in the email body')
 
 const classicPlaces = placesForJourney({
   destinations: 'Sigiriya → Kandy → Ella → Yala → Mirissa',

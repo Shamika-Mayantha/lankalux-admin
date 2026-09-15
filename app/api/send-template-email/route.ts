@@ -3,7 +3,14 @@ import { createClient } from '@supabase/supabase-js'
 import nodemailer from 'nodemailer'
 import { BRAND } from '@/config/brand'
 import { appUrl } from '@/config/env'
-import { followUpCtas, getTemplate, normalizeEditableBody, type TemplateId } from '@/lib/email-templates'
+import {
+  followUpBcc,
+  followUpCtas,
+  getTemplate,
+  normalizeEditableBody,
+  trustpilotAfsSnippet,
+  type TemplateId,
+} from '@/lib/email-templates'
 import { renderFollowUpEmail } from '@/services/journey-copy'
 
 export async function POST(request: Request) {
@@ -102,11 +109,19 @@ export async function POST(request: Request) {
         : template.getText({ clientName })
     const normalizedBody = normalizeEditableBody(bodySource)
     const ctas = followUpCtas(templateId).map((cta) => ({ url: cta.ctaUrl, label: cta.ctaLabel }))
+    const bcc = followUpBcc(templateId)
     const compiled = renderFollowUpEmail({
       clientName,
       bodyText: normalizedBody,
       logoUrl: `${appUrl()}${BRAND.logoEmailSrc}`,
       ctas,
+      extraHtml: bcc
+        ? trustpilotAfsSnippet({
+            recipientName: clientName,
+            recipientEmail: requestData.email,
+            referenceId: requestId,
+          })
+        : undefined,
     })
     const emailHtml = compiled.html
     const emailText = compiled.text
@@ -135,6 +150,7 @@ export async function POST(request: Request) {
     await transporter.sendMail({
       from: `"LankaLux" <${emailUser}>`,
       to: requestData.email,
+      bcc: bcc || undefined,
       subject,
       text: emailText,
       html: emailHtml,

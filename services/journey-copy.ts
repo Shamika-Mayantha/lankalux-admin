@@ -161,6 +161,7 @@ export function renderFollowUpEmail(opts: {
   ctaUrl?: string | null
   ctaLabel?: string | null
   ctas?: EmailCta[]
+  extraHtml?: string
 }): { html: string; text: string } {
   const name = firstName(opts.clientName)
   const paragraphs = opts.bodyText
@@ -172,7 +173,7 @@ export function renderFollowUpEmail(opts: {
     .map((p) => `<p style="color:#6b6b66;line-height:1.75;">${esc(p).replace(/\n/g, '<br/>')}</p>`)
     .join('')
   const ctas = resolveCtas(opts)
-  return renderBrandedClientEmail({
+  const compiled = renderBrandedClientEmail({
     firstName: name,
     bodyHtml,
     ctas,
@@ -190,6 +191,11 @@ export function renderFollowUpEmail(opts: {
       BRAND.tagline,
     ],
   })
+  if (!opts.extraHtml) return compiled
+  return {
+    ...compiled,
+    html: compiled.html.replace('</body>', `${opts.extraHtml}</body>`),
+  }
 }
 
 export function renderJourneyEmail(opts: {
