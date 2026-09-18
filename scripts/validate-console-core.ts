@@ -30,6 +30,7 @@ import { googleMapsSearchUrl } from '../lib/driver-pack/mapLinkHelpers'
 import { detectTrainOperation, operationalStopsForDay, TBC } from '../lib/driver-pack/routeHelpers'
 import { buildDriverPackData } from '../lib/driver-pack/buildDriverPackData'
 import { clampEndOnOrAfterStart } from '../lib/dates'
+import { mapWebsiteLead, parseDateRange, toIsoDate, hydrateStoredLead } from '../lib/website-lead'
 
 function assert(cond: unknown, msg: string) {
   if (!cond) throw new Error(msg)
@@ -509,5 +510,52 @@ assert(packed.logRows.every((row) => !/fuel/i.test(row.routeDuty)), 'log rows do
 assert(packed.days[1].hotel?.name === 'Elephant Fence Habarana', 'tonight hotel comes from the sold itinerary')
 assert(packed.days[1].stops.every((stop) => stop.classification !== undefined), 'stops are classified')
 assert(!JSON.stringify(packed).toLowerCase().includes('fuel cost'), 'driver pack data has no fuel fields')
+
+assert(toIsoDate('2026-06-15T00:00:00.000Z') === '2026-06-15', 'timestamp coerces to calendar date')
+assert(toIsoDate('15 Mar 2026') === '2026-03-15', 'day month year')
+assert(toIsoDate('15 Sept 2026') === '2026-09-15', 'british sept')
+assert(toIsoDate('Jun 2, 2026') === '2026-06-02', 'us month day year')
+assert(parseDateRange('15 Mar 2026 – 25 Mar 2026').start === '2026-03-15', 'en-gb range start')
+assert(parseDateRange('15 Mar 2026 – 25 Mar 2026').end === '2026-03-25', 'en-gb range end')
+assert(parseDateRange('15 Sept 2026 – 25 Sept 2026').start === '2026-09-15', 'sept range start')
+assert(parseDateRange('15 Sept 2026 – 25 Sept 2026').end === '2026-09-25', 'sept range end')
+assert(parseDateRange('Jun 2, 2026 – Jun 10, 2026').start === '2026-06-02', 'us range start')
+assert(parseDateRange('2 Jun – 10 Jun 2026').end === '2026-06-10', 'shared year range')
+
+const websiteLead = mapWebsiteLead({
+  name: 'Anna Silva',
+  email: 'anna@example.com',
+  whatsapp: 'Not provided',
+  travelDates: '15 Sept 2026 – 25 Sept 2026',
+  passengers: '2 adults, 1 child (ages: 6–11 years)',
+  kidsAges: '6–11 years',
+  message: 'Wildlife and tea country, slow mornings.',
+  needAirlineTickets: 'Yes',
+  airlineFrom: 'London',
+  airlineDates: '14 Sept 2026 – 26 Sept 2026',
+  source: 'hero-form',
+})
+assert(websiteLead.start_date === '2026-09-15', 'website lead maps arrival')
+assert(websiteLead.end_date === '2026-09-25', 'website lead maps departure')
+assert(websiteLead.duration === 11, 'website lead inclusive duration')
+assert(websiteLead.number_of_adults === 2, 'website lead adults')
+assert(websiteLead.number_of_children === 1, 'website lead children')
+assert(websiteLead.interests === 'Wildlife and tea country, slow mornings.', 'website lead keeps guest message only')
+assert(!/travel dates/i.test(websiteLead.interests || ''), 'dates are not dumped into interests')
+assert(websiteLead.lead_source === 'Website', 'hero form is website source')
+assert(/airline/i.test(websiteLead.special_requirements || ''), 'airline ask goes to special requirements')
+
+const dumped = hydrateStoredLead({
+  start_date: null,
+  end_date: null,
+  additional_preferences: 'Wildlife please.\n\nTravel dates: 2 Jun 2026 – 10 Jun 2026\nPassengers: 2 adults\nKids ages (as selected): None\n\nNeed airline tickets: No',
+  interests: null,
+  number_of_adults: null,
+  number_of_children: null,
+})
+assert(dumped.start_date === '2026-06-02', 'hydrate dates from dumped interests')
+assert(dumped.end_date === '2026-06-10', 'hydrate end date from dumped interests')
+assert(dumped.interests === 'Wildlife please.', 'hydrate strips travel meta from interests')
+assert(dumped.number_of_adults === 2, 'hydrate adults from dumped passengers')
 
 console.log('console core checks passed')

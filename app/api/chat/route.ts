@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { CHAT_KNOWLEDGE_SUMMARY } from '@/lib/chat-knowledge'
+import { toIsoDate } from '@/lib/website-lead'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -176,8 +177,8 @@ function coerceDraft(d: any): DraftLead {
     name: d?.name != null ? String(d.name).trim() || null : null,
     email: d?.email != null ? String(d.email).trim() || null : null,
     whatsapp: d?.whatsapp != null ? String(d.whatsapp).trim() || null : null,
-    startDate: d?.startDate != null ? String(d.startDate).trim() || null : null,
-    endDate: d?.endDate != null ? String(d.endDate).trim() || null : null,
+    startDate: toIsoDate(d?.startDate != null ? String(d.startDate).trim() : null),
+    endDate: toIsoDate(d?.endDate != null ? String(d.endDate).trim() : null),
     numberOfAdults: Number.isFinite(asNum(d?.numberOfAdults)) ? (asNum(d?.numberOfAdults) as number) : null,
     numberOfChildren: Number.isFinite(asNum(d?.numberOfChildren)) ? (asNum(d?.numberOfChildren) as number) : null,
     childrenAgesValues: ages && ages.length ? (ages as number[]) : null,
@@ -329,6 +330,8 @@ Optional: name, children, preferences, airline help.
 
 Knowledge base:
 ${CHAT_KNOWLEDGE_SUMMARY}
+
+- Dates in draft.startDate and draft.endDate MUST be YYYY-MM-DD (example: 2026-06-15). Convert any spoken dates to that format.
 
 Output STRICT JSON only with this shape:
 {

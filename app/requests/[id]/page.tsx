@@ -19,6 +19,7 @@ import { ClientViewPreviewModal } from '@/components/ClientViewPreviewModal'
 import { ImageManager } from '@/components/ImageManager'
 import type { ManagedImageItem } from '@/lib/managed-image'
 import { imageSrcs, normalizeManagedImages, absoluteImageSrc } from '@/lib/managed-image'
+import { hydrateStoredLead, toIsoDate } from '@/lib/website-lead'
 
 const PUBLIC_SITE_BASE = 'https://admin.lankalux.com'
 
@@ -234,27 +235,37 @@ export default function RequestDetailsPage() {
           requestData.link_opens = []
         }
         
-        setRequest(requestData)
+        const hydrated = hydrateStoredLead(requestData)
+        setRequest({
+          ...requestData,
+          start_date: hydrated.start_date,
+          end_date: hydrated.end_date,
+          duration: hydrated.duration ?? requestData.duration,
+          number_of_adults: hydrated.number_of_adults ?? requestData.number_of_adults,
+          number_of_children: hydrated.number_of_children ?? requestData.number_of_children,
+          additional_preferences: hydrated.interests || hydrated.additional_preferences,
+        })
         setStatusValue(requestData.status || '')
         setNotesValue(requestData.notes || '')
         setClientNameValue(requestData.client_name || '')
         setEmailValue(requestData.email || '')
         setWhatsappValue(requestData.whatsapp || '')
-        setStartDateValue(requestData.start_date || '')
-        setEndDateValue(requestData.end_date || '')
-        setNumberOfAdultsValue(requestData.number_of_adults?.toString() || '')
-        setNumberOfChildrenValue(requestData.number_of_children?.toString() || '')
-        if (requestData.children_ages) {
+        setStartDateValue(toIsoDate(hydrated.start_date) || '')
+        setEndDateValue(toIsoDate(hydrated.end_date) || '')
+        setNumberOfAdultsValue(hydrated.number_of_adults?.toString() || '')
+        setNumberOfChildrenValue(hydrated.number_of_children?.toString() || '')
+        const agesRaw = hydrated.children_ages
+        if (agesRaw) {
           try {
-            const ages = JSON.parse(requestData.children_ages)
-            setChildrenAgesValue(Array.isArray(ages) ? ages.map(a => a.toString()) : [])
+            const ages = typeof agesRaw === 'string' ? JSON.parse(agesRaw) : agesRaw
+            setChildrenAgesValue(Array.isArray(ages) ? ages.map((a: number | string) => a.toString()) : [])
           } catch {
             setChildrenAgesValue([])
           }
         } else {
           setChildrenAgesValue([])
         }
-        setAdditionalPreferencesValue(requestData.additional_preferences || '')
+        setAdditionalPreferencesValue(hydrated.interests || hydrated.additional_preferences || '')
         
         // Initialize sent itinerary editing state if option is selected
         if (requestData.selected_option !== null && requestData.selected_option !== undefined && requestData.itinerary_options?.options) {
@@ -2194,8 +2205,8 @@ LankaLux Team`
                 <textarea
                   value={additionalPreferencesValue}
                   onChange={(e) => setAdditionalPreferencesValue(e.target.value)}
-                  rows={20}
-                  className={`${field} resize-y min-h-[520px] h-[58vh] max-h-[76vh]`}
+                  rows={6}
+                  className={`${field} resize-y min-h-[140px]`}
                   placeholder="e.g., honeymoon, wildlife safari, luxury focus, train journeys, ayurveda retreat, family friendly, adventure"
                 />
                 <p className="text-xs text-secondary text-left">

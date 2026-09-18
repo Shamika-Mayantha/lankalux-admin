@@ -3,6 +3,7 @@ import { getServiceClient, AppError, isMissingTableError } from '@/services/supa
 import { resolveAssignedDriver } from '@/services/catalog.service'
 import { logActivity } from '@/services/activity.service'
 import { parseDriverPack } from '@/lib/driver-pack/fields'
+import { hydrateStoredLead, toIsoDate } from '@/lib/website-lead'
 import type { ClientRequestRow, RequestInput } from '@/types/domain'
 
 export { parseDriverPack } from '@/lib/driver-pack/fields'
@@ -45,15 +46,17 @@ export async function nextRequestId(): Promise<string> {
 }
 
 function toInsert(input: RequestInput, id: string) {
-  const duration = inclusiveDuration(input.start_date ?? null, input.end_date ?? null)
+  const start_date = toIsoDate(input.start_date) || null
+  const end_date = toIsoDate(input.end_date) || null
+  const duration = inclusiveDuration(start_date, end_date)
   return {
     id,
     client_name: input.client_name.trim(),
     email: input.email.trim(),
     whatsapp: input.whatsapp?.trim() || null,
     origin_country: input.origin_country?.trim() || null,
-    start_date: input.start_date || null,
-    end_date: input.end_date || null,
+    start_date,
+    end_date,
     duration,
     number_of_adults: input.number_of_adults ?? null,
     number_of_children: input.number_of_children ?? null,
@@ -80,15 +83,80 @@ export async function listRequests(): Promise<ClientRequestRow[]> {
   const supabase = getServiceClient()
   const { data, error } = await supabase.from('Client Requests').select('*').order('created_at', { ascending: false })
   if (error) throw new AppError(`Supabase request failed: ${error.message}`, 500)
-  return applyExpiry(((data || []) as ClientRequestRow[]).map(withDriverPack))
+  return applyLeadHydration(await applyExpiry(((data || []) as ClientRequestRow[]).map(withDriverPack)))
 }
 
 export async function getRequest(id: string): Promise<ClientRequestRow> {
   const supabase = getServiceClient()
   const { data, error } = await supabase.from('Client Requests').select('*').eq('id', id).single()
   if (error || !data) throw new AppError('Request not found', 404)
-  const [row] = await applyExpiry([withDriverPack(data as ClientRequestRow)])
+  const [row] = await applyLeadHydration(await applyExpiry([withDriverPack(data as ClientRequestRow)]))
   return row
+}
+
+async function applyLeadHydration(rows: ClientRequestRow[]): Promise<ClientRequestRow[]> {
+  const pending = rows.map((row) => {
+    const next = hydrateStoredLead(row)
+    return { row, next, changed: Boolean(next._leadHydrated) }
+  })
+  const dirty = pending.filter((item) => item.changed)
+  if (!dirty.length) return rows
+
+  const supabase = getServiceClient()
+  const now = new Date().toISOString()
+  const updatedById = new Map<string, ClientRequestRow>()
+
+  await Promise.all(
+    dirty.map(async ({ row, next }) => {
+      const patch: Record<string, unknown> = {
+        start_date: next.start_date,
+        end_date: next.end_date,
+        duration: next.duration,
+        number_of_adults: next.number_of_adults,
+        number_of_children: next.number_of_children,
+        children_ages: next.children_ages,
+        additional_preferences: next.additional_preferences,
+        interests: next.interests,
+        special_requirements: next.special_requirements,
+        arrival_flight: next.arrival_flight,
+        departure_flight: next.departure_flight,
+        requested_destinations: next.requested_destinations,
+        vehicle_preference: next.vehicle_preference,
+        lead_source: next.lead_source,
+        updated_at: now,
+      }
+      let { data, error } = await supabase.from('Client Requests').update(patch).eq('id', row.id).select('*').single()
+      if (error && isMissingTableError(error)) {
+        const legacy = { ...patch }
+        for (const key of [
+          'interests',
+          'lead_source',
+          'special_requirements',
+          'arrival_flight',
+          'departure_flight',
+          'requested_destinations',
+          'vehicle_preference',
+        ]) {
+          delete legacy[key]
+        }
+        const retry = await supabase.from('Client Requests').update(legacy).eq('id', row.id).select('*').single()
+        data = retry.data
+        error = retry.error
+      }
+      if (error || !data) {
+        const { _leadHydrated: _flag, ...fields } = next
+        updatedById.set(row.id, withDriverPack({ ...row, ...fields }))
+        return
+      }
+      updatedById.set(row.id, withDriverPack(data as ClientRequestRow))
+    })
+  )
+
+  return pending.map(({ row, next, changed }) => {
+    if (!changed) return row
+    const { _leadHydrated: _flag, ...fields } = next
+    return updatedById.get(row.id) || withDriverPack({ ...row, ...fields })
+  })
 }
 
 async function applyExpiry(rows: ClientRequestRow[]): Promise<ClientRequestRow[]> {
@@ -218,6 +286,8 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
     }
   }
   if (patch.start_date !== undefined || patch.end_date !== undefined) {
+    if ('start_date' in next) next.start_date = toIsoDate(next.start_date) || next.start_date || null
+    if ('end_date' in next) next.end_date = toIsoDate(next.end_date) || next.end_date || null
     if ('start_date' in next && !next.start_date) next.start_date = null
     if ('end_date' in next && !next.end_date) next.end_date = null
     next.duration = inclusiveDuration(

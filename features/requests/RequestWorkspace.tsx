@@ -23,6 +23,7 @@ import {
   getTemplate,
   type TemplateId,
 } from '@/lib/email-templates'
+import { hydrateStoredLead, toIsoDate } from '@/lib/website-lead'
 
 const DriverPackSection = dynamic(
   () => import('@/components/driver-pack/DriverPackModal').then((mod) => mod.DriverPackSection),
@@ -162,22 +163,23 @@ function templateDraft(templateId: TemplateId, clientName: string) {
 }
 
 function toOverviewDraft(row: ClientRequestRow, selected?: ItineraryRecord | undefined): OverviewDraft {
-  const party = partyCounts(row.number_of_adults, row.number_of_children, row.children_ages)
+  const hydrated = hydrateStoredLead(row)
+  const party = partyCounts(hydrated.number_of_adults, hydrated.number_of_children, hydrated.children_ages)
   return {
     status: normalizeStatus(row.status) || 'new',
     sold_option: soldOptionFromRow(row, selected),
     sold_price: row.sold_price || selected?.payload?.price || row.budget || '',
     client_name: row.client_name || '',
-    start_date: row.start_date || '',
-    end_date: row.end_date || '',
+    start_date: toIsoDate(hydrated.start_date) || '',
+    end_date: toIsoDate(hydrated.end_date) || '',
     email: row.email || '',
     whatsapp: row.whatsapp || '',
     origin_country: row.origin_country || '',
     assigned_employee: row.assigned_employee || '',
     assigned_driver_id: row.assigned_driver_id || '',
-    lead_source: row.lead_source || '',
-    requested_destinations: row.requested_destinations || '',
-    interests: row.interests || row.additional_preferences || '',
+    lead_source: hydrated.lead_source || '',
+    requested_destinations: hydrated.requested_destinations || '',
+    interests: hydrated.interests || hydrated.additional_preferences || '',
     notes: row.notes || '',
     number_of_adults: party.adults,
     number_of_children: party.children,
@@ -1240,10 +1242,10 @@ export function RequestWorkspace() {
           <label>
             Interests
             <textarea
-              rows={14}
-              style={{ minHeight: 360 }}
+              rows={5}
               value={overviewDraft.interests}
               onChange={(e) => setOverviewDraft({ ...overviewDraft, interests: e.target.value })}
+              placeholder="Wildlife, tea country, slow mornings…"
             />
           </label>
           <label>Internal notes<textarea value={overviewDraft.notes} onChange={(e) => setOverviewDraft({ ...overviewDraft, notes: e.target.value })} /></label>
