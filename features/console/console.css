@@ -1125,3 +1125,44 @@ button.ll-card,
   .ll-mail.in { margin-right: 0; }
   .ll-mail.out { margin-left: 0; }
 }
+
+/* Enquiry follow-ups: nav badge and the "Needs a nudge" list on Requests */
+.ll-nav-badge {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 9px;
+  background: var(--error-border);
+  color: #fff;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.ll-followups {
+  margin: 16px 0;
+}
+
+.ll-followups h3 {
+  margin: 0 0 4px;
+}
+
+.ll-followups ul {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.ll-followups li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.ll-followups-due {
+  color: var(--error-text);
+}
