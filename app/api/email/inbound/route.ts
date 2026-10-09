@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { logActivity } from '@/services/activity.service'
 import { notifyStaffOfReply, recordCommunication } from '@/services/email.service'
-import { fetchReceivedEmail, requestIdFromReplyAddress, verifyResendWebhook } from '@/services/mailer'
+import { fetchReceivedEmail, isStaffAddress, requestIdFromReplyAddress, verifyResendWebhook } from '@/services/mailer'
 import { getServiceClient } from '@/services/supabase.server'
 
 export const maxDuration = 30
@@ -64,6 +64,31 @@ export async function POST(request: Request) {
   const attachments = (email.attachments || []).map((a) => a.filename).filter(Boolean)
   const body = attachments.length ? `${text}\n\n[Attachments: ${attachments.join(', ')}]` : text
 
+  // A team member who answers from Zoho with Reply all also copies the reply address, so admin
+  // logs their answer as a sent email rather than as a client reply.
+  if (isStaffAddress(email.from)) {
+    await recordCommunication({
+      requestId,
+      channel: 'email',
+      recipient: (email.to || []).filter((a) => !requestIdFromReplyAddress(a)).join(', '),
+      subject: email.subject || undefined,
+      body,
+      shareToken: null,
+      providerMessageId: emailId,
+      status: 'sent',
+      direction: 'outbound',
+      fromAddress: email.from,
+      messageId: email.message_id,
+    })
+    await logActivity({
+      request_id: requestId,
+      actor: email.from,
+      event_type: 'email_reply_sent',
+      detail: { from: email.from, subject: email.subject, via: 'zoho' },
+    })
+    return NextResponse.json({ success: true, staff: true })
+  }
+
   await recordCommunication({
     requestId,
     channel: 'email',
@@ -83,8 +108,12 @@ export async function POST(request: Request) {
     event_type: 'email_received',
     detail: { from: email.from, subject: email.subject },
   })
-  await notifyStaffOfReply({ requestId, clientFrom: email.from, subject: email.subject, body }).catch((err) =>
-    console.error('[email/inbound] notify failed', err)
-  )
+  await notifyStaffOfReply({
+    requestId,
+    clientFrom: email.from,
+    subject: email.subject,
+    body,
+    alreadyReceived: [...(email.to || []), ...addresses],
+  }).catch((err) => console.error('[email/inbound] notify failed', err))
   return NextResponse.json({ success: true })
 }

@@ -8,6 +8,7 @@ import { consoleFetch } from '@/lib/console-api'
 import { INACTIVITY_MS } from '@/config/status'
 import { BRAND } from '@/config/brand'
 import { StaffProvider, type Me } from '@/features/console/StaffContext'
+import { useFollowUps } from '@/features/requests/FollowUpPanel'
 
 const NAV = [
   { href: '/console', label: 'Dashboard' },
@@ -138,6 +139,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
                 return (
                   <Link key={item.href} href={item.href} className={active ? 'active' : ''} onClick={() => setNavOpen(false)}>
                     {item.label}
+                    {item.href === '/console/requests' ? <FollowUpBadge /> : null}
                   </Link>
                 )
               })}
@@ -159,5 +161,17 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     </StaffProvider>
+  )
+}
+
+/** Count of clients waiting on a reply from us, next to Requests in the side nav. */
+function FollowUpBadge() {
+  const { data } = useFollowUps()
+  const waiting = (data?.items || []).filter((i) => i.kind === 'reply').length
+  if (!waiting) return null
+  return (
+    <span className="ll-nav-badge" title={`${waiting} waiting for a reply`}>
+      {waiting}
+    </span>
   )
 }

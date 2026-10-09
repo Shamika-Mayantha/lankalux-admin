@@ -1,5 +1,5 @@
 import { appUrl, publicJourneyUrl } from '@/config/env'
-import { deliverMail, MAIN_ADDRESS, replyAddressFor, requireMailer, senderFor, type MailAttachment } from '@/services/mailer'
+import { bareAddress, deliverMail, formatAddress, MAIN_ADDRESS, replyAddressFor, requireMailer, senderFor, type MailAttachment } from '@/services/mailer'
 import { BRAND } from '@/config/brand'
 import { logActivity } from '@/services/activity.service'
 import { getPublishedItinerary } from '@/services/itinerary.service'
@@ -34,6 +34,9 @@ async function sendLankaLuxMail(opts: {
   inReplyTo?: string | null
 }): Promise<{ messageId: string }> {
   const from = senderFor(opts.sender)
+  // A client's Reply goes to the sender's own Zoho inbox (where the team replies) and to the
+  // request's reply address, which keeps a copy in admin. Both carry the sender's name.
+  const replyTo = opts.requestId ? replyAddressFor(opts.requestId) : null
   const base = {
     requestId: opts.requestId || '',
     channel: 'email' as const,
@@ -50,7 +53,7 @@ async function sendLankaLuxMail(opts: {
     const result = await deliverMail({
       from,
       to: opts.to,
-      replyTo: opts.requestId ? replyAddressFor(opts.requestId) : null,
+      replyTo: replyTo ? [formatAddress(from), formatAddress({ name: from.name, address: replyTo })] : null,
       bcc: opts.bcc,
       subject: opts.subject,
       text: opts.text,
@@ -472,6 +475,8 @@ export async function notifyStaffOfReply(opts: {
   clientFrom: string
   subject: string | null
   body: string
+  /** Addresses the client's email was already sent to; they don't need a copy. */
+  alreadyReceived?: string[]
 }) {
   const supabase = getServiceClient()
   const [{ data: lastOut }, request] = await Promise.all([
@@ -494,6 +499,8 @@ export async function notifyStaffOfReply(opts: {
     const { data: staff } = await supabase.from('admin_users').select('email, active').in('user_id', staffIds)
     for (const s of staff || []) if (s.active && s.email) recipients.add(String(s.email).toLowerCase())
   }
+  for (const address of opts.alreadyReceived || []) recipients.delete(bareAddress(address))
+  if (!recipients.size) return
 
   const clientName = request.client_name || opts.clientFrom
   const link = `${appUrl()}/console/requests/${encodeURIComponent(opts.requestId)}#emails`
