@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { clientIp, isRateLimited } from '@/lib/rate-limit'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,8 +14,13 @@ function safeText(x: unknown) {
 
 export async function POST(request: Request) {
   try {
+    if (isRateLimited(`chats:${clientIp(request)}`, 120, 10 * 60 * 1000)) {
+      const res = NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 })
+      Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v))
+      return res
+    }
     const body = (await request.json().catch(() => ({}))) as any
-    const sessionId = safeText(body?.sessionId)
+    const sessionId = safeText(body?.sessionId).slice(0, 100)
     if (!sessionId) {
       const res = NextResponse.json({ success: false, error: 'sessionId is required' }, { status: 400 })
       Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v))
@@ -36,7 +42,7 @@ export async function POST(request: Request) {
     const messages = messagesRaw
       .map((m: any) => ({
         role: m?.role === 'assistant' ? 'assistant' : 'user',
-        content: safeText(m?.content),
+        content: safeText(m?.content).slice(0, 4000),
         kind: safeText(m?.kind) || 'text',
       }))
       .filter((m: { content: string }) => m.content.length > 0)

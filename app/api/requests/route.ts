@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { mapWebsiteLead } from '@/lib/website-lead'
+import { clientIp, isRateLimited } from '@/lib/rate-limit'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,6 +54,9 @@ const EXTRA_COLUMNS = [
 
 export async function POST(request: Request) {
   try {
+    if (isRateLimited(`requests:${clientIp(request)}`, 10, 10 * 60 * 1000)) {
+      return withCors(NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 }))
+    }
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
     const lead = mapWebsiteLead(body)
 
