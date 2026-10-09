@@ -77,8 +77,8 @@ function resolveCtas(opts: {
 function ctaButtonHtml(cta: EmailCta, variant: 'primary' | 'secondary') {
   const style =
     variant === 'primary'
-      ? "background:#1A2A1D;color:#F9F4EB;text-decoration:none;padding:14px 28px;border-radius:0;font-weight:500;letter-spacing:.02em;font-size:14px;font-family:'Open Sans',Arial,sans-serif;display:inline-block;border:1px solid #B18544;"
-      : "background:#F9F4EB;color:#1A2A1D;text-decoration:none;padding:14px 28px;border-radius:0;font-weight:500;letter-spacing:.02em;font-size:14px;font-family:'Open Sans',Arial,sans-serif;display:inline-block;border:1px solid #B18544;"
+      ? "background:#1A2A1D;color:#F9F4EB;text-decoration:none;padding:15px 32px;border-radius:3px;font-weight:600;letter-spacing:.02em;font-size:14px;font-family:'Open Sans',Arial,sans-serif;display:inline-block;border:1px solid #B18544;"
+      : "background:#F9F4EB;color:#1A2A1D;text-decoration:none;padding:15px 32px;border-radius:3px;font-weight:600;letter-spacing:.02em;font-size:14px;font-family:'Open Sans',Arial,sans-serif;display:inline-block;border:1px solid #B18544;"
   return `<a href="${esc(cta.url)}" style="${style}">${esc(cta.label)}</a>`
 }
 
@@ -86,7 +86,8 @@ function renderCtaBlock(ctas: EmailCta[]) {
   if (!ctas.length) return ''
   return ctas
     .map((cta, index) => {
-      const margin = index === 0 ? '28px 0 12px' : index === ctas.length - 1 ? '0 0 28px' : '0 0 12px'
+      const margin =
+        ctas.length === 1 ? '28px 0' : index === 0 ? '28px 0 12px' : index === ctas.length - 1 ? '0 0 28px' : '0 0 12px'
       return `<p style="text-align:center;margin:${margin};">${ctaButtonHtml(cta, index === 0 ? 'primary' : 'secondary')}</p>`
     })
     .join('')
@@ -104,16 +105,20 @@ function emailIvoryPixelUrl(logoUrl: string) {
   return logoUrl.replace(/[^/]+$/, 'email-ivory.jpg')
 }
 
-function emailLogoHeader(logoUrl: string) {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#F9F4EB" style="border-collapse:collapse;background-color:#F9F4EB;">
-      <tr>
-        <td align="center" valign="middle" bgcolor="#F9F4EB" style="padding:0;margin:0;background-color:#F9F4EB;text-align:center;line-height:0;font-size:0;">
-          <a href="${esc(BRAND.websiteUrl)}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;border:0;outline:none;line-height:0;">
-            <img src="${esc(logoUrl)}" alt="LankaLux" width="620" border="0" style="display:block;width:100%;max-width:620px;height:auto;border:0;outline:none;text-decoration:none;background-color:#F9F4EB;" />
-          </a>
-        </td>
-      </tr>
-    </table>`
+const EMAIL_FONT = "'Open Sans','Segoe UI',Helvetica,Arial,sans-serif"
+const EMAIL_DISPLAY_FONT = "'Be Vietnam Pro','Segoe UI',Helvetica,Arial,sans-serif"
+
+function emailLogoHeader(logoUrl: string, ivoryPixel: string) {
+  return `<tr>
+            <td align="center" bgcolor="#F9F4EB" class="ll-head" style="padding:32px 40px 26px;background-color:#F9F4EB;background-image:url('${esc(ivoryPixel)}');text-align:center;line-height:0;font-size:0;">
+              <a href="${esc(BRAND.websiteUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;border:0;outline:none;line-height:0;">
+                <img src="${esc(logoUrl)}" alt="LankaLux" width="340" border="0" style="display:block;width:340px;max-width:100%;height:auto;margin:0 auto;border:0;outline:none;text-decoration:none;background-color:#F9F4EB;" />
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td bgcolor="#B18544" style="height:2px;line-height:2px;font-size:0;background-color:#B18544;">&nbsp;</td>
+          </tr>`
 }
 
 function renderBrandedClientEmail(opts: {
@@ -128,58 +133,77 @@ function renderBrandedClientEmail(opts: {
   ctas?: EmailCta[]
   logoUrl: string
   textLines: string[]
+  preheader?: string
 }): { html: string; text: string } {
   const cta = renderCtaBlock(resolveCtas(opts))
 
   const body = opts.bodyHtml
     ? opts.bodyHtml
     : opts.introduction
-      ? `<p class="ll-muted" style="color:#6b6b66;line-height:1.75;">${esc(opts.introduction).replace(/\n/g, '<br/>')}</p>`
+      ? `<p class="ll-muted" style="margin:0 0 16px;color:#4a4a45;font-size:15px;line-height:1.7;">${esc(opts.introduction).replace(/\n/g, '<br/>')}</p>`
       : ''
 
   const highlight =
     opts.highlightTitle && opts.highlightBodyHtml
-      ? `<div class="ll-cream" style="background-color:#F1E9DA;border-left:3px solid #B18544;padding:12px 14px;margin:20px 0;">
-        <p class="ll-ink" style="margin:0 0 8px;color:#1A2A1D;font-size:18px;font-family:'Be Vietnam Pro',Arial,sans-serif;font-weight:600;">${esc(opts.highlightTitle)}</p>
-        <p class="ll-muted" style="margin:0;font-size:13px;color:#6b6b66;">${opts.highlightBodyHtml}</p>
-      </div>`
+      ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:24px 0 8px;">
+        <tr>
+          <td class="ll-cream" bgcolor="#F9F4EB" style="background-color:#F9F4EB;border:1px solid #E6DAC3;border-left:3px solid #B18544;padding:18px 20px;">
+            <p class="ll-gold" style="margin:0 0 6px;color:#B18544;font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;font-family:${EMAIL_DISPLAY_FONT};">Your journey</p>
+            <p class="ll-ink" style="margin:0 0 8px;color:#1A2A1D;font-size:19px;line-height:1.35;font-family:${EMAIL_DISPLAY_FONT};font-weight:600;">${esc(opts.highlightTitle)}</p>
+            <p class="ll-muted" style="margin:0;font-size:14px;line-height:1.6;color:#4a4a45;">${opts.highlightBodyHtml}</p>
+          </td>
+        </tr>
+      </table>`
       : ''
 
   const ivoryPixel = emailIvoryPixelUrl(opts.logoUrl)
+  const preheader = opts.preheader
+    ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#F1E9DA;opacity:0;">${esc(opts.preheader)}</div>`
+    : ''
+  const year = new Date().getFullYear()
   const html = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="color-scheme" content="light only"/><meta name="supported-color-schemes" content="light"/>
 <style type="text/css">
 :root { color-scheme: light only; }
 body, table, td, div, p { color-scheme: light only; }
+@media only screen and (max-width:620px) {
+  .ll-pad { padding:28px 22px !important; }
+  .ll-head { padding:26px 22px 20px !important; }
+  .ll-foot { padding:22px 22px 26px !important; }
+}
 @media (prefers-color-scheme: dark) {
-  .ll-bg, .ll-card, .ll-pad, body { background-color:#F9F4EB !important; background:#F9F4EB !important; color:#252523 !important; }
-  .ll-cream { background-color:#F1E9DA !important; }
-  .ll-muted { color:#6b6b66 !important; }
+  .ll-bg, body { background-color:#F1E9DA !important; }
+  .ll-card, .ll-pad { background-color:#FFFFFF !important; color:#252523 !important; }
+  .ll-head, .ll-foot, .ll-cream { background-color:#F9F4EB !important; }
+  .ll-muted { color:#4a4a45 !important; }
   .ll-ink { color:#1A2A1D !important; }
   .ll-gold { color:#B18544 !important; }
 }
-[data-ogsc] .ll-bg, [data-ogsc] .ll-card, [data-ogsc] .ll-pad { background-color:#F9F4EB !important; color:#252523 !important; }
+[data-ogsc] .ll-card, [data-ogsc] .ll-pad { background-color:#FFFFFF !important; color:#252523 !important; }
+[data-ogsc] .ll-head, [data-ogsc] .ll-foot { background-color:#F9F4EB !important; }
 </style>
 </head>
-<body class="ll-bg" bgcolor="#F9F4EB" style="margin:0;padding:0;background-color:#F9F4EB;background-image:url('${esc(ivoryPixel)}');font-family:'Open Sans',Segoe UI,Arial,sans-serif;color:#252523;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F9F4EB" class="ll-bg" style="border-collapse:collapse;background-color:#F9F4EB;background-image:url('${esc(ivoryPixel)}');">
+<body class="ll-bg" bgcolor="#F1E9DA" style="margin:0;padding:0;background-color:#F1E9DA;font-family:${EMAIL_FONT};color:#252523;-webkit-text-size-adjust:100%;">
+  ${preheader}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F1E9DA" class="ll-bg" style="border-collapse:collapse;background-color:#F1E9DA;">
     <tr>
-      <td align="center" bgcolor="#F9F4EB" class="ll-bg" style="padding:16px 10px;background-color:#F9F4EB;">
-        <table role="presentation" width="620" cellpadding="0" cellspacing="0" border="0" bgcolor="#F9F4EB" class="ll-card" style="width:100%;max-width:620px;border-collapse:collapse;background-color:#F9F4EB;">
+      <td align="center" bgcolor="#F1E9DA" class="ll-bg" style="padding:32px 12px;background-color:#F1E9DA;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFFFFF" class="ll-card" style="width:100%;max-width:600px;border-collapse:separate;background-color:#FFFFFF;border:1px solid #E6DAC3;border-radius:6px;overflow:hidden;">
+          ${emailLogoHeader(opts.logoUrl, ivoryPixel)}
           <tr>
-            <td bgcolor="#F9F4EB" class="ll-card" style="padding:0;background-color:#F9F4EB;">
-              ${emailLogoHeader(opts.logoUrl)}
-            </td>
-          </tr>
-          <tr>
-            <td bgcolor="#F9F4EB" class="ll-pad" style="padding:28px;background-color:#F9F4EB;color:#252523;">
-              <p class="ll-ink" style="color:#252523;">Dear ${esc(opts.firstName)},</p>
+            <td bgcolor="#FFFFFF" class="ll-pad" style="padding:36px 40px 32px;background-color:#FFFFFF;color:#252523;font-family:${EMAIL_FONT};font-size:15px;line-height:1.7;">
+              <p class="ll-ink" style="margin:0 0 16px;color:#1A2A1D;font-size:16px;">Dear ${esc(opts.firstName)},</p>
               ${body}
               ${highlight}
               ${opts.extraHtml || ''}
               ${cta}
-              <p class="ll-muted" style="font-size:13px;color:#6b6b66;">If you would like any changes, simply reply to this email.</p>
-              <p class="ll-ink" style="color:#252523;">Warm regards,<br/><strong style="color:#1A2A1D;">${esc(BRAND.name)}</strong><br/><span class="ll-gold" style="color:#B18544;">${esc(BRAND.tagline)}</span></p>
+              <p class="ll-muted" style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#6b6b66;">If you would like any changes, simply reply to this email.</p>
+              <p class="ll-ink" style="margin:0;color:#252523;font-size:15px;line-height:1.6;">Warm regards,<br/><strong style="color:#1A2A1D;">The ${esc(BRAND.name)} team</strong></p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" bgcolor="#F9F4EB" class="ll-foot" style="padding:24px 40px 28px;background-color:#F9F4EB;border-top:1px solid #E6DAC3;text-align:center;font-family:${EMAIL_FONT};">
+              <p class="ll-muted" style="margin:0;font-size:12px;line-height:1.6;color:#6b6b66;"><a href="${esc(BRAND.websiteUrl)}" target="_blank" rel="noopener noreferrer" style="color:#1A2A1D;text-decoration:none;">lankalux.com</a> &nbsp;·&nbsp; Sri Lanka &nbsp;·&nbsp; &copy; ${year} ${esc(BRAND.name)}</p>
             </td>
           </tr>
         </table>
@@ -207,7 +231,7 @@ export function renderFollowUpEmail(opts: {
     .map((p) => p.trim())
     .filter(Boolean)
   const bodyHtml = paragraphs
-    .map((p) => `<p class="ll-muted" style="color:#6b6b66;line-height:1.75;">${esc(p).replace(/\n/g, '<br/>')}</p>`)
+    .map((p) => `<p class="ll-muted" style="margin:0 0 16px;color:#4a4a45;font-size:15px;line-height:1.7;">${esc(p).replace(/\n/g, '<br/>')}</p>`)
     .join('')
   const ctas = resolveCtas(opts)
   const compiled = renderBrandedClientEmail({
@@ -246,7 +270,7 @@ export function renderJourneyEmail(opts: {
   const subject = `LankaLux Journey — ${j.title}`
   const hotelBlock =
     includeHotels && j.hotels.length
-      ? `<h3 style="color:#B18544;font-family:'Be Vietnam Pro',Arial,sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;">Suggested stays</h3>${j.hotels
+      ? `<h3 style="margin:24px 0 12px;color:#B18544;font-family:'Be Vietnam Pro',Arial,sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;">Suggested stays</h3>${j.hotels
           .map(
             (h) =>
               `<p style="margin:0 0 12px;"><strong style="color:#1A2A1D;">${esc(h.name)}</strong><br/>${esc(h.destination)} · ${esc(h.star_category)}<br/>${esc(h.room_category)} ${h.meal_plan ? '· ' + esc(h.meal_plan) : ''}</p>`
@@ -263,6 +287,7 @@ export function renderJourneyEmail(opts: {
     ctaUrl: shareUrl,
     ctaLabel: 'View your LankaLux Journey',
     logoUrl,
+    preheader: `Your personalised journey, ${j.title}, is ready to view.`,
     textLines: [
       `Dear ${name},`,
       '',
