@@ -5,7 +5,7 @@ import { isWebsitePhotoPath, isWebsiteReviewPage } from '@/config/website-conten
 
 const UPLOAD_BUCKET = process.env.SUPABASE_UPLOADS_BUCKET || 'client-uploads'
 const PHOTO_PREFIX = 'website'
-const MIGRATION_HINT = 'Website content tables are missing. Run supabase/migrations/20261009000000_website_content.sql.'
+const MIGRATION_HINT = 'Website content tables are missing. Run supabase/migrations/20261009010000_website_content.sql.'
 
 export type WebsiteReview = {
   id: string
