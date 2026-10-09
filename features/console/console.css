@@ -1092,7 +1092,11 @@ button.ll-card,
 }
 
 @media (max-width: 900px) {
-  /* Wide tables scroll sideways inside their box instead of stretching the whole page. */
+  /* Keep the page itself phone-width; only wide tables scroll sideways, inside their box. */
+  .ll-body { grid-template-columns: minmax(0, 1fr); }
+  .ll-main { min-width: 0; }
+  .ll-filters input,
+  .ll-filters select { min-width: 0; flex: 1 1 160px; }
   .ll-table {
     display: block;
     overflow-x: auto;
@@ -1102,4 +1106,9 @@ button.ll-card,
   .ll-table td {
     white-space: nowrap;
   }
+}
+
+@media (max-width: 600px) {
+  .ll-top { padding: 0 14px; }
+  .ll-top-actions > span { display: none; }
 }

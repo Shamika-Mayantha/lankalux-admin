@@ -84,10 +84,10 @@ function RequestsPageInner() {
           aria-label="Search requests"
         />
         <select value={status} onChange={(e) => setParam('status', e.target.value)} aria-label="Filter by status">
-          <option value="all">All statuses ({counts.all || 0})</option>
+          <option value="all">{loading ? 'All statuses' : `All statuses (${counts.all || 0})`}</option>
           {REQUEST_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {STATUS_LABEL[s]} ({counts[s] || 0})
+              {loading ? STATUS_LABEL[s] : `${STATUS_LABEL[s]} (${counts[s] || 0})`}
             </option>
           ))}
         </select>
