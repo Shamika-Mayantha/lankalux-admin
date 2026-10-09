@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { enRouteDesignRules, placesPromptSection } from '@/services/itinerary-prompt'
+import { rejectNonAdmin } from '@/app/api/v2/_guard'
 
 function cleanGeneratedDayTitle(rawTitle: unknown, dayNumber: number, location?: string) {
   const title = typeof rawTitle === 'string' ? rawTitle.trim() : ''
@@ -75,6 +76,9 @@ function isTooSimilar(candidate: any, existing: any[], threshold: number) {
 }
 
 export async function POST(request: Request) {
+  const denied = await rejectNonAdmin(request)
+  if (denied) return denied
+
   try {
     // Parse request body
     const body = await request.json()

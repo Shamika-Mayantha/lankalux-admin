@@ -34,3 +34,14 @@ export async function readJson<T>(request: Request): Promise<T> {
     throw new AppError('Invalid JSON body', 400)
   }
 }
+
+/** For legacy routes: returns a 401/403 response when the caller is not the admin, otherwise null. */
+export async function rejectNonAdmin(request: Request): Promise<NextResponse | null> {
+  try {
+    await requireAdmin(request)
+    return null
+  } catch (err) {
+    const status = err instanceof AppError ? err.status : 401
+    return NextResponse.json({ success: false, error: publicError(err, 'Sign in required.') }, { status })
+  }
+}

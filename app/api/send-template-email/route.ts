@@ -12,8 +12,12 @@ import {
   type TemplateId,
 } from '@/lib/email-templates'
 import { renderFollowUpEmail } from '@/services/journey-copy'
+import { rejectNonAdmin } from '@/app/api/v2/_guard'
 
 export async function POST(request: Request) {
+  const denied = await rejectNonAdmin(request)
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { requestId, templateId, subject: customSubject, body: customBody } = body as {

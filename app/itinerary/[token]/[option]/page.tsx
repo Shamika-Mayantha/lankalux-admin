@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { getFleetVehicleById } from '@/lib/fleet'
 import { ItineraryRender } from '@/components/itinerary/ItineraryRender'
+import { authedFetch } from '@/lib/authed-fetch'
 
 interface Day {
   day: number
@@ -300,7 +301,7 @@ export default function PublicItineraryPage() {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('requestId', request.id)
-    const res = await fetch('/api/upload-client-image', { method: 'POST', body: fd })
+    const res = await authedFetch('/api/upload-client-image', { method: 'POST', body: fd })
     const data = await res.json()
     if (!res.ok || !data?.src) {
       alert(data?.error || 'Upload failed')

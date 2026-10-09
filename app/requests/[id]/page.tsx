@@ -20,6 +20,7 @@ import { ImageManager } from '@/components/ImageManager'
 import type { ManagedImageItem } from '@/lib/managed-image'
 import { imageSrcs, normalizeManagedImages, absoluteImageSrc } from '@/lib/managed-image'
 import { hydrateStoredLead, toIsoDate } from '@/lib/website-lead'
+import { authedFetch } from '@/lib/authed-fetch'
 
 const PUBLIC_SITE_BASE = 'https://admin.lankalux.com'
 
@@ -588,7 +589,7 @@ export default function RequestDetailsPage() {
       let attempt = 0
       while (attempt < maxClientRetries) {
         attempt += 1
-        response = await fetch("/api/generate-single-option", {
+        response = await authedFetch("/api/generate-single-option", {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -668,7 +669,7 @@ export default function RequestDetailsPage() {
     try {
       setGeneratingItinerary(true)
 
-      const response = await fetch("/api/generate-itinerary", {
+      const response = await authedFetch("/api/generate-itinerary", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1421,7 +1422,7 @@ LankaLux Team`
         price: includeItinerarySend && includePriceInItinerary ? sendPriceValue.trim() || null : null,
         vehicle_option: includeItinerarySend && vehicleOption ? vehicleOption : null,
       }
-      const response = await fetch("/api/send-itinerary", {
+      const response = await authedFetch("/api/send-itinerary", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1515,7 +1516,7 @@ LankaLux Team`
     try {
       setSendingTemplateEmail(true)
       setTemplateEmailSuccess(false)
-      const res = await fetch("/api/send-template-email", {
+      const res = await authedFetch("/api/send-template-email", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
