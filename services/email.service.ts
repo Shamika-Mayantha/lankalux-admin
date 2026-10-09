@@ -1,5 +1,5 @@
 import { appUrl, publicJourneyUrl } from '@/config/env'
-import { bareAddress, deliverMail, formatAddress, MAIN_ADDRESS, replyAddressFor, requireMailer, senderFor, type MailAttachment } from '@/services/mailer'
+import { deliverMail, formatAddress, replyAddressFor, requireMailer, senderFor, type MailAttachment } from '@/services/mailer'
 import { BRAND } from '@/config/brand'
 import { logActivity } from '@/services/activity.service'
 import { getPublishedItinerary } from '@/services/itinerary.service'
@@ -459,74 +459,6 @@ export async function sendReplyEmail(opts: { requestId: string; body: string; su
     detail: { to, subject },
   })
   return { messageId, subject, to }
-}
-
-function escapeHtml(s: string) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
-
-/**
- * Copies a client's reply to the team's normal inboxes (Zoho), so they get notified:
- * hello@lankalux.com, the staff member who last emailed the client, and the assigned agent.
- * Replying to the copy goes straight to the client and is not logged in admin.
- */
-export async function notifyStaffOfReply(opts: {
-  requestId: string
-  clientFrom: string
-  subject: string | null
-  body: string
-  /** Addresses the client's email was already sent to; they don't need a copy. */
-  alreadyReceived?: string[]
-}) {
-  const supabase = getServiceClient()
-  const [{ data: lastOut }, request] = await Promise.all([
-    supabase
-      .from('communications')
-      .select('sent_by')
-      .eq('request_id', opts.requestId)
-      .eq('direction', 'outbound')
-      .not('sent_by', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    getRequest(opts.requestId),
-  ])
-  const staffIds = [lastOut?.sent_by, request.assigned_agent_id].filter(
-    (v): v is string => Boolean(v)
-  )
-  const recipients = new Set<string>([MAIN_ADDRESS])
-  if (staffIds.length) {
-    const { data: staff } = await supabase.from('admin_users').select('email, active').in('user_id', staffIds)
-    for (const s of staff || []) if (s.active && s.email) recipients.add(String(s.email).toLowerCase())
-  }
-  for (const address of opts.alreadyReceived || []) recipients.delete(bareAddress(address))
-  if (!recipients.size) return
-
-  const clientName = request.client_name || opts.clientFrom
-  const link = `${appUrl()}/console/requests/${encodeURIComponent(opts.requestId)}#emails`
-  const subject = `Client reply from ${clientName}: ${opts.subject || '(no subject)'}`
-  const text = [
-    `${opts.clientFrom} replied on request ${opts.requestId} (${clientName}):`,
-    '',
-    opts.body,
-    '',
-    `Open the conversation in admin: ${link}`,
-    'Replying to this email goes straight to the client but will not show in admin.',
-  ].join('\n')
-  const html = `<div style="font-family:Arial,sans-serif;font-size:14px;color:#252523;line-height:1.6">
-<p><strong>${escapeHtml(opts.clientFrom)}</strong> replied on request ${escapeHtml(opts.requestId)} (${escapeHtml(clientName)}):</p>
-<div style="white-space:pre-wrap;border-left:3px solid #c9a96e;padding:4px 12px;margin:12px 0">${escapeHtml(opts.body)}</div>
-<p><a href="${link}">Open the conversation in admin</a></p>
-<p style="color:#6b6b66;font-size:12px">Replying to this email goes straight to the client but will not show in admin.</p>
-</div>`
-
-  for (const to of recipients) {
-    try {
-      await deliverMail({ from: senderFor(null), to, replyTo: opts.clientFrom, subject, text, html })
-    } catch (err) {
-      console.error('[email] reply notification failed for', to, err instanceof Error ? err.message : err)
-    }
-  }
 }
 
 export { recordCommunication }
