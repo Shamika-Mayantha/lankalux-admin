@@ -1,35 +1,40 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { consoleFetch } from '@/lib/console-api'
+import { consoleGet, mapLimited, useConsoleResource } from '@/lib/console-api'
+import { formatAgo } from '@/lib/format'
+import { SkeletonRows } from '@/components/ui/RowLink'
 import type { ActivityEvent, ClientRequestRow } from '@/types/domain'
 
-export default function CommunicationsPage() {
-  const [events, setEvents] = useState<Array<ActivityEvent & { client?: string }>>([])
-  const [error, setError] = useState<string | null>(null)
+type CommEvent = ActivityEvent & { client?: string }
 
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const list = await consoleFetch('/api/v2/requests')
-        const reqs: ClientRequestRow[] = (list.requests || []).slice(0, 30)
-        const all: Array<ActivityEvent & { client?: string }> = []
-        for (const r of reqs) {
-          const d = await consoleFetch(`/api/v2/requests/${r.id}`)
-          for (const a of d.activity || []) {
-            if (['email_sent', 'follow_up_email_sent', 'whatsapp_shared', 'hotel_proposal_attached', 'share_link_created'].includes(a.event_type)) {
-              all.push({ ...a, client: r.client_name || r.id, request_id: r.id })
-            }
-          }
-        }
-        all.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
-        setEvents(all.slice(0, 80))
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load')
-      }
-    })()
-  }, [])
+const EVENT_LABEL: Record<string, string> = {
+  email_sent: 'Itinerary emailed',
+  follow_up_email_sent: 'Follow-up email sent',
+  whatsapp_shared: 'Shared on WhatsApp',
+  hotel_proposal_attached: 'Hotel proposal attached',
+  share_link_created: 'Share link created',
+}
+
+async function loadEvents(): Promise<CommEvent[]> {
+  const list = await consoleGet<{ requests?: ClientRequestRow[] }>('/api/v2/requests')
+  const reqs = (list.requests || []).slice(0, 30)
+  const details = await mapLimited(reqs, 6, (r) =>
+    consoleGet<{ activity?: ActivityEvent[] }>(`/api/v2/requests/${r.id}`).catch(() => ({ activity: [] }))
+  )
+  const all: CommEvent[] = []
+  reqs.forEach((r, i) => {
+    for (const a of details[i].activity || []) {
+      if (a.event_type in EVENT_LABEL) all.push({ ...a, client: r.client_name || r.id, request_id: r.id })
+    }
+  })
+  all.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+  return all.slice(0, 80)
+}
+
+export default function CommunicationsPage() {
+  const { data, error, loading } = useConsoleResource('communications', loadEvents)
+  const events = data || []
 
   return (
     <div>
@@ -46,13 +51,21 @@ export default function CommunicationsPage() {
           </tr>
         </thead>
         <tbody>
+          {loading ? <SkeletonRows cols={4} /> : null}
+          {!loading && events.length === 0 ? (
+            <tr>
+              <td colSpan={4} className="ll-muted" style={{ textAlign: 'center' }}>
+                No emails or shares logged yet.
+              </td>
+            </tr>
+          ) : null}
           {events.map((e, i) => (
             <tr key={e.id || i}>
-              <td>{e.created_at ? new Date(e.created_at).toLocaleString() : ''}</td>
+              <td title={e.created_at ? new Date(e.created_at).toLocaleString() : undefined}>{formatAgo(e.created_at)}</td>
               <td>
                 <Link href={`/console/requests/${e.request_id}`}>{e.client}</Link>
               </td>
-              <td>{e.event_type}</td>
+              <td>{EVENT_LABEL[e.event_type] || e.event_type}</td>
               <td>{e.actor || '—'}</td>
             </tr>
           ))}

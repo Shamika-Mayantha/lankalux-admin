@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { consoleFetch } from '@/lib/console-api'
+import { consoleFetch, consoleGet } from '@/lib/console-api'
 import { downloadJourneyPdf } from '@/lib/print-journey'
 import { STYLE_META, STATUS_LABEL, REQUEST_STATUSES, normalizeStatus, type ItineraryStyle } from '@/config/status'
 import { DatePicker } from '@/components/ui/DatePicker'
@@ -253,6 +254,9 @@ function activityLabel(eventType: string) {
   return labels[eventType] || eventType.replace(/_/g, ' ')
 }
 
+const WORKSPACE_TABS = ['overview', 'itineraries', 'editor', 'hotels', 'invoices', 'activity'] as const
+type WorkspaceTab = (typeof WORKSPACE_TABS)[number]
+
 export function RequestWorkspace() {
   const params = useParams<{ id: string }>()
   const id = params.id
@@ -260,7 +264,15 @@ export function RequestWorkspace() {
   const [itineraries, setItineraries] = useState<ItineraryRecord[]>([])
   const [activity, setActivity] = useState<ActivityEvent[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<'overview' | 'itineraries' | 'editor' | 'hotels' | 'invoices' | 'activity'>('overview')
+  // The open tab lives in the URL hash so a refresh or back button lands on the same tab.
+  const [tab, setTabState] = useState<WorkspaceTab>(() => {
+    const hash = typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
+    return (WORKSPACE_TABS as readonly string[]).includes(hash) ? (hash as WorkspaceTab) : 'overview'
+  })
+  function setTab(next: WorkspaceTab) {
+    setTabState(next)
+    window.history.replaceState(window.history.state, '', `#${next}`)
+  }
   const [generating, setGenerating] = useState<Record<number, boolean>>({})
   const [genError, setGenError] = useState<Record<number, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
@@ -305,13 +317,13 @@ export function RequestWorkspace() {
   useEffect(() => {
     if (!id) return
     reload().catch((e) => setError(e.message))
-    consoleFetch('/api/v2/vehicles')
+    consoleGet<{ vehicles?: VehicleRecord[] }>('/api/v2/vehicles')
       .then((d) => setVehicles(d.vehicles || []))
       .catch(() => {})
-    consoleFetch('/api/v2/drivers')
+    consoleGet<{ drivers?: DriverRecord[] }>('/api/v2/drivers')
       .then((d) => setDrivers(d.drivers || []))
       .catch(() => {})
-    consoleFetch('/api/v2/hotels')
+    consoleGet<{ hotels?: HotelRecord[] }>('/api/v2/hotels')
       .then((d) => setCatalogueHotels((d.hotels || []).filter((h: HotelRecord) => h.active !== false)))
       .catch(() => {})
   }, [id])
@@ -812,8 +824,40 @@ export function RequestWorkspace() {
     }
   }, [row, draft, itineraries, editOption, vehicles, attachedHotels])
 
-  if (error && !row) return <div className="ll-error">{error}</div>
-  if (!row) return <p>Loading request…</p>
+  useEffect(() => {
+    if (row) document.title = `${row.client_name || row.id} · LankaLux Admin`
+  }, [row])
+
+  // Success notices clear themselves; errors stay until the next action.
+  useEffect(() => {
+    if (!notice) return
+    const t = setTimeout(() => setNotice(null), 6000)
+    return () => clearTimeout(t)
+  }, [notice])
+
+  const overviewUnsaved =
+    !!row && !!overviewDraft && JSON.stringify(overviewDraft) !== JSON.stringify(toOverviewDraft(row, selected))
+  useEffect(() => {
+    if (!overviewUnsaved) return
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [overviewUnsaved])
+
+  if (error && !row) {
+    return (
+      <div>
+        <div className="ll-error">{error}</div>
+        <Link href="/console/requests" className="ll-btn secondary">
+          Back to requests
+        </Link>
+      </div>
+    )
+  }
+  if (!row) return <p className="ll-muted">Loading request…</p>
 
   const status = normalizeStatus(row.status) || 'new'
   const baselineOverview = toOverviewDraft(row, selected)
