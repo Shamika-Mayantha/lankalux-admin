@@ -1,4 +1,4 @@
-import { jsonErr, jsonOk, readJson, requireAdmin } from '@/app/api/v2/_guard'
+import { jsonErr, jsonOk, readJson, requireRequestAccess } from '@/app/api/v2/_guard'
 import { selectItinerary, updateItineraryDraft } from '@/services/itinerary.service'
 import type { StructuredItinerary } from '@/types/domain'
 import { AppError } from '@/services/supabase.server'
@@ -7,8 +7,8 @@ type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(request: Request, ctx: Ctx) {
   try {
-    const user = await requireAdmin(request)
     const { id } = await ctx.params
+    const user = await requireRequestAccess(request, id)
     const body = await readJson<{
       action?: 'select' | 'save'
       optionNumber?: number

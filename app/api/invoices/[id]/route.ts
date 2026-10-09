@@ -7,12 +7,12 @@ import {
   refreshDraftInvoice,
   updateDraftInvoice,
 } from '@/services/invoice.service'
-import { fail, ok, readJson, requireAdmin } from '@/app/api/invoices/_guard'
+import { fail, ok, readJson, requireInvoiceAccess } from '@/app/api/invoices/_guard'
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin(request)
     const { id } = await params
+    await requireInvoiceAccess(request, id)
     const invoice = await getInvoice(id)
     return ok({
       invoice,
@@ -25,8 +25,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireAdmin(request)
     const { id } = await params
+    const user = await requireInvoiceAccess(request, id)
     const patch = await readJson<{
       invoice_date?: string
       due_date?: string | null
@@ -49,8 +49,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireAdmin(request)
     const { id } = await params
+    const user = await requireInvoiceAccess(request, id)
     const body = await readJson<{ action?: 'refresh' | 'finalize' | 'duplicate' | 'mark_sent'; channel?: 'email' | 'whatsapp' }>(request)
     let invoice
     switch (body.action) {

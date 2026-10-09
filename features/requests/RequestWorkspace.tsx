@@ -14,6 +14,7 @@ import { formatKilometers, totalKilometersFor } from '@/services/kilometers.serv
 import { JourneyView } from '@/features/journey/JourneyView'
 import { PhotoPicker } from '@/features/console/PhotoPicker'
 import { InvoiceWorkspace } from '@/features/invoices/InvoiceWorkspace'
+import { AgentAssignment } from '@/features/console/AgentAssignment'
 import '@/features/journey/journey.css'
 import type { ActivityEvent, CanonicalJourney, ClientRequestRow, DriverRecord, HotelRecord, ItineraryDay, ItineraryRecord, RequestHotel, StructuredItinerary, VehicleRecord } from '@/types/domain'
 import {
@@ -249,6 +250,7 @@ function activityLabel(eventType: string) {
     hotel_proposal_removed: 'Hotel removed',
     hotels_applied_to_itineraries: 'Hotels inserted into itineraries',
     driver_pack_updated: 'Driver Pack details saved',
+    agent_assigned: 'Agent assignment changed',
   }
   return labels[eventType] || eventType.replace(/_/g, ' ')
 }
@@ -845,6 +847,11 @@ export function RequestWorkspace() {
               ? ` · Sold Option ${overviewDraft?.sold_option || selected?.option_number || '—'}${overviewDraft?.sold_price || selected?.payload?.price ? ` · ${overviewDraft?.sold_price || selected?.payload?.price}` : ''}`
               : ''}
           </p>
+          <AgentAssignment
+            row={row}
+            disabled={!!busy}
+            onAssign={(userId) => void patchRequest({ assigned_agent_id: userId })}
+          />
         </div>
         <div className="ll-row">
           <span className={`ll-pill ${status}`}>{STATUS_LABEL[status]}</span>

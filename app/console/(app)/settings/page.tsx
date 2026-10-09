@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { consoleFetch } from '@/lib/console-api'
 import { BRAND } from '@/config/brand'
+import { useMe } from '@/features/console/StaffContext'
 
 type Flags = Record<string, string>
 
@@ -50,7 +51,86 @@ const VISIBLE_KEYS = [
   ['iban', 'IBAN'],
 ] as const
 
+function PasswordCard() {
+  const me = useMe()
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  async function change() {
+    setError(null)
+    setNotice(null)
+    if (next.length < 8) return setError('New password must be at least 8 characters.')
+    if (next !== confirm) return setError('The new passwords do not match.')
+    setSaving(true)
+    try {
+      await consoleFetch('/api/v2/me/password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword: current, newPassword: next }),
+      })
+      setCurrent('')
+      setNext('')
+      setConfirm('')
+      setNotice('Password changed. Use the new password next time you sign in.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to change password.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="ll-card" style={{ marginBottom: 18 }}>
+      <h3>Your account</h3>
+      <p className="ll-muted">
+        Signed in as {me.email} ({me.role === 'supervisor' ? 'Supervisor' : 'Agent'}).
+      </p>
+      {error && <div className="ll-error">{error}</div>}
+      {notice && <div className="ll-ok">{notice}</div>}
+      <div className="ll-form" style={{ marginTop: 16 }}>
+        <label>
+          Current password
+          <input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+        </label>
+        <label>
+          New password
+          <input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
+        </label>
+        <label>
+          Confirm new password
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && void change()}
+          />
+        </label>
+        <button className="ll-btn" disabled={saving || !current || !next || !confirm} onClick={() => void change()}>
+          {saving ? 'Changing…' : 'Change password'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function SettingsPage() {
+  const supervisor = useMe().role === 'supervisor'
+  if (!supervisor) {
+    return (
+      <div>
+        <h1 className="ll-h1">Settings</h1>
+        <PasswordCard />
+      </div>
+    )
+  }
+  return <SupervisorSettings />
+}
+
+function SupervisorSettings() {
   const [flags, setFlags] = useState<Flags>({})
   const [meta, setMeta] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
@@ -100,6 +180,7 @@ export default function SettingsPage() {
   return (
     <div>
       <h1 className="ll-h1">Settings</h1>
+      <PasswordCard />
       <p className="ll-sub">Infrastructure status. Secret values are never shown.</p>
       {error && <div className="ll-error">{error}</div>}
       {notice && <div className="ll-ok">{notice}</div>}

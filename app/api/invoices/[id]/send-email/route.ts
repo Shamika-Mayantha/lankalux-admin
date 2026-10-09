@@ -1,12 +1,12 @@
 import { sendInvoiceEmail } from '@/services/email.service'
-import { fail, ok, readJson, requireAdmin } from '@/app/api/invoices/_guard'
+import { fail, ok, readJson, requireInvoiceAccess } from '@/app/api/invoices/_guard'
 
 export const maxDuration = 30
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireAdmin(request)
     const { id } = await params
+    const user = await requireInvoiceAccess(request, id)
     const body = await readJson<{ to?: string }>(request)
     const result = await sendInvoiceEmail({
       invoiceId: id,

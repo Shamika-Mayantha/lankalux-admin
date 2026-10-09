@@ -139,6 +139,10 @@ export type ClientRequestRow = {
   notes: string | null
   assigned_employee: string | null
   assigned_driver_id?: string | null
+  /** Staff login that created the request (null for website enquiries). */
+  created_by?: string | null
+  /** Staff login a supervisor assigned the request to. */
+  assigned_agent_id?: string | null
   lead_source: string | null
   budget: string | null
   hotel_preference: string | null
@@ -175,6 +179,8 @@ export type RequestInput = {
   additional_preferences?: string | null
   assigned_employee?: string | null
   assigned_driver_id?: string | null
+  /** Supervisor-only: the staff login responsible for this request. */
+  assigned_agent_id?: string | null
   lead_source?: string | null
   budget?: string | null
   hotel_preference?: string | null
@@ -318,4 +324,17 @@ export type GenerationLog = {
   parsed_response?: unknown
   retry_count: number
   created_at?: string
+}
+
+export type StaffRole = 'supervisor' | 'agent'
+
+export type StaffMember = {
+  user_id: string
+  email: string
+  full_name: string | null
+  role: StaffRole
+  active: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string | null
 }

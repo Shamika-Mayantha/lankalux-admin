@@ -1,12 +1,14 @@
 import { createInvoiceFromRequest, listInvoices, invoicePreviewModel, previewInvoiceSource } from '@/services/invoice.service'
-import { fail, ok, readJson, requireAdmin } from '@/app/api/invoices/_guard'
+import { fail, ok, readJson, requireRequestAccess, requireStaff } from '@/app/api/invoices/_guard'
+import { accessibleRequestIds } from '@/services/staff.service'
 
 export async function GET(request: Request) {
   try {
-    await requireAdmin(request)
     const { searchParams } = new URL(request.url)
     const requestId = searchParams.get('request_id') || undefined
-    const invoices = await listInvoices({ requestId })
+    const { staff } = requestId ? await requireRequestAccess(request, requestId) : await requireStaff(request)
+    const allowed = requestId ? null : await accessibleRequestIds(staff)
+    const invoices = (await listInvoices({ requestId })).filter((b) => !allowed || allowed.has(b.invoice.request_id))
     const source = requestId ? await previewInvoiceSource(requestId) : null
     return ok({
       source,
@@ -22,9 +24,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireAdmin(request)
     const body = await readJson<{ request_id?: string }>(request)
     if (!body.request_id) throw new Error('request_id is required.')
+    const user = await requireRequestAccess(request, body.request_id)
     const created = await createInvoiceFromRequest(body.request_id, user.email || user.id)
     return ok({
       invoice: created,

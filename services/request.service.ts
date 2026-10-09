@@ -45,7 +45,7 @@ export async function nextRequestId(): Promise<string> {
   return `${ID_PREFIX}${String(next).padStart(3, '0')}`
 }
 
-function toInsert(input: RequestInput, id: string) {
+function toInsert(input: RequestInput, id: string, createdBy?: string) {
   const start_date = toIsoDate(input.start_date) || null
   const end_date = toIsoDate(input.end_date) || null
   const duration = inclusiveDuration(start_date, end_date)
@@ -73,15 +73,20 @@ function toInsert(input: RequestInput, id: string) {
     departure_flight: input.departure_flight?.trim() || null,
     requested_destinations: input.requested_destinations?.trim() || null,
     notes: input.notes?.trim() || null,
+    ...(createdBy ? { created_by: createdBy } : {}),
+    ...(input.assigned_agent_id ? { assigned_agent_id: input.assigned_agent_id } : {}),
     status: input.status || 'new',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }
 }
 
-export async function listRequests(): Promise<ClientRequestRow[]> {
+/** `visibleTo` limits the list to requests that staff login created or was assigned. */
+export async function listRequests(opts?: { visibleTo?: string }): Promise<ClientRequestRow[]> {
   const supabase = getServiceClient()
-  const { data, error } = await supabase.from('Client Requests').select('*').order('created_at', { ascending: false })
+  let query = supabase.from('Client Requests').select('*')
+  if (opts?.visibleTo) query = query.or(`created_by.eq.${opts.visibleTo},assigned_agent_id.eq.${opts.visibleTo}`)
+  const { data, error } = await query.order('created_at', { ascending: false })
   if (error) throw new AppError(`Supabase request failed: ${error.message}`, 500)
   return applyLeadHydration(await applyExpiry(((data || []) as ClientRequestRow[]).map(withDriverPack)))
 }
@@ -185,13 +190,13 @@ async function applyExpiry(rows: ClientRequestRow[]): Promise<ClientRequestRow[]
   return rows.map((r) => (expiredIds.has(r.id) ? { ...r, status: 'expired' } : r))
 }
 
-export async function createRequest(input: RequestInput, actor?: string): Promise<ClientRequestRow> {
+export async function createRequest(input: RequestInput, actor?: string, createdBy?: string): Promise<ClientRequestRow> {
   if (!input.client_name?.trim()) throw new AppError('Client name is required')
   if (!input.email?.trim()) throw new AppError('Email is required')
   // A website enquiry can claim the same sequential ID between our read and insert; re-read and retry.
   for (let attempt = 1; ; attempt++) {
     try {
-      return await insertRequest(input, actor)
+      return await insertRequest(input, actor, createdBy)
     } catch (err) {
       const duplicate = err instanceof AppError && /duplicate key|23505/i.test(err.message)
       if (!duplicate || attempt >= 5) throw err
@@ -199,15 +204,17 @@ export async function createRequest(input: RequestInput, actor?: string): Promis
   }
 }
 
-async function insertRequest(input: RequestInput, actor?: string): Promise<ClientRequestRow> {
+async function insertRequest(input: RequestInput, actor?: string, createdBy?: string): Promise<ClientRequestRow> {
   const id = await nextRequestId()
   const supabase = getServiceClient()
-  const payload = toInsert(input, id)
+  const payload = toInsert(input, id, createdBy)
   let { data, error } = await supabase.from('Client Requests').insert(payload).select('*').single()
 
   if (error && isMissingTableError(error)) {
     const legacy = { ...payload } as Record<string, unknown>
     for (const key of [
+      'created_by',
+      'assigned_agent_id',
       'assigned_employee',
       'lead_source',
       'budget',
@@ -281,6 +288,7 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
     if (!('budget' in patch)) next.budget = next.sold_price
   }
   if ('cancellation_reason' in patch) next.cancellation_reason = patch.cancellation_reason ?? null
+  if ('assigned_agent_id' in patch) next.assigned_agent_id = patch.assigned_agent_id || null
   if ('assigned_employee' in patch || 'assigned_driver_id' in patch) {
     const resolved = await resolveAssignedDriver({
       assigned_driver_id: (typeof next.assigned_driver_id === 'string' ? next.assigned_driver_id : patch.assigned_driver_id) || current.assigned_driver_id,
@@ -359,6 +367,14 @@ export async function updateRequest(id: string, patch: Partial<RequestInput> & {
       actor,
       event_type: 'assignee_changed',
       detail: { from: current.assigned_employee, to: patch.assigned_employee },
+    })
+  }
+  if ('assigned_agent_id' in patch && (patch.assigned_agent_id || null) !== (current.assigned_agent_id || null)) {
+    await logActivity({
+      request_id: id,
+      actor,
+      event_type: 'agent_assigned',
+      detail: { from: current.assigned_agent_id || null, to: patch.assigned_agent_id || null },
     })
   }
   if (patch.notes !== undefined && patch.notes !== current.notes) {
