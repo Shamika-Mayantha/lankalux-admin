@@ -1,5 +1,5 @@
 import { appUrl, publicJourneyUrl } from '@/config/env'
-import { deliverMail, MAIN_ADDRESS, replyAddressFor, requireMailer, senderFor, type MailAttachment } from '@/services/mailer'
+import { deliverMail, formatAddress, MAIN_ADDRESS, replyAddressFor, requireMailer, senderFor, type MailAttachment } from '@/services/mailer'
 import { BRAND } from '@/config/brand'
 import { logActivity } from '@/services/activity.service'
 import { getPublishedItinerary } from '@/services/itinerary.service'
@@ -34,6 +34,8 @@ async function sendLankaLuxMail(opts: {
   inReplyTo?: string | null
 }): Promise<{ messageId: string }> {
   const from = senderFor(opts.sender)
+  // Shown with the sender's name, so the client's Reply reads "Oneth | LankaLux" rather than the raw address.
+  const replyTo = opts.requestId ? replyAddressFor(opts.requestId) : null
   const base = {
     requestId: opts.requestId || '',
     channel: 'email' as const,
@@ -50,7 +52,7 @@ async function sendLankaLuxMail(opts: {
     const result = await deliverMail({
       from,
       to: opts.to,
-      replyTo: opts.requestId ? replyAddressFor(opts.requestId) : null,
+      replyTo: replyTo ? formatAddress({ name: from.name, address: replyTo }) : null,
       bcc: opts.bcc,
       subject: opts.subject,
       text: opts.text,

@@ -54,26 +54,29 @@ function replyDomain(): string | null {
   return domain && resendEnabled() ? domain : null
 }
 
-/** r.<request id>.<signature>@reply.lankalux.com, or null when replies into admin are off. */
+/** <request id>.<signature>@reply.lankalux.com, or null when replies into admin are off. */
 export function replyAddressFor(requestId: string): string | null {
   const domain = replyDomain()
   if (!domain || !/^[A-Za-z0-9_-]+$/.test(requestId)) return null
-  return `r.${requestId.toLowerCase()}.${replySignature(requestId)}@${domain}`
+  return `${requestId.toLowerCase()}.${replySignature(requestId).slice(0, 8)}@${domain}`
 }
 
-/** Returns the lower-cased request ID an address was signed for, or null. */
+/**
+ * Returns the lower-cased request ID an address was signed for, or null.
+ * Also accepts the first format, r.<id>.<12-char signature>, used by emails already sent.
+ */
 export function requestIdFromReplyAddress(address: string): string | null {
   const m = address
     .trim()
     .toLowerCase()
-    .match(/(?:^|<)r\.([a-z0-9_-]+)\.([a-f0-9]{12})@([a-z0-9.-]+)>?$/)
+    .match(/(?:^|[<\s])(?:r\.)?([a-z0-9_-]+)\.([a-f0-9]{12}|[a-f0-9]{8})@([a-z0-9.-]+)>?$/)
   if (!m) return null
-  const expected = replySignature(m[1])
+  const expected = replySignature(m[1]).slice(0, m[2].length)
   const ok = crypto.timingSafeEqual(Buffer.from(m[2]), Buffer.from(expected))
   return ok ? m[1] : null
 }
 
-function formatAddress(sender: Sender) {
+export function formatAddress(sender: Sender) {
   return `"${sender.name.replace(/"/g, '')}" <${sender.address}>`
 }
 
