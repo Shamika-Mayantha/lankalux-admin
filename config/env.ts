@@ -41,6 +41,9 @@ export function envFlags(): Record<string, EnvStatus> {
     SMTP_USER: present('SMTP_USER') ? 'configured' : 'missing',
     SMTP_PASS: smtpPassword() ? 'configured' : 'missing',
     SMTP_FROM: present('SMTP_FROM') || present('SMTP_USER') ? 'configured' : 'missing',
+    RESEND_API_KEY: present('RESEND_API_KEY') ? 'configured' : 'missing',
+    RESEND_WEBHOOK_SECRET: present('RESEND_WEBHOOK_SECRET') ? 'configured' : 'missing',
+    EMAIL_REPLY_DOMAIN: present('EMAIL_REPLY_DOMAIN') ? 'configured' : 'missing',
   }
 }
 

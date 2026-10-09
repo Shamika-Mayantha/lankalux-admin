@@ -20,6 +20,7 @@ export async function POST(request: Request) {
       subject: body.subject,
       body: body.body,
       actor: user.email,
+      sender: user,
     })
     return jsonOk(result)
   } catch (err) {

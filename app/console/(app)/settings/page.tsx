@@ -210,6 +210,14 @@ function SupervisorSettings() {
             <td>{pill(meta.smtp)}</td>
           </tr>
           <tr>
+            <td>Email as each agent (Resend)</td>
+            <td>{pill(flags.RESEND_API_KEY)}</td>
+          </tr>
+          <tr>
+            <td>Client replies into admin</td>
+            <td>{pill(flags.RESEND_WEBHOOK_SECRET === 'configured' && flags.EMAIL_REPLY_DOMAIN === 'configured' ? 'configured' : 'missing')}</td>
+          </tr>
+          <tr>
             <td>WhatsApp</td>
             <td>
               <span className="ll-pill sold">Click-to-chat (wa.me)</span>
