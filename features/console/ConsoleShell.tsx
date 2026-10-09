@@ -3,10 +3,11 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { isLankaLuxAdminEmail } from '@/lib/admin-email'
 import { supabase } from '@/lib/supabase'
+import { consoleFetch } from '@/lib/console-api'
 import { INACTIVITY_MS } from '@/config/status'
 import { BRAND } from '@/config/brand'
+import { StaffProvider, type Me } from '@/features/console/StaffContext'
 
 const NAV = [
   { href: '/console', label: 'Dashboard' },
@@ -14,6 +15,7 @@ const NAV = [
   { href: '/console/itineraries', label: 'Itineraries' },
   { href: '/console/invoices', label: 'Invoices' },
   { href: '/console/payments', label: 'Payments' },
+  { href: '/console/team', label: 'Team' },
   { href: '/console/hotels', label: 'Hotels' },
   { href: '/console/vehicles', label: 'Vehicles' },
   { href: '/console/clients', label: 'Clients' },
@@ -22,11 +24,18 @@ const NAV = [
   { href: '/console/settings', label: 'Settings' },
 ]
 
+/** Pages hidden from agents; their API routes use requireAdmin, which also refuses agents. */
+const SUPERVISOR_ONLY = ['/console/payments', '/console/team', '/console/website']
+
+function supervisorOnly(href: string) {
+  return SUPERVISOR_ONLY.some((p) => href === p || href.startsWith(`${p}/`))
+}
+
 export function ConsoleShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [ready, setReady] = useState(false)
-  const [email, setEmail] = useState<string | null>(null)
+  const [me, setMe] = useState<Me | null>(null)
   const [navOpen, setNavOpen] = useState(false)
 
   useEffect(() => {
@@ -51,19 +60,22 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
     let mounted = true
     supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return
-      if (!data.session || !isLankaLuxAdminEmail(data.session.user.email)) {
-        if (data.session) await supabase.auth.signOut()
+      if (!data.session) {
         router.replace('/console/login')
         return
       }
-      setEmail(data.session.user.email ?? null)
-      setReady(true)
-    })
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_e, session) => {
-      if (!session || !isLankaLuxAdminEmail(session.user.email)) {
-        if (session) await supabase.auth.signOut()
-        router.replace('/console/login')
+      try {
+        const json = await consoleFetch('/api/v2/me')
+        if (!mounted) return
+        setMe(json.me as Me)
+        setReady(true)
+      } catch {
+        await supabase.auth.signOut()
+        router.replace('/console/login?reason=no_access')
       }
+    })
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (!session) router.replace('/console/login')
     })
     return () => {
       mounted = false
@@ -71,7 +83,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
     }
   }, [router])
 
-  if (!ready) {
+  if (!ready || !me) {
     return (
       <div className="ll-boot">
         <img src={BRAND.logoSrc} alt="LankaLux" style={{ height: 48 }} />
@@ -85,43 +97,61 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
     router.push('/console/login')
   }
 
+  const supervisor = me.role === 'supervisor'
+  const nav = NAV.filter((item) => supervisor || !supervisorOnly(item.href))
+  const blocked = !supervisor && supervisorOnly(pathname)
+
   return (
-    <div className={`ll-shell ${navOpen ? 'nav-open' : ''}`}>
-      <header className="ll-top">
-        <Link href="/console" className="ll-lockup" aria-label="LankaLux">
-          <img src={BRAND.logoSrc} alt="LankaLux" />
-        </Link>
-        <div className="ll-top-actions">
-          <span>{email}</span>
-          <button type="button" className="ll-btn secondary" onClick={logout}>
-            Logout
-          </button>
-          <button type="button" className="ll-menu-btn" aria-label="Open navigation" onClick={() => setNavOpen((v) => !v)}>
-            <span />
-            <span />
-            <span />
-          </button>
-        </div>
-      </header>
-      <div className="ll-backdrop" onClick={() => setNavOpen(false)} />
-      <div className="ll-body">
-        <aside className="ll-side">
-          <nav>
-            {NAV.map((item) => {
-              const active = pathname === item.href || (item.href !== '/console' && pathname.startsWith(item.href))
-              return (
-                <Link key={item.href} href={item.href} className={active ? 'active' : ''} onClick={() => setNavOpen(false)}>
-                  {item.label}
-                </Link>
-              )
-            })}
-          </nav>
-          <div className="ll-side-foot">
-            <p>Admin console</p>
+    <StaffProvider value={me}>
+      <div className={`ll-shell ${navOpen ? 'nav-open' : ''}`}>
+        <header className="ll-top">
+          <Link href="/console" className="ll-lockup" aria-label="LankaLux">
+            <img src={BRAND.logoSrc} alt="LankaLux" />
+          </Link>
+          <div className="ll-top-actions">
+            <span>
+              {me.name && me.name !== me.email ? `${me.name} · ` : ''}
+              {me.email}
+            </span>
+            <button type="button" className="ll-btn secondary" onClick={logout}>
+              Logout
+            </button>
+            <button type="button" className="ll-menu-btn" aria-label="Open navigation" onClick={() => setNavOpen((v) => !v)}>
+              <span />
+              <span />
+              <span />
+            </button>
           </div>
-        </aside>
-        <main className="ll-main">{children}</main>
+        </header>
+        <div className="ll-backdrop" onClick={() => setNavOpen(false)} />
+        <div className="ll-body">
+          <aside className="ll-side">
+            <nav>
+              {nav.map((item) => {
+                const active = pathname === item.href || (item.href !== '/console' && pathname.startsWith(item.href))
+                return (
+                  <Link key={item.href} href={item.href} className={active ? 'active' : ''} onClick={() => setNavOpen(false)}>
+                    {item.label}
+                  </Link>
+                )
+              })}
+            </nav>
+            <div className="ll-side-foot">
+              <p>{supervisor ? 'Supervisor' : 'Agent'} console</p>
+            </div>
+          </aside>
+          <main className="ll-main">
+            {blocked ? (
+              <div className="ll-card">
+                <h3>Supervisor only</h3>
+                <p className="ll-muted">Ask a supervisor if you need something from this page.</p>
+              </div>
+            ) : (
+              children
+            )}
+          </main>
+        </div>
       </div>
-    </div>
+    </StaffProvider>
   )
 }

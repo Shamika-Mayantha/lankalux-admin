@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isLankaLuxAdminEmail } from '@/lib/admin-email'
 import { supabase } from '@/lib/supabase'
+import { consoleFetch } from '@/lib/console-api'
 import { BRAND } from '@/config/brand'
 import '@/features/console/console.css'
 
@@ -13,18 +13,19 @@ export default function ConsoleLoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [expired] = useState(() =>
-    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('reason') === 'session_expired'
+  const [reason] = useState(() =>
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('reason') : null
   )
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) return
-      if (!isLankaLuxAdminEmail(data.session.user.email)) {
+      try {
+        await consoleFetch('/api/v2/me')
+        router.replace('/console')
+      } catch {
         await supabase.auth.signOut()
-        return
       }
-      router.replace('/console')
     })
   }, [router])
 
@@ -35,20 +36,17 @@ export default function ConsoleLoginPage() {
       return
     }
     setLoading(true)
-    if (!isLankaLuxAdminEmail(email)) {
-      setError('This login cannot access admin.')
-      setLoading(false)
-      return
-    }
-    const { data, error: signErr } = await supabase.auth.signInWithPassword({ email, password })
+    const { error: signErr } = await supabase.auth.signInWithPassword({ email, password })
     if (signErr) {
       setError(signErr.message || 'Failed to sign in.')
       setLoading(false)
       return
     }
-    if (!isLankaLuxAdminEmail(data.user?.email)) {
+    try {
+      await consoleFetch('/api/v2/me')
+    } catch {
       await supabase.auth.signOut()
-      setError('This login cannot access admin.')
+      setError('This login cannot access admin. Ask a supervisor to add you to the team.')
       setLoading(false)
       return
     }
@@ -64,7 +62,10 @@ export default function ConsoleLoginPage() {
             Admin Console
           </p>
         </div>
-        {expired && <div className="ll-error">Session expired. Please log in again.</div>}
+        {reason === 'session_expired' && <div className="ll-error">Session expired. Please log in again.</div>}
+        {reason === 'no_access' && (
+          <div className="ll-error">This login cannot access admin. Ask a supervisor to add you to the team.</div>
+        )}
         <div className="ll-form">
           <label>
             Email

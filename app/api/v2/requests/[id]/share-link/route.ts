@@ -1,4 +1,4 @@
-import { jsonErr, jsonOk, requireAdmin } from '@/app/api/v2/_guard'
+import { jsonErr, jsonOk, requireRequestAccess } from '@/app/api/v2/_guard'
 import { getOrCreateShareLink } from '@/services/share.service'
 import type { CanonicalJourney } from '@/types/domain'
 
@@ -15,8 +15,8 @@ type Body = {
 
 export async function POST(request: Request, ctx: Ctx) {
   try {
-    const user = await requireAdmin(request)
     const { id } = await ctx.params
+    const user = await requireRequestAccess(request, id)
     let body: Body = {}
     try {
       body = (await request.json()) as Body
