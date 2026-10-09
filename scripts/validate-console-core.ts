@@ -136,7 +136,7 @@ assert(parseClientFacingPrice('USD 1,850').amount === 1850, 'parse package quote
 assert(parseClientFacingPrice('USD 1,850').currency === 'USD', 'parse currency')
 assert(uniqueInOrder(['Sigiriya', 'Kandy', 'Ella', 'Yala', 'Mirissa', 'Sigiriya']).join(',') === 'Sigiriya,Kandy,Ella,Yala,Mirissa', 'route unique in order')
 
-const EMAIL_LOGO_URL = 'https://admin.lankalux.com/brand/lankalux-email-header.jpg'
+const EMAIL_LOGO_URL = 'https://admin.lankalux.com/brand/lankalux-email-logo.jpg'
 
 const invoiceEmail = renderInvoiceEmail({
   clientName: 'Sergey Ivanov',
@@ -150,7 +150,7 @@ const invoiceEmail = renderInvoiceEmail({
 })
 assert(invoiceEmail.subject === 'LankaLux Invoice — LL-INV-001', 'invoice email subject')
 assert(invoiceEmail.html.includes('View your LankaLux Journey'), 'invoice email uses itinerary CTA')
-assert(invoiceEmail.html.includes('/brand/lankalux-email-header.jpg'), 'invoice email uses full-width email header')
+assert(invoiceEmail.html.includes('/brand/lankalux-email-logo.jpg'), 'invoice email uses the centred email logo')
 assert(invoiceEmail.html.includes('href="https://lankalux.com"'), 'invoice logo links to lankalux.com')
 assert(invoiceEmail.html.includes('bgcolor="#F9F4EB"'), 'invoice email uses the ivory canvas')
 assert(invoiceEmail.html.includes('color-scheme'), 'invoice email asks clients to stay in light mode')
@@ -167,7 +167,7 @@ const followUpHtml = getTemplate('friendly_checkin')!.getHtml({
 assert(followUpHtml.includes('F9F4EB'), 'follow-up uses ivory')
 assert(followUpHtml.includes('B18544'), 'follow-up uses gold')
 assert(followUpHtml.includes('1A2A1D'), 'follow-up uses forest')
-assert(followUpHtml.includes('/brand/lankalux-email-header.jpg'), 'follow-up uses full-width email header')
+assert(followUpHtml.includes('/brand/lankalux-email-logo.jpg'), 'follow-up uses the centred email logo')
 assert(followUpHtml.includes('href="https://lankalux.com"'), 'follow-up logo links to lankalux.com')
 assert(followUpHtml.includes('bgcolor="#F9F4EB"'), 'follow-up email uses the ivory canvas')
 assert(!followUpHtml.includes('height:1px;background:#B18544'), 'follow-up does not use the expandable gold bar')
@@ -200,7 +200,7 @@ assert(postTripHtml.includes('Leave a Google review'), 'post-trip email includes
 assert(postTripHtml.includes(TRUSTPILOT_REVIEW_URL), 'post-trip email includes Trustpilot review URL')
 assert(postTripHtml.includes('Leave a Trustpilot review'), 'post-trip email includes Trustpilot review button')
 assert(postTripHtml.includes('Google or Trustpilot'), 'post-trip copy mentions both review sites')
-assert(postTripHtml.includes('/brand/lankalux-email-header.jpg'), 'post-trip uses full-width email header')
+assert(postTripHtml.includes('/brand/lankalux-email-logo.jpg'), 'post-trip uses the centred email logo')
 assert(postTripHtml.includes('href="https://lankalux.com"'), 'post-trip logo links to lankalux.com')
 assert(!postTripHtml.includes('mailto:hello@lankalux.com'), 'post-trip CTA is not the old mailto')
 const postTripText = getTemplate('post_trip_feedback')!.getText({ clientName: 'Anna Silva' })
