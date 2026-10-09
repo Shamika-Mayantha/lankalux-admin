@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { mapWebsiteLead } from '@/lib/website-lead'
 
 const corsHeaders = {
@@ -13,7 +13,7 @@ function withCors(res: NextResponse) {
   return res
 }
 
-async function generateNextRequestId(supabase: ReturnType<typeof createClient>): Promise<string> {
+async function generateNextRequestId(supabase: SupabaseClient): Promise<string> {
   try {
     const { data, error } = await supabase
       .from('Client Requests')
