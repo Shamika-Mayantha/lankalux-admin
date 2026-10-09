@@ -33,10 +33,33 @@ export function requireMailer() {
   throw new AppError('Email is not configured. Set RESEND_API_KEY, or SMTP_HOST, SMTP_USER and SMTP_PASS.', 500)
 }
 
+type SmtpLogin = { user: string; pass: string }
+
+/**
+ * Zoho mailbox logins admin may send through, so the email lands in that mailbox's Sent folder.
+ * SMTP_USER / SMTP_PASS is the main account; ZOHO_SMTP_ACCOUNTS adds agents as
+ * "oneth@lankalux.com:app-password,nimal@lankalux.com:app-password".
+ */
+function zohoLogin(address: string): SmtpLogin | null {
+  const wanted = address.trim().toLowerCase()
+  const mainUser = (process.env.SMTP_USER || '').trim().toLowerCase()
+  const mainPass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD
+  if (mainUser && mainPass && mainUser === wanted) return { user: mainUser, pass: mainPass }
+  for (const entry of (process.env.ZOHO_SMTP_ACCOUNTS || '').split(',')) {
+    const i = entry.indexOf(':')
+    if (i < 1) continue
+    const user = entry.slice(0, i).trim().toLowerCase()
+    const pass = entry.slice(i + 1).trim()
+    if (user === wanted && pass) return { user, pass }
+  }
+  return null
+}
+
 /** Agents with an @lankalux.com login send as themselves; everyone else sends as hello@. */
 export function senderFor(staff?: { email?: string | null; name?: string | null } | null): Sender {
   const email = (staff?.email || '').trim().toLowerCase()
-  if (resendEnabled() && email.endsWith(`@${SENDER_DOMAIN}`) && email !== MAIN_ADDRESS) {
+  const canSendAs = resendEnabled() || Boolean(zohoLogin(email))
+  if (canSendAs && email.endsWith(`@${SENDER_DOMAIN}`) && email !== MAIN_ADDRESS) {
     const name = (staff?.name || '').trim()
     return { name: name && name !== email ? `${name} | LankaLux` : 'LankaLux', address: email }
   }
@@ -105,6 +128,10 @@ export async function deliverMail(opts: {
   const replyTo = opts.replyTo && opts.replyTo.length ? opts.replyTo : opts.from.address
   const threading = opts.inReplyTo ? { 'In-Reply-To': opts.inReplyTo, References: opts.inReplyTo } : undefined
 
+  // Through the sender's own Zoho mailbox when admin has its login, so Zoho keeps it in Sent.
+  const login = zohoLogin(opts.from.address)
+  if (login) return sendViaZoho(login, { ...opts, replyTo, threading })
+
   if (resendEnabled()) {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -130,29 +157,43 @@ export async function deliverMail(opts: {
     return { messageId: json.id || '' }
   }
 
-  const host = process.env.SMTP_HOST
   const user = process.env.SMTP_USER
   const pass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD
-  if (!host || !user || !pass) throw new AppError('Email is not configured.', 500)
-  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587
-  const transporter = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } })
-  try {
-    await transporter.verify()
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    throw new AppError(`Email API returned a configuration error: ${msg}`, 502)
+  if (!user || !pass) throw new AppError('Email is not configured.', 500)
+  return sendViaZoho(
+    { user, pass },
+    { ...opts, from: { name: 'LankaLux', address: MAIN_ADDRESS }, replyTo, threading }
+  )
+}
+
+async function sendViaZoho(
+  login: SmtpLogin,
+  opts: {
+    from: Sender
+    to: string
+    replyTo: string | string[]
+    bcc?: string | null
+    subject: string
+    text: string
+    html: string
+    attachments?: MailAttachment[]
+    threading?: Record<string, string>
   }
+): Promise<{ messageId: string }> {
+  const host = process.env.SMTP_HOST || 'smtp.zoho.com'
+  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587
+  const transporter = nodemailer.createTransport({ host, port, secure: port === 465, auth: login })
   try {
     const result = await transporter.sendMail({
-      from: formatAddress({ name: 'LankaLux', address: MAIN_ADDRESS }),
-      replyTo,
+      from: formatAddress(opts.from),
+      replyTo: opts.replyTo,
       to: opts.to,
       bcc: opts.bcc || undefined,
       subject: opts.subject,
       text: opts.text,
       html: opts.html,
       attachments: opts.attachments,
-      headers: threading,
+      headers: opts.threading,
     })
     return { messageId: result.messageId || '' }
   } catch (err) {
