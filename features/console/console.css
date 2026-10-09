@@ -1125,3 +1125,90 @@ button.ll-card,
   .ll-mail.in { margin-right: 0; }
   .ll-mail.out { margin-left: 0; }
 }
+
+/* Performance page */
+.ll-perf-change {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.ll-card p.ll-perf-money {
+  font-size: 24px;
+}
+
+.ll-perf-legend {
+  display: flex;
+  gap: 18px;
+  font-size: 13px;
+  color: var(--charcoal);
+  margin-bottom: 12px;
+}
+
+.ll-perf-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+
+.ll-perf-swatch.enquiries,
+.ll-perf-bar.enquiries { background: #2F7A50; }
+.ll-perf-swatch.sold,
+.ll-perf-bar.sold { background: #C08A2E; }
+
+.ll-perf-chart {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ll-perf-week {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ll-perf-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  height: 200px;
+  padding-top: 18px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.ll-perf-bar {
+  position: relative;
+  width: 40%;
+  max-width: 16px;
+  border-radius: 4px 4px 0 0;
+}
+
+.ll-perf-bar span {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--charcoal);
+  padding-bottom: 2px;
+}
+
+.ll-perf-axis {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  padding-top: 6px;
+}
+
+@media (max-width: 640px) {
+  .ll-perf-chart { gap: 3px; }
+  .ll-perf-axis { font-size: 10px; }
+  .ll-perf-week:nth-child(even) .ll-perf-axis { visibility: hidden; }
+}
