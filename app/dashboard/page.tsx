@@ -151,6 +151,33 @@ export default function DashboardPage() {
     }
   }
 
+  const { nextArrival, nextDeparture } = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const soldOnly = requests.filter((r) => r.status?.toLowerCase() === 'sold')
+
+    let arrival: { request: Request; date: Date } | null = null
+    let departure: { request: Request; date: Date } | null = null
+
+    for (const req of soldOnly) {
+      const start = parseDateOnly(req.start_date)
+      if (start && start >= today) {
+        if (!arrival || start < arrival.date) {
+          arrival = { request: req, date: start }
+        }
+      }
+
+      const end = parseDateOnly(req.end_date)
+      if (end && end >= today) {
+        if (!departure || end < departure.date) {
+          departure = { request: req, date: end }
+        }
+      }
+    }
+
+    return { nextArrival: arrival, nextDeparture: departure }
+  }, [requests])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-page flex items-center justify-center">
@@ -208,33 +235,6 @@ export default function DashboardPage() {
   const depositRequests = requests.filter((r) => r.status?.toLowerCase() === 'deposit')
   const soldRequests = requests.filter((r) => r.status?.toLowerCase() === 'sold')
   const cancelledRequests = requests.filter((r) => r.status?.toLowerCase() === 'cancelled')
-
-  const { nextArrival, nextDeparture } = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const soldOnly = requests.filter((r) => r.status?.toLowerCase() === 'sold')
-
-    let arrival: { request: Request; date: Date } | null = null
-    let departure: { request: Request; date: Date } | null = null
-
-    for (const req of soldOnly) {
-      const start = parseDateOnly(req.start_date)
-      if (start && start >= today) {
-        if (!arrival || start < arrival.date) {
-          arrival = { request: req, date: start }
-        }
-      }
-
-      const end = parseDateOnly(req.end_date)
-      if (end && end >= today) {
-        if (!departure || end < departure.date) {
-          departure = { request: req, date: end }
-        }
-      }
-    }
-
-    return { nextArrival: arrival, nextDeparture: departure }
-  }, [requests])
 
   return (
     <div className="min-h-screen bg-page text-primary transition-colors duration-300">

@@ -407,7 +407,7 @@ export default function PublicItineraryPage() {
         <div className="text-center max-w-md">
           <h1 className="text-3xl font-bold text-[#c8a45d] mb-4 font-serif">Itinerary Not Found</h1>
           <p className="text-gray-600 mb-6">
-            The itinerary you're looking for doesn't exist or the link is invalid.
+            The itinerary you&apos;re looking for doesn&apos;t exist or the link is invalid.
           </p>
         </div>
       </div>

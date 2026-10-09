@@ -217,7 +217,7 @@ class PdfWriter {
   trackedLabel(text: string, x = MARGIN) {
     this.ensure(20)
     const size = 8
-    let cursor = x
+    const cursor = x
     const spaced = text.toUpperCase().split('').join(' ')
     this.page.drawText(spaced, {
       x: cursor,
