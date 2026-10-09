@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
-import { consoleFetch } from '@/lib/console-api'
+import { useMemo, useState } from 'react'
+import { useConsoleGet } from '@/lib/console-api'
+import { formatDay, formatDayRange } from '@/lib/format'
+import { RowLink } from '@/components/ui/RowLink'
 import { REQUEST_STATUSES, STATUS_LABEL, normalizeStatus, type RequestStatus } from '@/config/status'
 import type { ClientRequestRow } from '@/types/domain'
 
@@ -75,20 +77,18 @@ function RequestTable({ rows }: { rows: ClientRequestRow[] }) {
           const s = requestStatus(r)
           const href = `/console/requests/${r.id}`
           return (
-            <tr key={r.id}>
+            <RowLink key={r.id} href={href}>
               <td>
                 <Link href={href}>{r.id}</Link>
               </td>
               <td>
                 <Link href={href}>{r.client_name}</Link>
               </td>
-              <td>
-                {r.start_date || '—'} → {r.end_date || '—'}
-              </td>
+              <td>{formatDayRange(r.start_date, r.end_date)}</td>
               <td>
                 <span className={`ll-pill ${s}`}>{STATUS_LABEL[s]}</span>
               </td>
-            </tr>
+            </RowLink>
           )
         })}
       </tbody>
@@ -97,16 +97,10 @@ function RequestTable({ rows }: { rows: ClientRequestRow[] }) {
 }
 
 export default function DashboardPage() {
-  const [rows, setRows] = useState<ClientRequestRow[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const { data, error, loading } = useConsoleGet<{ requests?: ClientRequestRow[] }>('/api/v2/requests')
+  const rows = useMemo(() => data?.requests || [], [data])
   const [range, setRange] = useState<Range>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-
-  useEffect(() => {
-    consoleFetch('/api/v2/requests')
-      .then((d) => setRows(d.requests || []))
-      .catch((e) => setError(e.message))
-  }, [])
 
   const soldRows = useMemo(() => rows.filter((r) => requestStatus(r) === 'sold'), [rows])
 
@@ -133,7 +127,9 @@ export default function DashboardPage() {
 
   const visibleStatuses = statusFilter === 'all' ? REQUEST_STATUSES : [statusFilter]
 
-  const today = new Date().toISOString().slice(0, 10)
+  // Local calendar day (toISOString would be yesterday's date before 05:30 in Sri Lanka).
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   const upcomingArrivals = useMemo(
     () =>
       soldRows
@@ -183,7 +179,7 @@ export default function DashboardPage() {
             onClick={() => selectStatus(s)}
           >
             <h3>{DASHBOARD_STATUS_LABEL[s]}</h3>
-            <p className="ll-stat">{counts[s]}</p>
+            <p className="ll-stat">{loading ? <span className="ll-skel ll-skel-stat" /> : counts[s]}</p>
           </button>
         ))}
       </div>
@@ -193,19 +189,19 @@ export default function DashboardPage() {
       <div className="ll-grid-2" style={{ marginTop: 18 }}>
         <div className="ll-card">
           <h3>Upcoming arrivals</h3>
-          {upcomingArrivals.length === 0 && <p className="ll-muted">None found.</p>}
+          {loading ? <p className="ll-muted">Loading…</p> : upcomingArrivals.length === 0 && <p className="ll-muted">None found.</p>}
           {upcomingArrivals.map((r) => (
             <p key={r.id}>
-              <Link href={`/console/requests/${r.id}`}>{r.client_name}</Link> · {r.start_date}
+              <Link href={`/console/requests/${r.id}`}>{r.client_name}</Link> · {formatDay(r.start_date)}
             </p>
           ))}
         </div>
         <div className="ll-card">
           <h3>Upcoming departures</h3>
-          {upcomingDepartures.length === 0 && <p className="ll-muted">None found.</p>}
+          {loading ? <p className="ll-muted">Loading…</p> : upcomingDepartures.length === 0 && <p className="ll-muted">None found.</p>}
           {upcomingDepartures.map((r) => (
             <p key={r.id}>
-              <Link href={`/console/requests/${r.id}`}>{r.client_name}</Link> · {r.end_date}
+              <Link href={`/console/requests/${r.id}`}>{r.client_name}</Link> · {formatDay(r.end_date)}
             </p>
           ))}
         </div>
@@ -221,7 +217,7 @@ export default function DashboardPage() {
                 Open in Requests
               </Link>
             </div>
-            <RequestTable rows={grouped[s]} />
+            {loading ? <p className="ll-muted">Loading requests…</p> : <RequestTable rows={grouped[s]} />}
           </section>
         ))}
       </div>

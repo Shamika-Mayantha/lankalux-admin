@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { consoleFetch } from '@/lib/console-api'
+import { useConsoleGet } from '@/lib/console-api'
+import { formatDay } from '@/lib/format'
+import { SkeletonRows } from '@/components/ui/RowLink'
 
 type PaymentRow = {
   id: string
@@ -26,16 +27,8 @@ const METHOD_LABEL: Record<string, string> = {
 }
 
 export default function PaymentsPage() {
-  const [rows, setRows] = useState<PaymentRow[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    consoleFetch('/api/invoices/payments')
-      .then((d) => setRows(d.payments || []))
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [])
+  const { data, error, loading } = useConsoleGet<{ payments?: PaymentRow[] }>('/api/invoices/payments')
+  const rows = data?.payments || []
 
   return (
     <div>
@@ -56,11 +49,7 @@ export default function PaymentsPage() {
         </thead>
         <tbody>
           {loading ? (
-            <tr>
-              <td colSpan={7} className="ll-muted">
-                Loading payments…
-              </td>
-            </tr>
+            <SkeletonRows cols={7} />
           ) : rows.length === 0 ? (
             <tr>
               <td colSpan={7} className="ll-muted">
@@ -70,7 +59,7 @@ export default function PaymentsPage() {
           ) : (
             rows.map((row) => (
               <tr key={row.id}>
-                <td>{row.payment_date}</td>
+                <td>{formatDay(row.payment_date)}</td>
                 <td>
                   <Link href={`/console/invoices/${row.invoice_id}`}>{row.invoice_number || 'Invoice'}</Link>
                 </td>
@@ -80,7 +69,7 @@ export default function PaymentsPage() {
                 <td>{METHOD_LABEL[row.payment_method] || row.payment_method}</td>
                 <td>{row.reference_number || '—'}</td>
                 <td>
-                  {row.currency} {Number(row.amount).toFixed(2)}
+                  {row.currency} {Number(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
                 <td className="ll-muted">{row.note || '—'}</td>
               </tr>

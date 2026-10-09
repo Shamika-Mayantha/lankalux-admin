@@ -83,6 +83,11 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
     }
   }, [router])
 
+  useEffect(() => {
+    const item = [...NAV].reverse().find((i) => pathname === i.href || (i.href !== '/console' && pathname.startsWith(i.href)))
+    document.title = item ? `${item.label} · LankaLux Admin` : 'LankaLux Admin Console'
+  }, [pathname])
+
   if (!ready || !me) {
     return (
       <div className="ll-boot">

@@ -1034,3 +1034,81 @@ button.ll-card,
   .ll-main { padding: 20px; }
   .ll-lockup img { height: 36px; }
 }
+
+.ll-row-link {
+  cursor: pointer;
+}
+
+.ll-small {
+  font-size: 12px;
+}
+
+.ll-result-count {
+  margin: -6px 0 12px;
+  font-size: 13px;
+}
+
+.ll-link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--forest);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ll-link-btn:hover {
+  color: var(--gold);
+}
+
+.ll-skel {
+  display: inline-block;
+  width: 70%;
+  max-width: 180px;
+  height: 12px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--line) 25%, var(--gold-soft) 50%, var(--line) 75%);
+  background-size: 200% 100%;
+  animation: ll-skel 1.2s ease-in-out infinite;
+}
+
+.ll-skel-stat {
+  width: 40px;
+  height: 28px;
+}
+
+.ll-skel-row:hover td {
+  background: transparent !important;
+}
+
+@keyframes ll-skel {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ll-skel { animation: none; }
+}
+
+@media (max-width: 900px) {
+  /* Keep the page itself phone-width; only wide tables scroll sideways, inside their box. */
+  .ll-body { grid-template-columns: minmax(0, 1fr); }
+  .ll-main { min-width: 0; }
+  .ll-filters input,
+  .ll-filters select { min-width: 0; flex: 1 1 160px; }
+  .ll-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ll-table th,
+  .ll-table td {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 600px) {
+  .ll-top { padding: 0 14px; }
+  .ll-top-actions > span { display: none; }
+}
