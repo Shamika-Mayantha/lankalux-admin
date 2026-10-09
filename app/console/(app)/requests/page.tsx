@@ -10,6 +10,7 @@ import { STATUS_LABEL, normalizeStatus, REQUEST_STATUSES, type RequestStatus } f
 import type { ClientRequestRow } from '@/types/domain'
 import { useMe } from '@/features/console/StaffContext'
 import { memberName, useTeam } from '@/features/console/useTeam'
+import { FollowUpPanel } from '@/features/requests/FollowUpPanel'
 
 function isStatus(value: string): value is RequestStatus {
   return (REQUEST_STATUSES as readonly string[]).includes(value)
@@ -75,6 +76,7 @@ function RequestsPageInner() {
         </Link>
       </div>
       {error && <div className="ll-error">{error}</div>}
+      <FollowUpPanel />
       <div className="ll-filters">
         <input
           type="search"
