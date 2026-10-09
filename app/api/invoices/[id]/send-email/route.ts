@@ -12,6 +12,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       invoiceId: id,
       to: body.to,
       actor: user.email || user.id,
+      sender: user.staff,
     })
     return ok({ message: `Email sent to ${result.to}.`, to: result.to, subject: result.subject })
   } catch (error) {

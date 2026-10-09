@@ -23,6 +23,7 @@ export async function POST(request: Request) {
     const payload = {
       requestId: body.requestId,
       actor: user.email,
+      sender: user,
       introduction: body.introduction,
       includeHotels: body.includeHotels,
       includeVehicle: body.includeVehicle,

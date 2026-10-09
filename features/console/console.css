@@ -1112,3 +1112,16 @@ button.ll-card,
   .ll-top { padding: 0 14px; }
   .ll-top-actions > span { display: none; }
 }
+
+/* Request email conversation */
+.ll-thread { display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
+.ll-mail { border: 1px solid var(--line-strong); border-radius: 10px; padding: 12px 14px; background: #fff; }
+.ll-mail.in { background: var(--ivory-deep, #f4efe4); margin-right: 48px; }
+.ll-mail.out { margin-left: 48px; }
+.ll-mail-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.ll-mail-subject { font-weight: 600; margin-top: 6px; }
+.ll-mail-body { white-space: pre-wrap; margin-top: 6px; line-height: 1.6; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .ll-mail.in { margin-right: 0; }
+  .ll-mail.out { margin-left: 0; }
+}

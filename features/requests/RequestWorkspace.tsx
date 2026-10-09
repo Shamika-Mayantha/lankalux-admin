@@ -16,6 +16,7 @@ import { JourneyView } from '@/features/journey/JourneyView'
 import { PhotoPicker } from '@/features/console/PhotoPicker'
 import { InvoiceWorkspace } from '@/features/invoices/InvoiceWorkspace'
 import { AgentAssignment } from '@/features/console/AgentAssignment'
+import { EmailThread } from '@/features/requests/EmailThread'
 import '@/features/journey/journey.css'
 import type { ActivityEvent, CanonicalJourney, ClientRequestRow, DriverRecord, HotelRecord, ItineraryDay, ItineraryRecord, RequestHotel, StructuredItinerary, VehicleRecord } from '@/types/domain'
 import {
@@ -237,6 +238,8 @@ function activityLabel(eventType: string) {
     itinerary_link_opened: 'Client opened itinerary link',
     email_sent: 'Itinerary email sent',
     follow_up_email_sent: 'Follow-up email sent',
+    email_reply_sent: 'Email reply sent',
+    email_received: 'Client replied by email',
     whatsapp_shared: 'Itinerary shared on WhatsApp',
     invoice_created: 'Invoice created',
     invoice_edited: 'Invoice edited',
@@ -256,7 +259,7 @@ function activityLabel(eventType: string) {
   return labels[eventType] || eventType.replace(/_/g, ' ')
 }
 
-const WORKSPACE_TABS = ['overview', 'itineraries', 'editor', 'hotels', 'invoices', 'activity'] as const
+const WORKSPACE_TABS = ['overview', 'itineraries', 'editor', 'hotels', 'invoices', 'emails', 'activity'] as const
 type WorkspaceTab = (typeof WORKSPACE_TABS)[number]
 
 export function RequestWorkspace() {
@@ -942,6 +945,7 @@ export function RequestWorkspace() {
             ['editor', 'Editor'],
             ['hotels', 'Hotels'],
             ['invoices', 'Invoices & Payments'],
+            ['emails', 'Emails'],
             ['activity', 'Activity'],
           ] as const
         ).map(([id, label]) => (
@@ -1445,6 +1449,8 @@ export function RequestWorkspace() {
       {tab === 'invoices' && (
         <InvoiceWorkspace requestId={id} requestEmail={row.email} compact />
       )}
+
+      {tab === 'emails' && <EmailThread requestId={id} clientEmail={row.email} />}
 
       {tab === 'activity' && (
         <table className="ll-table">

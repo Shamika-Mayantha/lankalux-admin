@@ -1,5 +1,5 @@
-import nodemailer from 'nodemailer'
-import { appUrl, publicJourneyUrl, requireSmtp } from '@/config/env'
+import { appUrl, publicJourneyUrl } from '@/config/env'
+import { deliverMail, replyAddressFor, requireMailer, senderFor, type MailAttachment } from '@/services/mailer'
 import { BRAND } from '@/config/brand'
 import { logActivity } from '@/services/activity.service'
 import { getPublishedItinerary } from '@/services/itinerary.service'
@@ -18,13 +18,8 @@ import {
   type TemplateId,
 } from '@/lib/email-templates'
 
-const FROM_EMAIL = 'hello@lankalux.com'
-
-type MailAttachment = {
-  filename: string
-  content: Buffer
-  contentType?: string
-}
+/** The staff member sending, so agents send from their own @lankalux.com address. */
+export type MailSender = { id?: string | null; email?: string | null; name?: string | null }
 
 async function sendLankaLuxMail(opts: {
   to: string
@@ -35,65 +30,44 @@ async function sendLankaLuxMail(opts: {
   attachments?: MailAttachment[]
   requestId?: string
   shareToken?: string | null
+  sender?: MailSender | null
+  inReplyTo?: string | null
 }): Promise<{ messageId: string }> {
-  const smtp = requireSmtp()
-  const transporter = nodemailer.createTransport({
-    host: smtp.host,
-    port: smtp.port,
-    secure: smtp.port === 465,
-    auth: { user: smtp.user, pass: smtp.pass },
-  })
-
-  try {
-    await transporter.verify()
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    throw new AppError(`Email API returned a configuration error: ${msg}`, 502)
+  const from = senderFor(opts.sender)
+  const base = {
+    requestId: opts.requestId || '',
+    channel: 'email' as const,
+    recipient: opts.to,
+    subject: opts.subject,
+    body: opts.text,
+    shareToken: opts.shareToken ?? null,
+    fromAddress: from.address,
+    sentBy: opts.sender?.id || null,
   }
 
   let messageId = ''
   try {
-    const result = await transporter.sendMail({
-      from: `"LankaLux" <${FROM_EMAIL}>`,
-      replyTo: FROM_EMAIL,
+    const result = await deliverMail({
+      from,
       to: opts.to,
-      bcc: opts.bcc || undefined,
+      replyTo: opts.requestId ? replyAddressFor(opts.requestId) : null,
+      bcc: opts.bcc,
       subject: opts.subject,
       text: opts.text,
       html: opts.html,
       attachments: opts.attachments,
+      inReplyTo: opts.inReplyTo,
     })
-    messageId = result.messageId || ''
+    messageId = result.messageId
   } catch (err) {
-    const anyErr = err as { responseCode?: number; message?: string }
-    const code = anyErr.responseCode ? ` ${anyErr.responseCode}` : ''
-    const msg = anyErr.message || 'Unknown SMTP error'
     if (opts.requestId) {
-      await recordCommunication({
-        requestId: opts.requestId,
-        channel: 'email',
-        recipient: opts.to,
-        subject: opts.subject,
-        body: opts.text,
-        shareToken: opts.shareToken ?? null,
-        status: 'failed',
-        error: `Email API returned${code}: ${msg}`,
-      })
+      await recordCommunication({ ...base, status: 'failed', error: err instanceof Error ? err.message : String(err) })
     }
-    throw new AppError(`Email API returned${code}: ${msg}`, 502)
+    throw err
   }
 
   if (opts.requestId) {
-    await recordCommunication({
-      requestId: opts.requestId,
-      channel: 'email',
-      recipient: opts.to,
-      subject: opts.subject,
-      body: opts.text,
-      shareToken: opts.shareToken ?? null,
-      providerMessageId: messageId,
-      status: 'sent',
-    })
+    await recordCommunication({ ...base, providerMessageId: messageId, status: 'sent' })
   }
 
   return { messageId }
@@ -126,8 +100,8 @@ export async function previewJourneyEmail(opts: {
   return { ...compiled, journey }
 }
 
-export async function sendInvoiceEmail(opts: { invoiceId: string; to?: string; actor?: string }) {
-  requireSmtp()
+export async function sendInvoiceEmail(opts: { invoiceId: string; to?: string; actor?: string; sender?: MailSender | null }) {
+  requireMailer()
   const bundle = await getInvoice(opts.invoiceId)
   if (bundle.invoice.status === 'draft') throw new AppError('Finalize the invoice before sending.', 400)
   if (bundle.invoice.status === 'cancelled') throw new AppError('Cancelled invoice cannot be sent.', 400)
@@ -155,6 +129,7 @@ export async function sendInvoiceEmail(opts: { invoiceId: string; to?: string; a
     html: compiled.html,
     requestId: bundle.invoice.request_id,
     shareToken: bundle.invoice.share_link_token,
+    sender: opts.sender,
     attachments: [
       {
         filename: `${model.invoiceNumber}.pdf`,
@@ -171,6 +146,7 @@ export async function sendInvoiceEmail(opts: { invoiceId: string; to?: string; a
 export async function sendJourneyEmail(opts: {
   requestId: string
   actor?: string
+  sender?: MailSender | null
   introduction?: string
   includeHotels?: boolean
   includeVehicle?: boolean
@@ -181,7 +157,7 @@ export async function sendJourneyEmail(opts: {
   subject?: string
   to?: string
 }) {
-  requireSmtp()
+  requireMailer()
   const request = await getRequest(opts.requestId)
   const to = (opts.to || request.email || '').trim()
   if (!to) throw new AppError('Client email is missing.', 400)
@@ -238,6 +214,7 @@ export async function sendJourneyEmail(opts: {
     html: compiled.html,
     requestId: opts.requestId,
     shareToken,
+    sender: opts.sender,
   })
 
   const supabase = getServiceClient()
@@ -269,8 +246,9 @@ export async function sendFollowUpTemplateEmail(opts: {
   subject?: string
   body?: string
   actor?: string
+  sender?: MailSender | null
 }) {
-  requireSmtp()
+  requireMailer()
   const template = getTemplate(opts.templateId as TemplateId)
   if (!template) throw new AppError('Invalid template ID', 400)
 
@@ -310,6 +288,7 @@ export async function sendFollowUpTemplateEmail(opts: {
     text,
     html,
     requestId: opts.requestId,
+    sender: opts.sender,
   })
 
   const now = new Date().toISOString()
@@ -359,11 +338,15 @@ async function recordCommunication(row: {
   body: string
   shareToken: string | null
   providerMessageId?: string
-  status: 'sent' | 'failed'
+  status: 'sent' | 'failed' | 'received'
   error?: string
+  direction?: 'outbound' | 'inbound'
+  fromAddress?: string | null
+  sentBy?: string | null
+  messageId?: string | null
 }) {
   const supabase = getServiceClient()
-  const { error } = await supabase.from('communications').insert({
+  const base = {
     request_id: row.requestId,
     channel: row.channel,
     recipient: row.recipient,
@@ -373,8 +356,106 @@ async function recordCommunication(row: {
     provider_message_id: row.providerMessageId || null,
     status: row.status,
     error: row.error || null,
-  })
+  }
+  const threaded = {
+    ...base,
+    direction: row.direction || 'outbound',
+    from_address: row.fromAddress || null,
+    sent_by: row.sentBy || null,
+    message_id: row.messageId || null,
+  }
+  let { error } = await supabase.from('communications').insert(threaded)
+  // Before the email_threads migration runs, keep logging outgoing mail the old way.
+  if (error && isMissingTableError(error) && row.status !== 'received') {
+    ;({ error } = await supabase.from('communications').insert(base))
+  }
   if (error && !isMissingTableError(error)) console.error('communications', error.message)
+}
+
+export type EmailMessage = {
+  id: string
+  direction: 'outbound' | 'inbound'
+  from_address: string | null
+  recipient: string | null
+  subject: string | null
+  body: string | null
+  status: string
+  error: string | null
+  created_at: string
+}
+
+/** Every email on a request, oldest first. Callers check request access. */
+export async function listRequestEmails(requestId: string): Promise<EmailMessage[]> {
+  const supabase = getServiceClient()
+  const { data, error } = await supabase
+    .from('communications')
+    .select('*')
+    .eq('request_id', requestId)
+    .eq('channel', 'email')
+    .order('created_at', { ascending: true })
+    .limit(200)
+  if (error) {
+    if (isMissingTableError(error)) return []
+    throw new AppError(`Supabase request failed: ${error.message}`, 500)
+  }
+  return (data || []).map((r) => ({
+    id: String(r.id),
+    direction: r.direction === 'inbound' ? 'inbound' : 'outbound',
+    from_address: r.from_address ?? null,
+    recipient: r.recipient ?? null,
+    subject: r.subject ?? null,
+    body: r.body ?? null,
+    status: String(r.status),
+    error: r.error ?? null,
+    created_at: String(r.created_at),
+  }))
+}
+
+/** A plain reply from the request page, threaded onto the client's last email when there is one. */
+export async function sendReplyEmail(opts: { requestId: string; body: string; subject?: string; sender: MailSender }) {
+  requireMailer()
+  const bodyText = normalizeEditableBody(opts.body || '').trim()
+  if (!bodyText) throw new AppError('Write a message first.', 400)
+  const request = await getRequest(opts.requestId)
+  const to = (request.email || '').trim()
+  if (!to) throw new AppError('Client email is missing.', 400)
+
+  const supabase = getServiceClient()
+  const { data: lastIn } = await supabase
+    .from('communications')
+    .select('subject, message_id')
+    .eq('request_id', opts.requestId)
+    .eq('direction', 'inbound')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const lastSubject = (lastIn?.subject as string | null) || ''
+  const subject =
+    opts.subject?.trim() ||
+    (lastSubject ? (/^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}`) : 'A note from LankaLux')
+
+  const compiled = renderFollowUpEmail({
+    clientName: request.client_name || 'Valued Client',
+    bodyText,
+    logoUrl: `${appUrl()}${BRAND.logoEmailHeaderSrc}`,
+    ctas: [],
+  })
+  const { messageId } = await sendLankaLuxMail({
+    to,
+    subject,
+    text: compiled.text,
+    html: compiled.html,
+    requestId: opts.requestId,
+    sender: opts.sender,
+    inReplyTo: (lastIn?.message_id as string | null) || null,
+  })
+  await logActivity({
+    request_id: opts.requestId,
+    actor: opts.sender.email || undefined,
+    event_type: 'email_reply_sent',
+    detail: { to, subject },
+  })
+  return { messageId, subject, to }
 }
 
 export { recordCommunication }
