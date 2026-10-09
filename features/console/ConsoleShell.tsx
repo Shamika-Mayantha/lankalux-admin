@@ -9,20 +9,26 @@ import { INACTIVITY_MS } from '@/config/status'
 import { BRAND } from '@/config/brand'
 import { StaffProvider, type Me } from '@/features/console/StaffContext'
 
-/** `supervisorOnly` items are hidden from agents; their API routes also refuse agents. */
-const NAV: Array<{ href: string; label: string; supervisorOnly?: boolean }> = [
+const NAV = [
   { href: '/console', label: 'Dashboard' },
   { href: '/console/requests', label: 'Requests' },
   { href: '/console/itineraries', label: 'Itineraries' },
   { href: '/console/invoices', label: 'Invoices' },
-  { href: '/console/payments', label: 'Payments', supervisorOnly: true },
+  { href: '/console/payments', label: 'Payments' },
+  { href: '/console/team', label: 'Team' },
   { href: '/console/hotels', label: 'Hotels' },
   { href: '/console/vehicles', label: 'Vehicles' },
   { href: '/console/clients', label: 'Clients' },
   { href: '/console/communications', label: 'Communications' },
-  { href: '/console/team', label: 'Team', supervisorOnly: true },
   { href: '/console/settings', label: 'Settings' },
 ]
+
+/** Pages hidden from agents; their API routes use requireAdmin, which also refuses agents. */
+const SUPERVISOR_ONLY = ['/console/payments', '/console/team', '/console/website']
+
+function supervisorOnly(href: string) {
+  return SUPERVISOR_ONLY.some((p) => href === p || href.startsWith(`${p}/`))
+}
 
 export function ConsoleShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -91,8 +97,8 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
   }
 
   const supervisor = me.role === 'supervisor'
-  const nav = NAV.filter((item) => supervisor || !item.supervisorOnly)
-  const blocked = !supervisor && NAV.some((item) => item.supervisorOnly && pathname.startsWith(item.href))
+  const nav = NAV.filter((item) => supervisor || !supervisorOnly(item.href))
+  const blocked = !supervisor && supervisorOnly(pathname)
 
   return (
     <StaffProvider value={me}>

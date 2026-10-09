@@ -33,7 +33,7 @@ Only supervisors may read or write admin tables directly; keep public sign-ups d
 
 ## Team logins
 
-Staff logins live in `admin_users` (migration `20261009010000_staff_roles.sql`). Supervisors add people from
+Staff logins live in `admin_users` (migration `20261009020000_staff_roles.sql`). Supervisors add people from
 **Console → Team**, which creates the Supabase Auth user on the server. `hello@lankalux.com` is always a supervisor.
 
 - **Supervisor:** sees every request, assigns requests to agents, manages the team, payments and settings.
