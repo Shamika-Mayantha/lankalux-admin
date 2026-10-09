@@ -188,6 +188,18 @@ async function applyExpiry(rows: ClientRequestRow[]): Promise<ClientRequestRow[]
 export async function createRequest(input: RequestInput, actor?: string): Promise<ClientRequestRow> {
   if (!input.client_name?.trim()) throw new AppError('Client name is required')
   if (!input.email?.trim()) throw new AppError('Email is required')
+  // A website enquiry can claim the same sequential ID between our read and insert; re-read and retry.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await insertRequest(input, actor)
+    } catch (err) {
+      const duplicate = err instanceof AppError && /duplicate key|23505/i.test(err.message)
+      if (!duplicate || attempt >= 5) throw err
+    }
+  }
+}
+
+async function insertRequest(input: RequestInput, actor?: string): Promise<ClientRequestRow> {
   const id = await nextRequestId()
   const supabase = getServiceClient()
   const payload = toInsert(input, id)

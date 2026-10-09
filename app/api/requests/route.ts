@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { mapWebsiteLead } from '@/lib/website-lead'
+import { clientIp, isRateLimited } from '@/lib/rate-limit'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,29 +15,31 @@ function withCors(res: NextResponse) {
 }
 
 async function generateNextRequestId(supabase: SupabaseClient): Promise<string> {
-  try {
-    const { data, error } = await supabase
-      .from('Client Requests')
-      .select('id')
-      .order('created_at', { ascending: false })
-      .limit(2000)
+  const { data, error } = await supabase
+    .from('Client Requests')
+    .select('id')
+    .order('created_at', { ascending: false })
+    .limit(2000)
 
-    if (error) throw error
+  if (error) throw error
 
-    const idPattern = /^req-id-(\d+)$/
-    const nums: number[] = []
-    ;(data || []).forEach((row: { id: string }) => {
-      const match = row.id && typeof row.id === 'string' ? row.id.match(idPattern) : null
-      if (match) nums.push(parseInt(match[1], 10))
-    })
+  const idPattern = /^req-id-(\d+)$/
+  const nums: number[] = []
+  ;(data || []).forEach((row: { id: string }) => {
+    const match = row.id && typeof row.id === 'string' ? row.id.match(idPattern) : null
+    if (match) nums.push(parseInt(match[1], 10))
+  })
 
-    const maxNumber = nums.length ? Math.max(...nums) : 0
-    const nextNumber = maxNumber + 1
-    const paddedNumber = nextNumber.toString().padStart(3, '0')
-    return `req-id-${paddedNumber}`
-  } catch {
-    return 'req-id-001'
-  }
+  const maxNumber = nums.length ? Math.max(...nums) : 0
+  const nextNumber = maxNumber + 1
+  const paddedNumber = nextNumber.toString().padStart(3, '0')
+  return `req-id-${paddedNumber}`
+}
+
+const MAX_ID_ATTEMPTS = 5
+
+function isDuplicateIdError(error: { code?: string; message?: string } | null) {
+  return !!error && (error.code === '23505' || /duplicate key/i.test(error.message || ''))
 }
 
 const EXTRA_COLUMNS = [
@@ -51,6 +54,9 @@ const EXTRA_COLUMNS = [
 
 export async function POST(request: Request) {
   try {
+    if (isRateLimited(`requests:${clientIp(request)}`, 10, 10 * 60 * 1000)) {
+      return withCors(NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 }))
+    }
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
     const lead = mapWebsiteLead(body)
 
@@ -65,10 +71,8 @@ export async function POST(request: Request) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    const requestId = await generateNextRequestId(supabase)
 
     const payload: Record<string, unknown> = {
-      id: requestId,
       client_name: lead.client_name,
       email: lead.email,
       whatsapp: lead.whatsapp,
@@ -90,12 +94,21 @@ export async function POST(request: Request) {
       status: 'new',
     }
 
-    let { error } = await supabase.from('Client Requests').insert([payload])
-    if (error && /schema cache|PGRST204|column/i.test(error.message || '')) {
-      const legacy = { ...payload }
-      for (const key of EXTRA_COLUMNS) delete legacy[key]
-      const retry = await supabase.from('Client Requests').insert([legacy])
-      error = retry.error
+    let requestId = ''
+    let error: { code?: string; message?: string } | null = null
+    let useLegacyColumns = false
+    for (let attempt = 0; attempt < MAX_ID_ATTEMPTS; attempt++) {
+      // Re-reading after a duplicate picks up the ID a concurrent enquiry just claimed.
+      requestId = await generateNextRequestId(supabase)
+      const row: Record<string, unknown> = { ...payload, id: requestId }
+      if (useLegacyColumns) for (const key of EXTRA_COLUMNS) delete row[key]
+      ;({ error } = await supabase.from('Client Requests').insert([row]))
+      if (error && !useLegacyColumns && /schema cache|PGRST204|column/i.test(error.message || '')) {
+        useLegacyColumns = true
+        for (const key of EXTRA_COLUMNS) delete row[key]
+        ;({ error } = await supabase.from('Client Requests').insert([row]))
+      }
+      if (!isDuplicateIdError(error)) break
     }
 
     if (error) {

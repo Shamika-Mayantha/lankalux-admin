@@ -9,6 +9,7 @@ import type { ManagedImageItem } from '@/lib/managed-image'
 import { normalizeManagedImages } from '@/lib/managed-image'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
+import { authedFetch } from '@/lib/authed-fetch'
 
 const STARS: StarRating[] = ['3', '4', '5', 'Boutique']
 const ROOM_PRESETS = ['Deluxe', 'Suite', 'Family', 'Executive', 'Villa', 'Presidential']
@@ -97,7 +98,7 @@ export function HotelModal({
     }
     setExtractingBooking(true)
     try {
-      const res = await fetch('/api/extract-booking-hotel', {
+      const res = await authedFetch('/api/extract-booking-hotel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Upload, ImageIcon, Trash2, RefreshCw, X, FolderOpen } from 'lucide-react'
 import type { ManagedImageItem } from '@/lib/managed-image'
+import { authedFetch } from '@/lib/authed-fetch'
 
 type Props = {
   items: ManagedImageItem[]
@@ -50,7 +51,7 @@ export function ImageManager({ items, onChange, requestId, sectionLabel, disable
         const fd = new FormData()
         fd.append('file', file)
         fd.append('requestId', requestId)
-        const res = await fetch('/api/upload-client-image', { method: 'POST', body: fd })
+        const res = await authedFetch('/api/upload-client-image', { method: 'POST', body: fd })
         const data = await res.json()
         if (!res.ok) {
           alert(data.error || 'Upload failed')

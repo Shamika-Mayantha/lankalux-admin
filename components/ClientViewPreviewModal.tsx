@@ -8,6 +8,7 @@ import { ItineraryRender } from '@/components/itinerary/ItineraryRender'
 import type { RenderItinerary } from '@/components/itinerary/ItineraryRender'
 import type { ItineraryOption } from '@/components/requests/itinerary-types'
 import type { HotelRecord } from '@/lib/hotel-types'
+import { authedFetch } from '@/lib/authed-fetch'
 
 export function ClientViewPreviewModal({
   open,
@@ -155,7 +156,7 @@ export function ClientViewPreviewModal({
     const fd = new FormData()
     fd.append('file', file)
     fd.append('requestId', requestId)
-    const res = await fetch('/api/upload-client-image', { method: 'POST', body: fd })
+    const res = await authedFetch('/api/upload-client-image', { method: 'POST', body: fd })
     const data = await res.json()
     if (!res.ok || !data?.src) {
       alert(data?.error || 'Upload failed')

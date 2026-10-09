@@ -3,6 +3,7 @@ import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { randomUUID } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
+import { rejectNonAdmin } from '@/app/api/v2/_guard'
 
 const UPLOAD_BUCKET = process.env.SUPABASE_UPLOADS_BUCKET || 'client-uploads'
 
@@ -16,6 +17,9 @@ function safeExtension(originalName: string, mimeType: string) {
 }
 
 export async function POST(request: Request) {
+  const denied = await rejectNonAdmin(request)
+  if (denied) return denied
+
   try {
     const formData = await request.formData()
     const file = formData.get('file')
