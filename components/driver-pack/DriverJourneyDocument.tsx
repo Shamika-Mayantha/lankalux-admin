@@ -369,7 +369,7 @@ export function DriverJourneyDocument({ data, logoSrc }: { data: DriverPackData;
             {day.hotel ? (
               <View style={styles.hotelBox}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.hotelTitle}>Tonight's hotel</Text>
+                  <Text style={styles.hotelTitle}>Tonight&apos;s hotel</Text>
                   <Text style={styles.placeName}>{day.hotel.name}</Text>
                   <Text style={styles.placeAddress}>{day.hotel.address}</Text>
                   {day.hotel.mapsUrl ? (

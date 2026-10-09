@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { rejectNonAdmin } from '@/app/api/v2/_guard'
 
 type ExtractedHotel = {
   name?: string
@@ -108,6 +109,9 @@ function parsePriceMeta(html: string): string | undefined {
 }
 
 export async function POST(request: Request) {
+  const denied = await rejectNonAdmin(request)
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const bookingUrl = typeof body?.url === 'string' ? body.url.trim() : ''

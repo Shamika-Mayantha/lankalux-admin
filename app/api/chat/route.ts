@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { CHAT_KNOWLEDGE_SUMMARY } from '@/lib/chat-knowledge'
 import { toIsoDate } from '@/lib/website-lead'
+import { clientIp, isRateLimited } from '@/lib/rate-limit'
+
+const MAX_MESSAGE_CHARS = 2000
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -191,6 +194,9 @@ function coerceDraft(d: any): DraftLead {
 
 export async function POST(req: Request) {
   try {
+    if (isRateLimited(`chat:${clientIp(req)}`, 30, 10 * 60 * 1000)) {
+      return jsonResponse({ success: false, error: 'Too many messages. Please wait a few minutes and try again.' }, 429)
+    }
     if (!process.env.OPENAI_API_KEY) {
       return jsonResponse({ success: false, error: 'Missing OPENAI_API_KEY' }, 500)
     }
@@ -201,7 +207,7 @@ export async function POST(req: Request) {
       ? (messagesRaw as any[])
           .map((m): ChatMessage => ({
             role: m?.role === 'assistant' ? 'assistant' : 'user',
-            content: safeText(m?.content),
+            content: safeText(m?.content).slice(0, MAX_MESSAGE_CHARS),
           }))
           .filter((m) => m.content.length > 0)
           .slice(-20)
@@ -345,6 +351,7 @@ Output STRICT JSON only with this shape:
     const completion = await openai.chat.completions.create({
       model: process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini',
       temperature: 0.72,
+      max_tokens: 800,
       messages: [
         { role: 'system', content: system },
         {

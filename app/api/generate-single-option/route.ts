@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { enRouteDesignRules, placesPromptSection } from '@/services/itinerary-prompt'
+import { rejectNonAdmin } from '@/app/api/v2/_guard'
 
 function cleanGeneratedDayTitle(rawTitle: unknown, dayNumber: number, location?: string) {
   const title = typeof rawTitle === 'string' ? rawTitle.trim() : ''
@@ -75,6 +76,9 @@ function isTooSimilar(candidate: any, existing: any[], threshold: number) {
 }
 
 export async function POST(request: Request) {
+  const denied = await rejectNonAdmin(request)
+  if (denied) return denied
+
   try {
     // Parse request body
     const body = await request.json()
@@ -161,7 +165,7 @@ export async function POST(request: Request) {
       : 'Not specified'
 
     // When dates exist, build per-day date labels so the AI can use them in titles (e.g. "Day 1 – Saturday, March 15")
-    let dayDateLabels: string[] = []
+    const dayDateLabels: string[] = []
     if (requestData.start_date && requestData.end_date) {
       const start = new Date(requestData.start_date)
       start.setHours(0, 0, 0, 0)

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-const nodemailer = require('nodemailer')
+import { randomBytes } from 'crypto'
+import nodemailer from 'nodemailer'
+import { rejectNonAdmin } from '@/app/api/v2/_guard'
 
 function makeShareToken() {
   // URL-safe token
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 10)}`
+  return `${Date.now().toString(36)}-${randomBytes(12).toString('base64url')}`
 }
 
 function formatDateLabel(value: string | null | undefined) {
@@ -18,6 +20,9 @@ function formatDateLabel(value: string | null | undefined) {
 }
 
 export async function POST(request: Request) {
+  const denied = await rejectNonAdmin(request)
+  if (denied) return denied
+
   try {
     // Parse request body
     const body = await request.json()
