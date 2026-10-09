@@ -18,6 +18,7 @@ const NAV = [
   { href: '/console/vehicles', label: 'Vehicles' },
   { href: '/console/clients', label: 'Clients' },
   { href: '/console/communications', label: 'Communications' },
+  { href: '/console/website', label: 'Website' },
   { href: '/console/settings', label: 'Settings' },
 ]
 
