@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { logActivity } from '@/services/activity.service'
-import { notifyStaffOfReply, recordCommunication } from '@/services/email.service'
+import { recordCommunication } from '@/services/email.service'
 import { fetchReceivedEmail, isStaffAddress, requestIdFromReplyAddress, verifyResendWebhook } from '@/services/mailer'
 import { getServiceClient } from '@/services/supabase.server'
 
@@ -108,12 +108,5 @@ export async function POST(request: Request) {
     event_type: 'email_received',
     detail: { from: email.from, subject: email.subject },
   })
-  await notifyStaffOfReply({
-    requestId,
-    clientFrom: email.from,
-    subject: email.subject,
-    body,
-    alreadyReceived: [...(email.to || []), ...addresses],
-  }).catch((err) => console.error('[email/inbound] notify failed', err))
   return NextResponse.json({ success: true })
 }
