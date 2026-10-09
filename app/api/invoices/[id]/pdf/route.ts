@@ -1,11 +1,11 @@
 import { addInvoiceActivity, getInvoice, invoicePreviewModel } from '@/services/invoice.service'
 import { renderInvoicePdf } from '@/services/invoice-pdf'
-import { fail, requireAdmin } from '@/app/api/invoices/_guard'
+import { fail, requireInvoiceAccess } from '@/app/api/invoices/_guard'
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireAdmin(request)
     const { id } = await params
+    const user = await requireInvoiceAccess(request, id)
     const invoice = await getInvoice(id)
     const model = invoicePreviewModel(invoice)
     const bytes = await renderInvoicePdf(model)

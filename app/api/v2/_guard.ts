@@ -1,19 +1,24 @@
 import { NextResponse } from 'next/server'
-import { isLankaLuxAdminEmail } from '@/lib/admin-email'
-import { AppError, publicError, getServiceClient } from '@/services/supabase.server'
+import { AppError, publicError } from '@/services/supabase.server'
+import { assertRequestAccess, requireSupervisorRole, staffFromRequest, type Staff } from '@/services/staff.service'
 import type { User } from '@supabase/supabase-js'
 
+/** Supervisor-only routes. Returns the Supabase user for existing callers. */
 export async function requireAdmin(request: Request): Promise<User> {
-  const header = request.headers.get('authorization')
-  const token = header?.startsWith('Bearer ') ? header.slice(7).trim() : ''
-  if (!token) throw new AppError('Sign in required.', 401)
-  const supabase = getServiceClient()
-  const { data, error } = await supabase.auth.getUser(token)
-  if (error || !data.user) throw new AppError('Sign in required.', 401)
-  if (!isLankaLuxAdminEmail(data.user.email)) {
-    throw new AppError('This login cannot access admin.', 403)
-  }
-  return data.user
+  const staff = await staffFromRequest(request)
+  return requireSupervisorRole(staff).user
+}
+
+/** Any active staff login (supervisor or agent). */
+export async function requireStaff(request: Request): Promise<Staff> {
+  return staffFromRequest(request)
+}
+
+/** Any staff login that may see this request: supervisors, its creator, or its assigned agent. */
+export async function requireRequestAccess(request: Request, requestId: string): Promise<Staff> {
+  const staff = await staffFromRequest(request)
+  await assertRequestAccess(staff, requestId)
+  return staff
 }
 
 export function jsonOk(data: unknown, status = 200) {

@@ -1,12 +1,12 @@
-import { jsonErr, jsonOk, readJson, requireAdmin } from '@/app/api/v2/_guard'
+import { jsonErr, jsonOk, readJson, requireRequestAccess } from '@/app/api/v2/_guard'
 import { attachHotel, detachRequestHotel, listRequestHotels } from '@/services/catalog.service'
 import { applyHotelsToRequestItineraries } from '@/services/itinerary.service'
 
 export async function GET(request: Request) {
   try {
-    await requireAdmin(request)
     const requestId = new URL(request.url).searchParams.get('requestId')
     if (!requestId) return jsonErr(new Error('requestId is required'))
+    await requireRequestAccess(request, requestId)
     const hotels = await listRequestHotels(requestId)
     return jsonOk({ hotels })
   } catch (err) {
@@ -16,9 +16,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireAdmin(request)
     const body = await readJson<{ requestId?: string; hotelId?: string; action?: 'attach' | 'apply' }>(request)
     if (!body.requestId) return jsonErr(new Error('requestId is required'))
+    const user = await requireRequestAccess(request, body.requestId)
     if (body.action === 'apply') {
       const result = await applyHotelsToRequestItineraries(body.requestId, user.email)
       return jsonOk({ applied: true, matchCount: result.matchCount })
@@ -34,11 +34,11 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const user = await requireAdmin(request)
     const url = new URL(request.url)
     const requestId = url.searchParams.get('requestId')
     const attachmentId = url.searchParams.get('attachmentId')
     if (!requestId || !attachmentId) return jsonErr(new Error('requestId and attachmentId are required'))
+    const user = await requireRequestAccess(request, requestId)
     await detachRequestHotel(requestId, attachmentId, user.email)
     const hotels = await listRequestHotels(requestId)
     return jsonOk({ removed: true, hotels })

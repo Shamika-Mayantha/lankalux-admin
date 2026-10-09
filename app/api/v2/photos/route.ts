@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'fs/promises'
 import fs from 'fs'
 import path from 'path'
 import { randomUUID } from 'crypto'
-import { jsonErr, jsonOk, requireAdmin } from '@/app/api/v2/_guard'
+import { jsonErr, jsonOk, requireStaff } from '@/app/api/v2/_guard'
 import { AppError, getServiceClient } from '@/services/supabase.server'
 import { isImageFilename } from '@/lib/managed-image'
 
@@ -79,7 +79,7 @@ async function saveToStorage(buf: Buffer, originalName: string, mime: string): P
 
 export async function GET(request: Request) {
   try {
-    await requireAdmin(request)
+    await requireStaff(request)
     const uploaded = [...(await listStorageUploads()), ...localUploadPaths()]
     const seen = new Set<string>()
     const paths: string[] = []
@@ -96,7 +96,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin(request)
+    await requireStaff(request)
     const formData = await request.formData()
     const file = formData.get('file')
     if (!file || !(file instanceof Blob)) {

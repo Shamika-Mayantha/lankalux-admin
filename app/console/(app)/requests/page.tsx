@@ -8,6 +8,8 @@ import { formatAgo, formatDayRange } from '@/lib/format'
 import { RowLink, SkeletonRows } from '@/components/ui/RowLink'
 import { STATUS_LABEL, normalizeStatus, REQUEST_STATUSES, type RequestStatus } from '@/config/status'
 import type { ClientRequestRow } from '@/types/domain'
+import { useMe } from '@/features/console/StaffContext'
+import { memberName, useTeam } from '@/features/console/useTeam'
 
 function isStatus(value: string): value is RequestStatus {
   return (REQUEST_STATUSES as readonly string[]).includes(value)
@@ -20,14 +22,19 @@ function RequestsPageInner() {
   const { data, error, loading } = useConsoleGet<{ requests?: ClientRequestRow[] }>('/api/v2/requests')
   const rows = useMemo(() => data?.requests || [], [data])
   const [q, setQ] = useState('')
+  const me = useMe()
+  const supervisor = me.role === 'supervisor'
+  const team = useTeam()
 
   const statusParam = searchParams.get('status') || 'all'
   const status = statusParam === 'all' || isStatus(statusParam) ? statusParam : 'all'
+  // all | mine | unassigned | <user id>
+  const agent = searchParams.get('agent') || 'all'
 
-  function setStatus(next: string) {
+  function setParam(key: string, next: string) {
     const params = new URLSearchParams(searchParams.toString())
-    if (!next || next === 'all') params.delete('status')
-    else params.set('status', next)
+    if (!next || next === 'all') params.delete(key)
+    else params.set(key, next)
     const qs = params.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname)
   }
@@ -46,6 +53,9 @@ function RequestsPageInner() {
   const shown = rows.filter((r) => {
     const s = normalizeStatus(r.status) || 'new'
     if (status !== 'all' && s !== status) return false
+    if (agent === 'mine' && r.assigned_agent_id !== me.id) return false
+    if (agent === 'unassigned' && r.assigned_agent_id) return false
+    if (agent !== 'all' && agent !== 'mine' && agent !== 'unassigned' && r.assigned_agent_id !== agent) return false
     if (!needle) return true
     if (`${r.client_name} ${r.email} ${r.id}`.toLowerCase().includes(needle)) return true
     return digits.length >= 4 && String(r.whatsapp || '').replace(/\D/g, '').includes(digits)
@@ -56,7 +66,9 @@ function RequestsPageInner() {
       <div className="ll-row" style={{ justifyContent: 'space-between' }}>
         <div>
           <h1 className="ll-h1">Requests</h1>
-          <p className="ll-sub">Every enquiry, in one place.</p>
+          <p className="ll-sub">
+            {supervisor ? 'Every enquiry, in one place.' : 'Requests you created and the ones assigned to you.'}
+          </p>
         </div>
         <Link className="ll-btn" href="/console/requests/new">
           New request
@@ -71,7 +83,7 @@ function RequestsPageInner() {
           onChange={(e) => setQ(e.target.value)}
           aria-label="Search requests"
         />
-        <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by status">
+        <select value={status} onChange={(e) => setParam('status', e.target.value)} aria-label="Filter by status">
           <option value="all">All statuses ({counts.all || 0})</option>
           {REQUEST_STATUSES.map((s) => (
             <option key={s} value={s}>
@@ -79,8 +91,20 @@ function RequestsPageInner() {
             </option>
           ))}
         </select>
+        <select value={agent} onChange={(e) => setParam('agent', e.target.value)} aria-label="Filter by agent">
+          <option value="all">{supervisor ? 'All agents' : 'All my requests'}</option>
+          <option value="mine">Assigned to me</option>
+          {supervisor ? <option value="unassigned">Unassigned</option> : null}
+          {supervisor
+            ? team.map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.full_name || m.email}
+                </option>
+              ))
+            : null}
+        </select>
       </div>
-      {!loading && (needle || status !== 'all') ? (
+      {!loading && (needle || status !== 'all' || agent !== 'all') ? (
         <p className="ll-muted ll-result-count">
           Showing {shown.length} of {rows.length}
           {' · '}
@@ -89,7 +113,7 @@ function RequestsPageInner() {
             className="ll-link-btn"
             onClick={() => {
               setQ('')
-              setStatus('all')
+              router.replace(pathname)
             }}
           >
             Clear filters
@@ -104,11 +128,12 @@ function RequestsPageInner() {
             <th>Travel</th>
             <th>Party</th>
             <th>Status</th>
+            <th>Agent</th>
             <th>Sold</th>
           </tr>
         </thead>
         <tbody>
-          {loading ? <SkeletonRows cols={6} /> : null}
+          {loading ? <SkeletonRows cols={7} /> : null}
           {shown.map((r) => {
             const s = normalizeStatus(r.status) || 'new'
             const href = `/console/requests/${r.id}`
@@ -131,6 +156,7 @@ function RequestsPageInner() {
                 <td>
                   <span className={`ll-pill ${s}`}>{STATUS_LABEL[s]}</span>
                 </td>
+                <td className="ll-muted">{memberName(team, r.assigned_agent_id) || 'Unassigned'}</td>
                 <td className="ll-muted">
                   {s === 'sold'
                     ? [
@@ -146,7 +172,7 @@ function RequestsPageInner() {
           })}
           {!loading && shown.length === 0 ? (
             <tr>
-              <td colSpan={6} className="ll-muted" style={{ textAlign: 'center' }}>
+              <td colSpan={7} className="ll-muted" style={{ textAlign: 'center' }}>
                 {rows.length === 0 ? 'No requests yet.' : 'No requests match this filter.'}
               </td>
             </tr>

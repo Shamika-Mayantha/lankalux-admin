@@ -1,11 +1,10 @@
-import { jsonErr, jsonOk, readJson, requireAdmin } from '@/app/api/v2/_guard'
+import { jsonErr, jsonOk, readJson, requireRequestAccess } from '@/app/api/v2/_guard'
 import { previewJourneyEmail, sendJourneyEmail } from '@/services/email.service'
 
 export const maxDuration = 30
 
 export async function POST(request: Request) {
   try {
-    const user = await requireAdmin(request)
     const body = await readJson<{
       requestId?: string
       introduction?: string
@@ -20,6 +19,7 @@ export async function POST(request: Request) {
       preview?: boolean
     }>(request)
     if (!body.requestId) return jsonErr(new Error('Request ID is required'))
+    const user = await requireRequestAccess(request, body.requestId)
     const payload = {
       requestId: body.requestId,
       actor: user.email,

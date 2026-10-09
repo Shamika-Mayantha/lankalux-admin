@@ -1,10 +1,10 @@
 import { createInvoicePublicPdfLink, getInvoice, invoicePreviewModel, markInvoiceSent } from '@/services/invoice.service'
-import { fail, ok, requireAdmin } from '@/app/api/invoices/_guard'
+import { fail, ok, requireInvoiceAccess } from '@/app/api/invoices/_guard'
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireAdmin(request)
     const { id } = await params
+    const user = await requireInvoiceAccess(request, id)
     const invoice = await getInvoice(id)
     if (invoice.invoice.status === 'draft') {
       throw new Error('Finalize the invoice before sharing.')
