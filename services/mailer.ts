@@ -76,6 +76,17 @@ export function requestIdFromReplyAddress(address: string): string | null {
   return ok ? m[1] : null
 }
 
+/** The bare, lower-cased address from "Name <a@b>" or "a@b". */
+export function bareAddress(value: string): string {
+  const m = value.match(/<([^>]+)>/)
+  return (m ? m[1] : value).trim().toLowerCase()
+}
+
+/** Staff mail comes from @lankalux.com; clients never do. */
+export function isStaffAddress(value: string): boolean {
+  return bareAddress(value).endsWith(`@${SENDER_DOMAIN}`)
+}
+
 export function formatAddress(sender: Sender) {
   return `"${sender.name.replace(/"/g, '')}" <${sender.address}>`
 }
@@ -83,7 +94,7 @@ export function formatAddress(sender: Sender) {
 export async function deliverMail(opts: {
   from: Sender
   to: string
-  replyTo?: string | null
+  replyTo?: string | string[] | null
   bcc?: string | null
   subject: string
   text: string
@@ -91,7 +102,7 @@ export async function deliverMail(opts: {
   attachments?: MailAttachment[]
   inReplyTo?: string | null
 }): Promise<{ messageId: string }> {
-  const replyTo = opts.replyTo || opts.from.address
+  const replyTo = opts.replyTo && opts.replyTo.length ? opts.replyTo : opts.from.address
   const threading = opts.inReplyTo ? { 'In-Reply-To': opts.inReplyTo, References: opts.inReplyTo } : undefined
 
   if (resendEnabled()) {
@@ -102,7 +113,7 @@ export async function deliverMail(opts: {
         from: formatAddress(opts.from),
         to: [opts.to],
         bcc: opts.bcc ? [opts.bcc] : undefined,
-        reply_to: [replyTo],
+        reply_to: Array.isArray(replyTo) ? replyTo : [replyTo],
         subject: opts.subject,
         text: opts.text,
         html: opts.html,
