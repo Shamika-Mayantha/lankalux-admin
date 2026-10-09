@@ -144,6 +144,8 @@ export type ClientRequestRow = {
   /** Staff login a supervisor assigned the request to. */
   assigned_agent_id?: string | null
   lead_source: string | null
+  /** How a website enquiry found the site, e.g. "Google search · landed on /destinations/yala". */
+  traffic_source?: string | null
   budget: string | null
   hotel_preference: string | null
   vehicle_preference: string | null

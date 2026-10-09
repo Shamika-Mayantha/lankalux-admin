@@ -1293,6 +1293,9 @@ export function RequestWorkspace() {
             </span>
           </label>
           <label>Lead source<input value={overviewDraft.lead_source} onChange={(e) => setOverviewDraft({ ...overviewDraft, lead_source: e.target.value })} /></label>
+          {row?.traffic_source ? (
+            <p className="ll-muted">Found us via: {row.traffic_source}</p>
+          ) : null}
           <label>Destinations<input value={overviewDraft.requested_destinations} onChange={(e) => setOverviewDraft({ ...overviewDraft, requested_destinations: e.target.value })} /></label>
           <label>
             Interests

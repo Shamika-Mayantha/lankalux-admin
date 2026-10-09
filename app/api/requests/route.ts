@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { mapWebsiteLead } from '@/lib/website-lead'
 import { clientIp, isRateLimited } from '@/lib/rate-limit'
+import { describeTrafficSource } from '@/lib/traffic-source'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -91,18 +92,27 @@ export async function POST(request: Request) {
       requested_destinations: lead.requested_destinations,
       vehicle_preference: lead.vehicle_preference,
       lead_source: lead.lead_source || 'Website',
+      traffic_source: describeTrafficSource(body.attribution),
       status: 'new',
     }
 
     let requestId = ''
     let error: { code?: string; message?: string } | null = null
     let useLegacyColumns = false
+    let useTrafficSource = true
     for (let attempt = 0; attempt < MAX_ID_ATTEMPTS; attempt++) {
       // Re-reading after a duplicate picks up the ID a concurrent enquiry just claimed.
       requestId = await generateNextRequestId(supabase)
       const row: Record<string, unknown> = { ...payload, id: requestId }
       if (useLegacyColumns) for (const key of EXTRA_COLUMNS) delete row[key]
+      if (!useTrafficSource) delete row.traffic_source
       ;({ error } = await supabase.from('Client Requests').insert([row]))
+      // Until the traffic_source column exists, save the enquiry without it.
+      if (error && useTrafficSource && /traffic_source/i.test(error.message || '')) {
+        useTrafficSource = false
+        delete row.traffic_source
+        ;({ error } = await supabase.from('Client Requests').insert([row]))
+      }
       if (error && !useLegacyColumns && /schema cache|PGRST204|column/i.test(error.message || '')) {
         useLegacyColumns = true
         for (const key of EXTRA_COLUMNS) delete row[key]

@@ -1,4 +1,5 @@
 import { parseItineraryJson } from '../validation/itinerary.schema'
+import { describeTrafficSource } from '../lib/traffic-source'
 import { assignDayImages, matchDestination } from '../services/image-map.service'
 import { calculateTotalKilometers, LOCAL_DAY_KM } from '../services/kilometers.service'
 import { shouldExpireRequest } from '../config/status'
@@ -557,5 +558,18 @@ assert(dumped.start_date === '2026-06-02', 'hydrate dates from dumped interests'
 assert(dumped.end_date === '2026-06-10', 'hydrate end date from dumped interests')
 assert(dumped.interests === 'Wildlife please.', 'hydrate strips travel meta from interests')
 assert(dumped.number_of_adults === 2, 'hydrate adults from dumped passengers')
+
+assert(
+  describeTrafficSource({ referrer: 'www.google.co.uk', landingPage: '/destinations/yala', enquiryPage: '/' }) ===
+    'Google search · landed on /destinations/yala · enquired on /',
+  'traffic source names Google search and both pages'
+)
+assert(
+  describeTrafficSource({ utmSource: 'instagram', utmMedium: 'bio', landingPage: '/', enquiryPage: '/' }) ===
+    'instagram / bio · landed on /',
+  'traffic source prefers campaign tags'
+)
+assert(describeTrafficSource({ landingPage: '/journeys', enquiryPage: '/journeys' }) === 'Direct or unknown · landed on /journeys', 'direct visit')
+assert(describeTrafficSource(null) === null && describeTrafficSource({ landingPage: 'javascript:x' }) === null, 'ignores junk')
 
 console.log('console core checks passed')
