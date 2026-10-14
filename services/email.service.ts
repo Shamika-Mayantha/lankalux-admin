@@ -415,7 +415,14 @@ export async function listRequestEmails(requestId: string): Promise<EmailMessage
 }
 
 /** A plain reply from the request page, threaded onto the client's last email when there is one. */
-export async function sendReplyEmail(opts: { requestId: string; body: string; subject?: string; sender: MailSender }) {
+export async function sendReplyEmail(opts: {
+  requestId: string
+  body: string
+  subject?: string
+  sender: MailSender
+  /** A prepared draft (e.g. from Bellion) that this send replaces; it is removed once the email is delivered. */
+  draftId?: string | null
+}) {
   requireMailer()
   const bodyText = normalizeEditableBody(opts.body || '').trim()
   if (!bodyText) throw new AppError('Write a message first.', 400)
@@ -456,9 +463,34 @@ export async function sendReplyEmail(opts: { requestId: string; body: string; su
     request_id: opts.requestId,
     actor: opts.sender.email || undefined,
     event_type: 'email_reply_sent',
-    detail: { to, subject },
+    detail: { to, subject, ...(opts.draftId ? { from_draft: true } : {}) },
   })
+  if (opts.draftId) await removeDraft(opts.requestId, opts.draftId)
   return { messageId, subject, to }
+}
+
+/** Delete a prepared email draft. Only rows still in 'prepared' on this request's email channel can be removed. */
+async function removeDraft(requestId: string, draftId: string) {
+  const supabase = getServiceClient()
+  const { error } = await supabase
+    .from('communications')
+    .delete()
+    .eq('id', draftId)
+    .eq('request_id', requestId)
+    .eq('channel', 'email')
+    .eq('status', 'prepared')
+  if (error) throw new AppError(`Could not remove the draft: ${error.message}`, 500)
+}
+
+export async function discardDraftEmail(opts: { requestId: string; draftId: string; actor?: string | null }) {
+  await removeDraft(opts.requestId, opts.draftId)
+  await logActivity({
+    request_id: opts.requestId,
+    actor: opts.actor || undefined,
+    event_type: 'email_draft_discarded',
+    detail: {},
+  })
+  return { discarded: true }
 }
 
 export { recordCommunication }
