@@ -341,7 +341,7 @@ async function recordCommunication(row: {
   body: string
   shareToken: string | null
   providerMessageId?: string
-  status: 'sent' | 'failed' | 'received'
+  status: 'prepared' | 'sent' | 'failed' | 'received'
   error?: string
   direction?: 'outbound' | 'inbound'
   fromAddress?: string | null

@@ -46,7 +46,8 @@ export async function prepareWhatsApp(opts: {
     recipient: phone,
     body: message,
     shareToken: share.token,
-    status: 'sent',
+    // A wa.me link only opens WhatsApp with the text filled in; nothing confirms it was sent.
+    status: 'prepared',
   })
   await logActivity({
     request_id: opts.requestId,

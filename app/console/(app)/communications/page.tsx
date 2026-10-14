@@ -13,7 +13,7 @@ const EVENT_LABEL: Record<string, string> = {
   follow_up_email_sent: 'Follow-up email sent',
   email_reply_sent: 'Email reply sent',
   email_received: 'Client replied by email',
-  whatsapp_shared: 'Shared on WhatsApp',
+  whatsapp_shared: 'WhatsApp message prepared (not confirmed sent)',
   hotel_proposal_attached: 'Hotel proposal attached',
   share_link_created: 'Share link created',
 }
