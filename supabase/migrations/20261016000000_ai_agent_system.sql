@@ -761,7 +761,7 @@ GRANT UPDATE (summary, request_id, customer_name, last_message_at, service_windo
 GRANT UPDATE (status, provider_message_id) ON public.ai_messages TO lankalux_agent;
 GRANT UPDATE (embedding) ON public.ai_memory TO lankalux_agent;
 GRANT UPDATE (status) ON public.ai_actions TO lankalux_agent;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO lankalux_agent;
+GRANT USAGE ON SEQUENCE public.ai_activity_log_id_seq TO lankalux_agent;
 
 DROP POLICY IF EXISTS "Agent service writes actions" ON public.ai_actions;
 CREATE POLICY "Agent service writes actions" ON public.ai_actions FOR INSERT TO lankalux_agent WITH CHECK (true);
