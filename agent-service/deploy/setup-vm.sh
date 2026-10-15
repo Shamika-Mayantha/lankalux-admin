@@ -55,10 +55,11 @@ fi
 
 install -m 644 "$SRC/deploy/lankalux-agents.service" /etc/systemd/system/lankalux-agents.service
 systemctl daemon-reload
-systemctl enable lankalux-agents   # enabled for reboots, but not started yet
+# Not enabled yet: with placeholder config it would crash-loop after a reboot.
+# Enable once /etc/lankalux-agents/env is filled in (see the last step below).
 
 echo
 echo "Done. Next:"
-echo "  1. ollama pull qwen3:4b && ollama pull nomic-embed-text   (plus any models to compare)"
+echo "  1. ollama pull qwen3:4b && ollama pull nomic-embed-text   (plus any models to compare; stop them after: ollama stop <model>)"
 echo "  2. $APP/venv/bin/lankalux-bench --models qwen3:4b,qwen3:8b,gemma3:4b --out ~/bench.json"
-echo "  3. Fill /etc/lankalux-agents/env (sudo nano), then: sudo systemctl start lankalux-agents"
+echo "  3. Fill /etc/lankalux-agents/env (sudo nano), then: sudo systemctl enable --now lankalux-agents"
