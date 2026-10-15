@@ -13,6 +13,7 @@ import { useFollowUps } from '@/features/requests/FollowUpPanel'
 const NAV = [
   { href: '/console', label: 'Dashboard' },
   { href: '/console/performance', label: 'Performance' },
+  { href: '/console/ai', label: 'AI agents' },
   { href: '/console/requests', label: 'Requests' },
   { href: '/console/itineraries', label: 'Itineraries' },
   { href: '/console/invoices', label: 'Invoices' },
@@ -27,7 +28,7 @@ const NAV = [
 ]
 
 /** Pages hidden from agents; their API routes use requireAdmin, which also refuses agents. */
-const SUPERVISOR_ONLY = ['/console/performance', '/console/payments', '/console/team', '/console/website']
+const SUPERVISOR_ONLY = ['/console/performance', '/console/ai', '/console/payments', '/console/team', '/console/website']
 
 function supervisorOnly(href: string) {
   return SUPERVISOR_ONLY.some((p) => href === p || href.startsWith(`${p}/`))

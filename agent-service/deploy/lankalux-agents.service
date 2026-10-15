@@ -1,0 +1,28 @@
+[Unit]
+Description=LankaLux AI agent service
+After=network-online.target ollama.service
+Wants=network-online.target ollama.service
+
+[Service]
+User=lankalux
+Group=lankalux
+EnvironmentFile=/etc/lankalux-agents/env
+ExecStart=/opt/lankalux-agents/venv/bin/lankalux-agents
+Restart=always
+RestartSec=10
+# Finish the current task on stop (model calls can take a few minutes on CPU).
+TimeoutStopSec=600
+KillSignal=SIGTERM
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryMax=2G
+
+[Install]
+WantedBy=multi-user.target
