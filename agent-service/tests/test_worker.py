@@ -103,3 +103,7 @@ def test_paused_system_does_nothing(test_db):
     w = make_worker(test_db["agent"], llm)
     assert w.tick() is False
     assert llm.calls == []
+    with psycopg.connect(test_db["admin"]) as c:
+        assert c.execute("SELECT count(*) FROM public.ai_tasks").fetchone()[0] == 0
+        assert c.execute("SELECT count(*) FROM public.ai_events WHERE processed_at IS NULL").fetchone()[0] == 1
+        assert c.execute("SELECT count(*) FROM public.ai_agents WHERE last_heartbeat_at IS NOT NULL").fetchone()[0] > 0

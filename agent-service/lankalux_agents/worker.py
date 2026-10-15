@@ -51,9 +51,13 @@ class Worker:
 
     def tick(self) -> bool:
         """One loop pass. Returns True when a task ran."""
+        self.heartbeat()
+        # While paused, only check in: events wait in ai_events and nothing is queued,
+        # so pressing Start does not release a backlog of scheduled scans.
+        if self.paused():
+            return False
         pump_events(self.db, self.ctx.queue)
         schedule(self.ctx.queue)
-        self.heartbeat()
         tasks = self.ctx.queue.claim(1)
         if not tasks:
             return False
@@ -65,6 +69,10 @@ class Worker:
                              {"task_type": task.task_type, "seconds": round(time.monotonic() - started, 1),
                               "error": out.error}, task_id=task.id, request_id=task.request_id)
         return True
+
+    def paused(self) -> bool:
+        row = self.db.one("SELECT system_paused FROM public.ai_settings WHERE id")
+        return bool(row is None or row["system_paused"])
 
     def heartbeat(self, error: str | None = None) -> None:
         if time.monotonic() - self._last_beat < HEARTBEAT_SECONDS:
