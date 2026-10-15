@@ -18,6 +18,7 @@ from .base import Agent, Context, Outcome
 ROUTES: dict[str, tuple[str, str, int]] = {
     "lead.created": ("sales", "qualify_lead", 50),
     "inquiry.received": ("sales", "handle_inquiry", 20),
+    "whatsapp.message_received": ("sales", "handle_inquiry", 20),
     "lead.updated": ("sales", "qualify_lead", 80),
     "itinerary.changed": ("quality", "review_itinerary", 60),
     "lead.status_changed": ("operations", "status_changed", 70),
