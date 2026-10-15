@@ -12,8 +12,8 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4'
 
-const VERIFY_TOKEN = Deno.env.get('WHATSAPP_VERIFY_TOKEN') ?? ''
-const APP_SECRET = Deno.env.get('WHATSAPP_APP_SECRET') ?? ''
+const VERIFY_TOKEN = (Deno.env.get('WHATSAPP_VERIFY_TOKEN') ?? '').trim()
+const APP_SECRET = (Deno.env.get('WHATSAPP_APP_SECRET') ?? '').trim()
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
 })
@@ -128,7 +128,8 @@ Deno.serve(async (req) => {
 
   if (req.method === 'GET') {
     const ok = url.searchParams.get('hub.mode') === 'subscribe' && VERIFY_TOKEN !== '' &&
-      timingSafeEqual(url.searchParams.get('hub.verify_token') ?? '', VERIFY_TOKEN)
+      timingSafeEqual((url.searchParams.get('hub.verify_token') ?? '').trim(), VERIFY_TOKEN)
+    if (!ok) console.warn('whatsapp-webhook verify refused', { secret_set: VERIFY_TOKEN !== '' })
     return ok ? new Response(url.searchParams.get('hub.challenge') ?? '', { status: 200 }) : new Response('Forbidden', { status: 403 })
   }
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
