@@ -1,6 +1,8 @@
 -- LankaLux AI agent system: tables, task queue, approval enforcement and CRM event capture.
 --
--- DRAFT. Not applied. Shamika must approve before this runs on the live database.
+-- Applied to LankaLux-CRM on 2026-10-15 with Shamika's approval, in parts (Supabase migrations
+-- ai_agent_system_0_vector .. ai_agent_system_3_permissions) because the connector times out on
+-- large or DROP-containing calls. Same objects as this file.
 -- Rollback: supabase/rollbacks/20261016000000_ai_agent_system_down.sql
 --
 -- Design (see /mnt/project-files/ai-system/PLAN.md):
@@ -334,14 +336,11 @@ BEGIN
   RETURN NEW;
 END $$;
 
-DROP TRIGGER IF EXISTS ai_tasks_touch ON public.ai_tasks;
-CREATE TRIGGER ai_tasks_touch BEFORE UPDATE ON public.ai_tasks
+CREATE OR REPLACE TRIGGER ai_tasks_touch BEFORE UPDATE ON public.ai_tasks
   FOR EACH ROW EXECUTE FUNCTION public.ai_touch_updated_at();
-DROP TRIGGER IF EXISTS ai_actions_touch ON public.ai_actions;
-CREATE TRIGGER ai_actions_touch BEFORE UPDATE ON public.ai_actions
+CREATE OR REPLACE TRIGGER ai_actions_touch BEFORE UPDATE ON public.ai_actions
   FOR EACH ROW EXECUTE FUNCTION public.ai_touch_updated_at();
-DROP TRIGGER IF EXISTS ai_conversations_touch ON public.ai_conversations;
-CREATE TRIGGER ai_conversations_touch BEFORE UPDATE ON public.ai_conversations
+CREATE OR REPLACE TRIGGER ai_conversations_touch BEFORE UPDATE ON public.ai_conversations
   FOR EACH ROW EXECUTE FUNCTION public.ai_touch_updated_at();
 
 -- An action's level always comes from the policy table, never from the caller.
@@ -360,8 +359,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$;
-DROP TRIGGER IF EXISTS ai_actions_level ON public.ai_actions;
-CREATE TRIGGER ai_actions_level BEFORE INSERT OR UPDATE OF action_type ON public.ai_actions
+CREATE OR REPLACE TRIGGER ai_actions_level BEFORE INSERT OR UPDATE OF action_type ON public.ai_actions
   FOR EACH ROW EXECUTE FUNCTION public.ai_actions_set_level();
 
 -- ---------------------------------------------------------------------------
@@ -718,11 +716,11 @@ EXCEPTION WHEN others THEN
   RETURN NULL;
 END $$;
 
-DROP TRIGGER IF EXISTS ai_capture_request_event ON public."Client Requests";
-CREATE TRIGGER ai_capture_request_event AFTER INSERT OR UPDATE ON public."Client Requests"
+REVOKE EXECUTE ON FUNCTION public.ai_capture_request_event(), public.ai_capture_communication_event()
+  FROM PUBLIC, anon, authenticated;
+CREATE OR REPLACE TRIGGER ai_capture_request_event AFTER INSERT OR UPDATE ON public."Client Requests"
   FOR EACH ROW EXECUTE FUNCTION public.ai_capture_request_event();
-DROP TRIGGER IF EXISTS ai_capture_communication_event ON public.communications;
-CREATE TRIGGER ai_capture_communication_event AFTER INSERT ON public.communications
+CREATE OR REPLACE TRIGGER ai_capture_communication_event AFTER INSERT ON public.communications
   FOR EACH ROW EXECUTE FUNCTION public.ai_capture_communication_event();
 
 -- Time-based events (pending follow-ups, trips starting soon) are produced by the
