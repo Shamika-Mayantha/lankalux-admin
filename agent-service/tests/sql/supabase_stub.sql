@@ -66,9 +66,11 @@ CREATE TABLE public.activity_logs (id uuid PRIMARY KEY DEFAULT gen_random_uuid()
   event_type text, detail jsonb, created_at timestamptz DEFAULT now());
 CREATE TABLE public.admin_users (user_id uuid PRIMARY KEY REFERENCES auth.users(id), email text, role text, active boolean);
 DO $$ DECLARE t text; BEGIN
-  FOREACH t IN ARRAY ARRAY['itineraries','invoices','invoice_payments','trips','trip_days','hotels','request_hotels',
+  FOREACH t IN ARRAY ARRAY['invoices','invoice_payments','trips','trip_days','hotels','request_hotels',
     'vehicles','drivers','share_links','website_chat_sessions'] LOOP
     EXECUTE format('CREATE TABLE public.%I (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), start_date date)', t);
   END LOOP; END $$;
+CREATE TABLE public.itineraries (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), request_id text, option_number integer,
+  style text, status text, title text, start_date date);
 CREATE FUNCTION public.is_lankalux_admin() RETURNS boolean LANGUAGE sql STABLE AS $$
   SELECT EXISTS (SELECT 1 FROM public.admin_users WHERE user_id = auth.uid() AND role = 'supervisor' AND active) $$;

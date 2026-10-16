@@ -55,3 +55,13 @@ class Agent:
 
 def not_enabled(agent: str, task: Task) -> Outcome:
     return Outcome("succeeded", {"skipped": True, "reason": f"{agent}.{task.task_type} is not enabled yet"})
+
+
+def request_review(ctx: Context, action: dict, parent: Task, *, priority: int = 25) -> str | None:
+    """Every Level 2 proposal goes to the Quality Agent, which hands it to the AI Manager.
+    The Manager's approval is what lets it run (the database checks that, not this code)."""
+    return ctx.queue.enqueue(
+        "quality", "review_action", {"action_id": str(action["id"])}, request_id=parent.request_id,
+        parent=parent, dedupe_key=f"review:{action['id']}", priority=priority, created_by=parent.agent_key,
+        conversation_id=parent.conversation_id,
+    )

@@ -119,8 +119,13 @@ export default function DashboardPage() {
         href: '/console/ai',
         icon: 'ai',
         title: a.summary,
-        detail: `${a.action_type.startsWith('message.') ? 'WhatsApp reply to approve' : 'AI action to approve'} · ${formatAgo(a.created_at)}`,
+        detail: `${a.payload?.channel === 'email' ? 'Email to approve' : a.action_type.startsWith('message.') ? 'WhatsApp reply to approve' : 'AI action to approve'} · ${formatAgo(a.created_at)}`,
       })
+    }
+    const listed = new Set((ai?.pending || []).map((a) => a.id))
+    for (const p of ai?.pings || []) {
+      if (p.action_id && listed.has(p.action_id)) continue
+      list.push({ key: `ping-${p.id}`, href: p.request_id ? `/console/requests/${p.request_id}` : '/console/ai', icon: 'ai', title: p.title, detail: `AI Manager · ${formatAgo(p.created_at)}` })
     }
     for (const f of followUps?.items || []) {
       list.push({

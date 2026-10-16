@@ -68,3 +68,72 @@ class CRM:
             conversation_id, limit,
         )
         return list(reversed(rows))
+
+    # --- Facts for the autonomous agents -------------------------------------------------
+
+    def settings(self) -> dict:
+        return self.db.one(
+            "SELECT system_paused, customer_messaging_enabled, owner_approves_messages FROM public.ai_settings WHERE id"
+        ) or {}
+
+    def action(self, action_id: str) -> dict | None:
+        return self.db.one(
+            """SELECT id, agent_key, action_type, level, status, request_id, conversation_id, summary, reasoning, payload, created_at
+               FROM public.ai_actions WHERE id = %s""",
+            action_id,
+        )
+
+    def recent_actions(self, request_id: str, action_prefix: str, days: int) -> list[dict]:
+        """This agent family's actions for a request in the last `days`, any status but cancelled."""
+        return self.db.all(
+            """SELECT id, action_type, status, created_at FROM public.ai_actions
+               WHERE request_id = %s AND action_type LIKE %s AND status <> 'cancelled'
+                 AND created_at > now() - make_interval(days => %s)""",
+            request_id, f"{action_prefix}%", days,
+        )
+
+    def follow_ups_sent(self, request_id: str) -> int:
+        row = self.db.one(
+            """SELECT count(*) AS n FROM public.ai_actions
+               WHERE request_id = %s AND action_type = 'message.follow_up' AND status = 'executed'""",
+            request_id,
+        )
+        return int((row or {}).get("n") or 0)
+
+    def notified_recently(self, title: str, hours: int = 20) -> bool:
+        return bool(self.db.one(
+            "SELECT 1 AS x FROM public.ai_notifications WHERE title = %s AND created_at > now() - make_interval(hours => %s) LIMIT 1",
+            title, hours,
+        ))
+
+    def itinerary_options(self, request_id: str) -> list[dict]:
+        """Itinerary options for a request, plus one 'legacy' row when the old text column holds some."""
+        return self.db.all(
+            """SELECT option_number, status, title FROM public.itineraries WHERE request_id = %s
+               UNION ALL
+               SELECT 0, 'legacy', NULL FROM public."Client Requests"
+               WHERE id = %s AND coalesce(btrim(itineraryoptions), '') NOT IN ('', '[]', '{}', 'null')
+               ORDER BY 1""",
+            request_id, request_id,
+        )
+
+    def upcoming_sold_trips(self, days: int = 7) -> list[dict]:
+        """Sold requests starting within `days`, with what operations still has to arrange."""
+        return self.db.all(
+            """SELECT id, client_name, start_date, end_date, number_of_adults, number_of_children,
+                      assigned_driver_id, assigned_vehicle_id, selected_itinerary_id, arrival_flight
+               FROM public."Client Requests"
+               WHERE status = 'sold' AND start_date BETWEEN current_date AND current_date + %s
+               ORDER BY start_date""",
+            days,
+        )
+
+    def price_samples(self, limit: int = 50) -> list[dict]:
+        """Prices LankaLux actually sold at (free text on the request, e.g. 'Total Price: 660 USD')."""
+        return self.db.all(
+            """SELECT id, sold_price, duration, number_of_adults, number_of_children, start_date
+               FROM public."Client Requests"
+               WHERE status IN ('sold', 'after_sales') AND coalesce(sold_price, '') <> ''
+               ORDER BY updated_at DESC LIMIT %s""",
+            limit,
+        )

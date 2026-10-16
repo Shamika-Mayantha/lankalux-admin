@@ -24,11 +24,22 @@ ROUTES: dict[str, tuple[str, str, int]] = {
     "lead.status_changed": ("operations", "status_changed", 70),
 }
 
-MANAGER_PROMPT = """You are the AI General Manager of LankaLux, a small Sri Lankan travel company.
-You review work from specialist agents before it goes ahead. Judge only from the facts given.
-Approve routine, accurate, polite work that follows the business rules. Reject anything that
-invents prices, promises availability, offers discounts, confirms bookings, or contradicts the
-customer's stated requirements. Explain your decision in one or two sentences."""
+MANAGER_PROMPT = """You are the AI General Manager of LankaLux, a small, premium Sri Lankan private-chauffeur
+and tailor-made travel company. Specialist agents send you their drafts; you decide what happens next.
+The owner trusts you to handle routine work without them, and wants to be pinged only when it matters.
+Judge only from the facts given (the draft, the conversation or lead, and the Quality findings).
+
+Decide:
+- "approve": a routine, accurate, warm reply or follow-up that answers what the customer said, asks for
+  sensible missing details, invents nothing, and follows the rules. Most everyday messages are this.
+- "escalate": the owner should look. Use it when the customer is unhappy, complaining or hesitant about
+  money; asks about prices, discounts, payments, refunds, cancellations or an existing booking; has an
+  unusual request (very large group, VIP, medical, accessibility, safety, legal); the draft misreads the
+  customer or might embarrass LankaLux; or you are not sure.
+- "reject": the draft is wrong or unsuitable and should not be sent at all (it will also be shown to the owner).
+Never approve anything that quotes or estimates prices, promises availability, offers discounts, confirms
+bookings, takes payments, or claims to be a human. Explain your decision in one or two plain sentences
+written for the owner."""
 
 SUMMARY_PROMPT = """You are the AI General Manager of LankaLux. Write the owner's daily summary from
 the JSON facts given. Use only those numbers and names; if something is zero, say so plainly.
@@ -36,7 +47,7 @@ Lead with what needs the owner's attention. Keep it under 150 words."""
 
 
 class Review(BaseModel):
-    decision: str = Field(pattern="^(approve|reject|revise)$")
+    decision: str = Field(pattern="^(approve|escalate|reject)$")
     reason: str = Field(max_length=600)
 
 
@@ -69,16 +80,41 @@ class ManagerAgent(Agent):
     def review_action(self, task: Task, ctx: Context) -> Outcome:
         """Level 2 review. The database refuses a manager decision on anything else."""
         action = task.payload["action"]
+        current = ctx.crm.action(action["id"])
+        if not current or current["status"] != "proposed":
+            return Outcome("succeeded", {"skipped": True, "reason": "no longer waiting"})
+        conversation = None
+        if action.get("conversation_id"):
+            conversation = [{"from": "customer" if m["direction"] == "inbound" else "lankalux", "text": m["body"]}
+                            for m in ctx.crm.conversation_messages(action["conversation_id"], 10)]
         facts = {
-            "action": action,
-            "request": ctx.crm.request(action["request_id"]) if action.get("request_id") else None,
+            "draft": action,
+            "conversation": conversation,
+            "lead": ctx.crm.request(action["request_id"]) if action.get("request_id") else None,
             "quality_findings": task.payload.get("quality"),
             "past_corrections": ctx.memory.recall(action.get("summary", ""), limit=3),
         }
         review = ctx.llm.structured(
             self.system_prompt(ctx, MANAGER_PROMPT), json.dumps(facts, default=str), Review
         )
-        ctx.actions.manager_decision(action["id"], review.decision, review.reason)
+        customer_facing = action["action_type"].startswith("message.")
+        if review.decision == "approve":
+            ctx.actions.manager_decision(action["id"], "approve", review.reason)
+            if customer_facing and ctx.crm.settings().get("owner_approves_messages", True):
+                ctx.actions.notify_owner(
+                    "approval_needed", f"{action['summary']}: the AI Manager approved it, waiting for you", review.reason,
+                    request_id=action.get("request_id"), action_id=action["id"],
+                )
+        elif review.decision == "reject" and not customer_facing:
+            ctx.actions.manager_decision(action["id"], "reject", review.reason)
+        else:
+            # "revise" leaves the action open, so the owner can still approve or edit it.
+            ctx.actions.manager_decision(action["id"], "revise", review.reason)
+            verdict = "flagged" if review.decision == "escalate" else "would not send"
+            ctx.actions.notify_owner(
+                "approval_needed", f"{action['summary']}: the AI Manager {verdict} it", review.reason,
+                request_id=action.get("request_id"), action_id=action["id"],
+            )
         return Outcome("succeeded", {"decision": review.decision, "reason": review.reason})
 
     def daily_summary(self, task: Task, ctx: Context) -> Outcome:

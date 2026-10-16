@@ -1,6 +1,6 @@
 import { jsonErr, jsonOk, readJson } from '@/app/api/v2/_guard'
 import { requireSupervisorRole, staffFromRequest } from '@/services/staff.service'
-import { getAiOverview, updateAiSettings } from '@/services/ai-console.service'
+import { getAiOverview, updateAiSettings, type AiSettingsPatch } from '@/services/ai-console.service'
 
 export async function GET(request: Request) {
   try {
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const staff = requireSupervisorRole(await staffFromRequest(request))
-    const body = await readJson<{ system_paused?: unknown; customer_messaging_enabled?: unknown }>(request)
+    const body = await readJson<AiSettingsPatch>(request)
     await updateAiSettings(staff, body)
     return jsonOk({ overview: await getAiOverview() })
   } catch (err) {
