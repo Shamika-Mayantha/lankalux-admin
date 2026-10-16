@@ -29,9 +29,15 @@ function serviceKeys(): string[] {
   return keys.filter(Boolean)
 }
 
-function authorised(req: Request) {
+async function authorised(req: Request) {
   const bearer = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
-  return bearer !== '' && serviceKeys().includes(bearer)
+  if (!bearer) return false
+  if (serviceKeys().includes(bearer)) return true
+  // The admin may hold a different server key format than this runtime sees; accept any key
+  // that can use the Auth admin API, which only secret/service-role keys can.
+  const probe = createClient(Deno.env.get('SUPABASE_URL')!, bearer, { auth: { persistSession: false, autoRefreshToken: false } })
+  const { error } = await probe.auth.admin.listUsers({ page: 1, perPage: 1 })
+  return !error
 }
 
 async function finish(id: string, ok: boolean, result: Record<string, unknown> | null, error: string | null) {
@@ -121,7 +127,7 @@ async function deliver(a: Action): Promise<'sent' | 'failed'> {
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
-  if (!authorised(req)) return new Response('Unauthorized', { status: 401 })
+  if (!(await authorised(req))) return new Response('Unauthorized', { status: 401 })
   if (!TOKEN || !PHONE_ID) return Response.json({ error: 'WhatsApp sending is not set up yet.' }, { status: 503 })
 
   // Message actions an owner (or the AI Manager) has approved and that have not run yet.
