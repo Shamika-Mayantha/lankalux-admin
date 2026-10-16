@@ -22,18 +22,50 @@ PROMISES = re.compile(
 )
 SELF_DISCLOSURE = re.compile(r"\b(?:as an ai|i am an ai|i'm an ai|language model|chatbot|i am a bot|i'm a bot|virtual assistant)\b", re.I)
 HUMAN_CLAIM = re.compile(r"\b(?:i am|i'm) (?:a )?(?:real )?(?:human|person)\b|\bnot a (?:bot|robot|ai)\b", re.I)
+# "Sightings aren't guaranteed" is the honest thing to say, not a promise.
+NO_GUARANTEE = re.compile(
+    r"\b(?:not|never|aren't|isn't|can't|cannot|can never be|no)\s+(?:be\s+|always\s+)?guarantee[ds]?\b|\bno guarantees?\b", re.I)
+# A customer asking whether they are talking to a person or a machine.
+ASKED_IF_HUMAN = re.compile(
+    r"\b(?:real|actual|live) (?:person|human)\b|\b(?:are you|is this|am i (?:talking|speaking|chatting) (?:to|with))\b[^.?!\n]{0,30}"
+    r"\b(?:bot|robot|ai|a\.i\.|automated|human|person|machine|chatgpt)\b|\bchat ?bot\b", re.I)
+EMOJI = re.compile(
+    "[\U0001F000-\U0001FAFF\U00002600-\U000027BF\U0001F900-\U0001F9FF\uFE0F\u200D\u2B50\u2B06\u2934\u2935\u2190-\u21FF]+")
+GREETING = re.compile(r"^\s*(?:dear|hi|hello|hey|good (?:morning|afternoon|evening))\b[^\n]{0,40},?\s*\n+", re.I)
+SIGN_OFF = re.compile(r"\n+\s*(?:warm(?:est)? regards|kind regards|best regards|best wishes|regards|cheers|thanks|thank you)[,!.]?"
+                      r"(?:\s*\n[^\n]{0,40}){0,3}\s*$", re.I)
+
+
+def asked_if_human(customer_text: str) -> bool:
+    return bool(ASKED_IF_HUMAN.search((customer_text or "").replace("\u2019", "'")))
+
+
+def tidy_message(text: str) -> str:
+    """WhatsApp replies: LankaLux writes without emojis (the model adds them however it is told)."""
+    t = EMOJI.sub("", text)
+    t = re.sub(r"[ \t]+([,.!?])", r"\1", t)
+    return re.sub(r"[ \t]{2,}", " ", t).strip()
+
+
+def tidy_email_body(text: str) -> str:
+    """The email template adds "Dear <name>," and the sign-off, so drop any the model wrote too."""
+    t = text.strip()
+    for _ in range(2):
+        t = GREETING.sub("", t, count=1)
+    t = SIGN_OFF.sub("", t)
+    return EMOJI.sub("", t).strip()
 
 
 def check_text(text: str, *, max_len: int = 1000) -> tuple[list[str], list[str]]:
     """Returns (hard findings, soft findings) for a customer-facing text."""
     hard: list[str] = []
     soft: list[str] = []
-    t = text.strip()
+    t = text.strip().replace("\u2019", "'").replace("\u2018", "'")
     if not t:
         hard.append("The message is empty.")
     if MONEY.search(t):
         hard.append("Mentions a price or an amount. Only the owner may quote prices.")
-    if PROMISES.search(t):
+    if PROMISES.search(NO_GUARANTEE.sub("", t)):
         hard.append("Promises a discount, booking, payment or refund. Only the owner may do that.")
     if HUMAN_CLAIM.search(t):
         hard.append("Claims to be a human. The AI must never do that.")
@@ -45,6 +77,8 @@ def check_text(text: str, *, max_len: int = 1000) -> tuple[list[str], list[str]]
         soft.append("Contains a link; check it is a LankaLux link.")
     if t.count("?") > 2:
         soft.append("Asks more than two questions at once.")
+    if EMOJI.search(t):
+        soft.append("Uses emojis.")
     return hard, soft
 
 

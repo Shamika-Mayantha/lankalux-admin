@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from .agents.base import Context
 from .agents.followup import FOLLOW_UP_PROMPT, FollowUpAgent, FollowUpEmail
 from .agents.manager import MANAGER_PROMPT, ManagerAgent, Review
-from .agents.quality import check_text
+from .agents.quality import asked_if_human, check_text, tidy_email_body, tidy_message
 from .agents.sales import QUALIFY_PROMPT, REPLY_PROMPT, Qualification, Reply, SalesAgent
 from .db import Database, jsonb
 from .llm import LLMError, OllamaLLM
@@ -114,12 +114,14 @@ def run(llm: OllamaLLM, playbook: str) -> Report:
             r.add(f"**Sales failed:** {err}")
             r.summary["errors"] += 1
             continue
-        if reply.kind == "needs_human" or not reply.reply.strip():
-            r.add(f"**Sales:** hands it to you ({reply.reason}). Nothing drafted. ({took:.0f}s)")
+        text = tidy_message(reply.reply)
+        if reply.kind == "needs_human" or not text:
+            why = "asked if they're talking to a real person" if asked_if_human(chat.messages[-1][1]) else reply.reason
+            r.add(f"**Sales:** hands it to you ({why}). Nothing drafted. ({took:.0f}s)")
             r.summary["to_owner"] += 1
             continue
-        r.add(f"**Sales drafts** ({reply.kind}, {took:.0f}s): {reply.reply}")
-        hard, soft = check_text(reply.reply)
+        r.add(f"**Sales drafts** ({reply.kind}, {took:.0f}s): {text}")
+        hard, soft = check_text(text)
         if hard:
             r.add(f"**Quality:** stops it and pings you: {' '.join(hard)}")
             r.summary["to_owner"] += 1
@@ -127,7 +129,7 @@ def run(llm: OllamaLLM, playbook: str) -> Report:
         if soft:
             r.add(f"**Quality notes:** {' '.join(soft)}")
         draft = {"action_type": f"message.{reply.kind}", "summary": f"WhatsApp reply to {chat.customer or 'a new contact'}",
-                 "reasoning": reply.reason, "payload": {"text": reply.reply}}
+                 "reasoning": reply.reason, "payload": {"text": text}}
         review_facts = {"draft": draft, "conversation": facts["conversation"], "lead": chat.lead,
                         "quality_findings": {"ok": not soft, "notes": soft}, "past_corrections": []}
         try:
@@ -148,8 +150,9 @@ def run(llm: OllamaLLM, playbook: str) -> Report:
         r.add(f"**Subject:** {mail.subject}")
         r.add("Dear David,")
         r.add("")
-        r.add(mail.body.strip())
-        hard, soft = check_text(mail.body, max_len=2500)
+        body = tidy_email_body(mail.body)
+        r.add(body)
+        hard, soft = check_text(body, max_len=2500)
         r.add(f"**Quality:** {'stops it: ' + ' '.join(hard) if hard else 'passes' + (' (' + ' '.join(soft) + ')' if soft else '')}")
     except LLMError as err:
         r.add(f"**Follow-up failed:** {err}")

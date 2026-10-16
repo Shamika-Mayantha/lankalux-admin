@@ -215,3 +215,14 @@ def test_asking_if_human_pings_the_owner(test_db):
         assert c.execute("SELECT count(*) FROM public.ai_actions").fetchone()[0] == 0
         title, body = c.execute("SELECT title, body FROM public.ai_notifications WHERE kind = 'attention'").fetchone()
     assert "real person" in title and "Is this a real person?" in body
+
+
+def test_complaint_is_not_reported_as_asking_if_human(test_db):
+    # The first test drive labelled a complaint "asked_if_human"; the heading follows what the customer wrote.
+    _whatsapp_hi(test_db["admin"], "Our driver was 40 minutes late. Not impressed.")
+    w = make_worker(test_db["agent"], FakeLLM(reply=Reply(kind="needs_human", reply="", reason="asked_if_human")))
+    for _ in range(2):
+        w.tick()
+    with psycopg.connect(test_db["admin"]) as c:
+        title = c.execute("SELECT title FROM public.ai_notifications WHERE kind = 'attention'").fetchone()[0]
+    assert "needs a person" in title and "real person" not in title

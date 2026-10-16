@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from ..queue import Task
 from .base import Agent, Context, Outcome, request_review
+from .quality import tidy_email_body
 
 QUIET_DAYS = 3
 MIN_GAP_DAYS = 4
@@ -68,7 +69,7 @@ class FollowUpAgent(Agent):
             action = ctx.actions.propose(
                 agent_key=self.key, action_type="message.follow_up", task_id=task.id, request_id=rid,
                 summary=f"Follow-up email to {who}", reasoning=f"No reply for {QUIET_DAYS}+ days (follow-up {sent + 1} of {MAX_FOLLOW_UPS}).",
-                payload={"channel": "email", "to": req.get("email"), "subject": mail.subject.strip(), "body": mail.body.strip()},
+                payload={"channel": "email", "to": req.get("email"), "subject": mail.subject.strip(), "body": tidy_email_body(mail.body)},
             )
             request_review(ctx, action, Task(id=task.id, agent_key=self.key, task_type=task.task_type, payload={},
                                              request_id=rid, depth=task.depth), priority=60)
