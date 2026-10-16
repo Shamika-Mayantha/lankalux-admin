@@ -2436,3 +2436,12 @@ html:has(.ll-root),
   background: var(--gold-soft);
   font-size: 13.5px;
 }
+
+/* AI playbook editor */
+.ll-playbook-text {
+  min-height: 60vh;
+  margin-top: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13.5px;
+  line-height: 1.55;
+}

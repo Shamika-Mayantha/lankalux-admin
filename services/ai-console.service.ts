@@ -337,3 +337,28 @@ export async function decideAiAction(staff: Staff, id: string, decision: unknown
   if (decision === 'approve' && isMessage) return flushApprovedMessages()
   return null
 }
+
+export type AiPlaybook = { playbook: string; updated_at: string | null }
+
+const PLAYBOOK_MAX = 20000
+
+/** The owner's playbook: business facts and writing rules the customer-facing agents follow. */
+export async function getAiPlaybook(): Promise<AiPlaybook> {
+  const { data, error } = await getServiceClient().from('ai_settings').select('playbook, playbook_updated_at').eq('id', true).maybeSingle()
+  if (error) throw new AppError(`Could not load the playbook: ${error.message}`, 500)
+  return { playbook: (data?.playbook as string) || '', updated_at: (data?.playbook_updated_at as string | null) ?? null }
+}
+
+export async function updateAiPlaybook(staff: Staff, playbook: unknown): Promise<AiPlaybook> {
+  if (typeof playbook !== 'string') throw new AppError('The playbook must be text.', 400)
+  const text = playbook.replace(/\r\n/g, '\n').trim()
+  if (text.length > PLAYBOOK_MAX) throw new AppError(`The playbook is too long (${text.length} of ${PLAYBOOK_MAX} characters).`, 400)
+  const now = new Date().toISOString()
+  const { error } = await getServiceClient()
+    .from('ai_settings')
+    .update({ playbook: text, playbook_updated_at: now, updated_by: staff.id, updated_at: now })
+    .eq('id', true)
+  if (error) throw new AppError(`Could not save the playbook: ${error.message}`, 500)
+  await logOwner(staff, 'playbook.changed', { characters: text.length })
+  return { playbook: text, updated_at: now }
+}

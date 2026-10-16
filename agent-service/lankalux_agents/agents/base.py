@@ -24,6 +24,7 @@ class Context:
     crm: CRM
     memory: Memory
     prompts: dict[str, str] = field(default_factory=dict)  # owner-approved prompts from ai_agents
+    playbook: str = ""  # owner-edited business facts and writing rules (ai_settings.playbook)
 
 
 @dataclass
@@ -41,6 +42,7 @@ Handler = Callable[[Task, Context], Outcome]
 class Agent:
     key: str = ""
     handlers: dict[str, str] = {}  # task_type -> method name
+    uses_playbook = False  # agents that write to or judge messages for customers
 
     def handle(self, task: Task, ctx: Context) -> Outcome:
         name = self.handlers.get(task.task_type)
@@ -49,8 +51,12 @@ class Agent:
         return getattr(self, name)(task, ctx)
 
     def system_prompt(self, ctx: Context, default: str) -> str:
-        """The owner-approved prompt from ai_agents when set, else the built-in default."""
-        return ctx.prompts.get(self.key) or default
+        """The owner-approved prompt from ai_agents when set, else the built-in default,
+        followed by the owner's playbook for agents that deal with customers."""
+        prompt = ctx.prompts.get(self.key) or default
+        if self.uses_playbook and ctx.playbook.strip():
+            prompt += "\n\n" + ctx.playbook.strip()
+        return prompt
 
 
 def not_enabled(agent: str, task: Task) -> Outcome:

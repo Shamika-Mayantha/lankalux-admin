@@ -26,6 +26,7 @@ class FakeLLM:
     def __init__(self, fail: bool = False, reply: Reply | None = None, review: Review | None = None,
                  qualification: Qualification | None = None, email: FollowUpEmail | None = None):
         self.calls: list[str] = []
+        self.systems: list[str] = []
         self.fail = fail
         self.reply = reply or Reply(kind="collect_info", reply="Lovely! When would you like to travel, and how many of you?", reason="dates and party size missing")
         self.review = review or Review(decision="approve", reason="Routine, friendly question about dates.")
@@ -34,6 +35,7 @@ class FakeLLM:
 
     def structured(self, system, user, schema: type[BaseModel], **_):
         self.calls.append(schema.__name__)
+        self.systems.append(system)
         if self.fail:
             raise LLMError("model down")
         if schema is Qualification:

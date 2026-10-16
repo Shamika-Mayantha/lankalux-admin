@@ -41,6 +41,7 @@ class FollowUpEmail(BaseModel):
 
 class FollowUpAgent(Agent):
     key = "followup"
+    uses_playbook = True
     handlers = {"scan_follow_ups": "scan_follow_ups"}
 
     def scan_follow_ups(self, task: Task, ctx: Context) -> Outcome:

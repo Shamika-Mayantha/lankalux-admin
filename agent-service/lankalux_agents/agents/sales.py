@@ -60,6 +60,7 @@ class Qualification(BaseModel):
 
 class SalesAgent(Agent):
     key = "sales"
+    uses_playbook = True
     handlers = {"qualify_lead": "qualify_lead", "handle_inquiry": "handle_inquiry"}
     disclosure = AI_DISCLOSURE
 

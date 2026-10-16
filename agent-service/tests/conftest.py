@@ -17,7 +17,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = [ROOT.parent / "supabase" / "migrations" / name
               for name in ("20261016000000_ai_agent_system.sql", "20261016100000_ai_whatsapp_replies.sql",
-                           "20261016200000_ai_autonomy.sql")]
+                           "20261016200000_ai_autonomy.sql", "20261016220000_ai_playbook.sql")]
 STUB = ROOT / "tests" / "sql" / "supabase_stub.sql"
 
 
@@ -55,3 +55,9 @@ def test_db(admin_dsn: str):
     yield {"admin": dsn, "agent": f"{dsn} user=lankalux_agent"}
     with psycopg.connect(admin_dsn, autocommit=True) as c:
         c.execute(f"DROP DATABASE {name} WITH (FORCE)")
+
+
+@pytest.fixture(autouse=True)
+def no_clock(monkeypatch):
+    """Scheduled work (daily summary, hourly scans) depends on the time of day; tests enqueue it explicitly."""
+    monkeypatch.setattr("lankalux_agents.worker.schedule", lambda queue, *a, **k: None)

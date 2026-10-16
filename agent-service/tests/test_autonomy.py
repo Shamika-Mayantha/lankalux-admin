@@ -11,12 +11,6 @@ from lankalux_agents.agents.sales import Qualification, Reply
 from test_worker import FakeLLM, _whatsapp_hi, drain, make_worker
 
 
-@pytest.fixture(autouse=True)
-def no_clock(monkeypatch):
-    """The hourly scans depend on the time of day; these tests enqueue them explicitly."""
-    monkeypatch.setattr("lankalux_agents.worker.schedule", lambda queue, *a, **k: None)
-
-
 def _run(w, agent: str, task_type: str, request_id: str | None = None, key: str = "t1"):
     w.ctx.queue.enqueue(agent, task_type, {}, request_id=request_id, dedupe_key=f"test:{task_type}:{key}", created_by="test")
     return drain(w)
@@ -179,3 +173,34 @@ def test_price_parsing_and_thin_data():
     assert parse_price("tbc") is None
     line, stats = price_guide([{"sold_price": "500 USD", "duration": "5 days"}], 7)
     assert stats["samples"] == 1 and "not enough" in line
+
+
+# --- Playbook -----------------------------------------------------------------------------
+
+def test_playbook_reaches_customer_facing_prompts(test_db):
+    with psycopg.connect(test_db["admin"], autocommit=True) as c:
+        assert "LANKALUX PLAYBOOK" in c.execute("SELECT playbook FROM public.ai_settings").fetchone()[0]
+        c.execute("UPDATE public.ai_settings SET playbook = 'PLAYBOOK: we never say cheap.'")
+    _whatsapp_hi(test_db["admin"])
+    llm = FakeLLM()
+    w = make_worker(test_db["agent"], llm)
+    w.heartbeat()
+    drain(w)
+    assert llm.calls == ["Reply", "Review"]
+    assert all("we never say cheap" in s for s in llm.systems)  # Sales and the Manager
+
+
+def test_agent_cannot_edit_the_playbook(test_db):
+    with psycopg.connect(test_db["agent"], autocommit=True) as c, pytest.raises(psycopg.Error):
+        c.execute("UPDATE public.ai_settings SET playbook = 'be pushy'")
+
+
+def test_testdrive_runs_every_scenario_without_a_database():
+    from lankalux_agents.testdrive import CHATS, run
+    llm = FakeLLM()
+    llm.model = "fake"
+    report = run(llm, "PLAYBOOK: test")
+    text = "\n".join(report.lines)
+    assert report.summary == {"approved": len(CHATS), "escalated": 0, "to_owner": 0, "errors": 0}
+    assert "Playbook loaded" in text and "Follow-up email" in text and "Readiness:" in text
+    assert all("PLAYBOOK: test" in s for s in llm.systems)

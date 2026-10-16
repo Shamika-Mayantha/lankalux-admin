@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import { consoleFetch, useConsoleGet } from '@/lib/console-api'
 import { formatAgo } from '@/lib/format'
-import type { AiActivity, AiAgent, AiConversation, AiOverview, AiPendingAction, AiPing, AiRunningTask } from '@/services/ai-console.service'
+import type { AiActivity, AiAgent, AiConversation, AiOverview, AiPendingAction, AiPing, AiPlaybook, AiRunningTask } from '@/services/ai-console.service'
 
 /** How often the page refreshes itself while it is open and visible. */
 const LIVE_REFRESH_MS = 5000
@@ -57,6 +57,8 @@ const EVENT_LABEL: Record<string, string> = {
   'action.approved': 'approved an action',
   'action.rejected': 'rejected an action',
   'settings.changed': 'changed the AI settings',
+  'playbook.changed': 'updated the playbook',
+  'testdrive.report': 'ran a test drive (nothing was sent)',
   'agent.paused': 'paused an agent',
   'agent.resumed': 'resumed an agent',
   'conversation.taken_over': 'took over a conversation',
@@ -337,11 +339,79 @@ function AgentCard({ ag, o, busy, onToggle }: { ag: AiAgent; o: AiOverview; busy
   )
 }
 
+/** The business facts and writing rules the Sales, Follow-up and Manager agents follow. */
+function PlaybookEditor() {
+  const { data, error, loading, reload } = useConsoleGet<{ playbook?: AiPlaybook }>('/api/v2/ai/playbook')
+  const [draft, setDraft] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+  const current = data?.playbook?.playbook ?? ''
+  const text = draft ?? current
+  const dirty = draft !== null && draft.trim() !== current.trim()
+
+  async function save() {
+    setSaving(true)
+    setSaveError(null)
+    setSaved(false)
+    try {
+      await consoleFetch('/api/v2/ai/playbook', { method: 'PUT', body: JSON.stringify({ playbook: text }) })
+      await reload()
+      setDraft(null)
+      setSaved(true)
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Could not save.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="ll-card ll-panel ll-playbook">
+      <div className="ll-panel-head">
+        <div>
+          <h2>Playbook</h2>
+          <p className="ll-muted ll-small" style={{ margin: '4px 0 0' }}>
+            What the agents know about LankaLux and how they write. Sales, Follow-up and the AI Manager read it before every message; changes apply within a minute.
+          </p>
+        </div>
+        {data?.playbook?.updated_at && <span className="ll-muted ll-small">saved {formatAgo(data.playbook.updated_at)}</span>}
+      </div>
+      {error && <div className="ll-error">{error}</div>}
+      {saveError && <div className="ll-error">{saveError}</div>}
+      {saved && !dirty && <div className="ll-ok">Saved. The agents use it from their next message.</div>}
+      <textarea
+        aria-label="Playbook"
+        className="ll-ai-reply ll-playbook-text"
+        value={loading && draft === null ? 'Loading…' : text}
+        disabled={loading || saving}
+        onChange={(e) => {
+          setDraft(e.target.value)
+          setSaved(false)
+        }}
+      />
+      <div className="ll-row" style={{ marginTop: 12, justifyContent: 'space-between' }}>
+        <span className="ll-muted ll-small">{text.length.toLocaleString()} characters · keep it short and factual; the AI only knows what is written here</span>
+        <div className="ll-row" style={{ gap: 8 }}>
+          {dirty && (
+            <button type="button" className="ll-btn secondary" disabled={saving} onClick={() => setDraft(null)}>
+              Undo changes
+            </button>
+          )}
+          <button type="button" className="ll-btn" disabled={!dirty || saving} onClick={save}>
+            {saving ? 'Saving…' : 'Save playbook'}
+          </button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function secondsSince(at: number | null) {
   return at ? Math.max(0, Math.round((Date.now() - at) / 1000)) : null
 }
 
-type Tab = 'live' | 'approvals' | 'whatsapp'
+type Tab = 'live' | 'approvals' | 'whatsapp' | 'playbook'
 
 export default function AiPage() {
   const { data, error, loading, reload, refreshing } = useConsoleGet<{ overview?: AiOverview }>('/api/v2/ai')
@@ -508,6 +578,9 @@ export default function AiPage() {
         <button type="button" role="tab" aria-selected={tab === 'approvals'} className={tab === 'approvals' ? 'on' : ''} onClick={() => setTab('approvals')}>
           Approvals{o && o.pending.length > 0 && <span className="ll-count">{o.pending.length}</span>}
         </button>
+        <button type="button" role="tab" aria-selected={tab === 'playbook'} className={tab === 'playbook' ? 'on' : ''} onClick={() => setTab('playbook')}>
+          Playbook
+        </button>
         <button type="button" role="tab" aria-selected={tab === 'whatsapp'} className={tab === 'whatsapp' ? 'on' : ''} onClick={() => setTab('whatsapp')}>
           WhatsApp{o && o.conversations.length > 0 && <span className="ll-count">{o.conversations.length}</span>}
         </button>
@@ -586,6 +659,8 @@ export default function AiPage() {
           )}
         </section>
       )}
+
+      {tab === 'playbook' && <PlaybookEditor />}
 
       {tab === 'whatsapp' && (
         <section>
