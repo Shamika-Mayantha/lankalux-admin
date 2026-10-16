@@ -1,6 +1,7 @@
 -- Minimal stand-in for the Supabase/LankaLux schema so the AI migration can be tested
 -- on a plain local Postgres. Not used in production.
 CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN;
+DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role NOLOGIN; END IF; END $$;
 CREATE SCHEMA auth; CREATE SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 CREATE TABLE auth.users (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), email text);

@@ -51,3 +51,20 @@ class CRM:
                ORDER BY 4 NULLS FIRST LIMIT %s""",
             days, limit,
         )
+
+    def conversation(self, conversation_id: str) -> dict | None:
+        return self.db.one(
+            """SELECT id, channel, external_id, request_id, customer_name, mode, service_window_expires_at
+               FROM public.ai_conversations WHERE id = %s""",
+            conversation_id,
+        )
+
+    def conversation_messages(self, conversation_id: str, limit: int = 12) -> list[dict]:
+        """The latest messages, oldest first, as the model should read them."""
+        rows = self.db.all(
+            """SELECT direction, sender_kind, left(body, 1500) AS body, created_at
+               FROM public.ai_messages WHERE conversation_id = %s AND status <> 'failed'
+               ORDER BY created_at DESC LIMIT %s""",
+            conversation_id, limit,
+        )
+        return list(reversed(rows))

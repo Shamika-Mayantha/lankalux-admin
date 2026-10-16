@@ -186,7 +186,11 @@ BEGIN
   VALUES ('sales', 'message.routine_reply', 1, 'Reply', c) RETURNING id INTO a;
   PERFORM public.t_expect_fail(format('SELECT public.ai_begin_action(%L)', a), '%human control%');
   UPDATE public.ai_conversations SET mode = 'ai' WHERE id = c;
+  -- While owner_approves_messages is on (the default), even Level 1 messages need the owner.
+  PERFORM public.t_expect_fail(format('SELECT public.ai_begin_action(%L)', a), '%needs owner approval%');
+  UPDATE public.ai_settings SET owner_approves_messages = false;
   PERFORM public.ai_begin_action(a);
+  UPDATE public.ai_settings SET owner_approves_messages = true;
 
   INSERT INTO public.ai_actions (agent_key, action_type, level, summary, conversation_id)
   VALUES ('sales', 'message.follow_up', 1, 'Follow up', c) RETURNING id INTO b;

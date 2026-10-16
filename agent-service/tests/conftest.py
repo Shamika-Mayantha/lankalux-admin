@@ -15,12 +15,13 @@ import psycopg
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-MIGRATION = ROOT.parent / "supabase" / "migrations" / "20261016000000_ai_agent_system.sql"
+MIGRATIONS = [ROOT.parent / "supabase" / "migrations" / name
+              for name in ("20261016000000_ai_agent_system.sql", "20261016100000_ai_whatsapp_replies.sql")]
 STUB = ROOT / "tests" / "sql" / "supabase_stub.sql"
 
 
 def _local_migration() -> str:
-    sql = MIGRATION.read_text()
+    sql = "\n".join(m.read_text() for m in MIGRATIONS)
     sql = re.sub(r"^CREATE EXTENSION IF NOT EXISTS vector.*$", "", sql, flags=re.M)
     sql = sql.replace("extensions.vector(768)", "real[]")
     sql = re.sub(r"CREATE INDEX IF NOT EXISTS ai_memory_embedding_idx[^;]*;", "", sql, flags=re.S)

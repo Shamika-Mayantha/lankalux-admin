@@ -46,6 +46,16 @@ class Actions:
             log.info("action %s waiting: %s", action_id, err.diag.message_primary)
             return None
 
+    def cancel_open_messages(self, conversation_id: str, agent_key: str) -> int:
+        """Withdraws this agent's unsent replies in a conversation, so a newer draft replaces them."""
+        rows = self.db.all(
+            """UPDATE public.ai_actions SET status = 'cancelled'
+               WHERE conversation_id = %s AND agent_key = %s AND status = 'proposed' AND action_type LIKE 'message.%%'
+               RETURNING id""",
+            conversation_id, agent_key,
+        )
+        return len(rows)
+
     def manager_decision(self, action_id: str, decision: str, note: str) -> None:
         """Only for Level 2 actions; the database refuses manager decisions on Level 3."""
         self.db.one(

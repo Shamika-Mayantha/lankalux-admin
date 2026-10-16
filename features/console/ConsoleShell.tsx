@@ -3,29 +3,91 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import {
+  BedDouble,
+  Car,
+  CreditCard,
+  FileText,
+  Globe,
+  Inbox,
+  LayoutDashboard,
+  LogOut,
+  Mail,
+  Map as MapIcon,
+  Menu,
+  Plus,
+  Settings,
+  Sparkles,
+  TrendingUp,
+  UserCog,
+  Users,
+  X,
+  type LucideIcon,
+} from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { consoleFetch } from '@/lib/console-api'
 import { INACTIVITY_MS } from '@/config/status'
 import { BRAND } from '@/config/brand'
 import { StaffProvider, type Me } from '@/features/console/StaffContext'
 import { useFollowUps } from '@/features/requests/FollowUpPanel'
+import { useConsoleGet } from '@/lib/console-api'
+import type { AiOverview } from '@/services/ai-console.service'
 
-const NAV = [
-  { href: '/console', label: 'Dashboard' },
-  { href: '/console/performance', label: 'Performance' },
-  { href: '/console/ai', label: 'AI agents' },
-  { href: '/console/requests', label: 'Requests' },
-  { href: '/console/itineraries', label: 'Itineraries' },
-  { href: '/console/invoices', label: 'Invoices' },
-  { href: '/console/payments', label: 'Payments' },
-  { href: '/console/team', label: 'Team' },
-  { href: '/console/hotels', label: 'Hotels' },
-  { href: '/console/vehicles', label: 'Vehicles' },
-  { href: '/console/clients', label: 'Clients' },
-  { href: '/console/communications', label: 'Communications' },
-  { href: '/console/website', label: 'Website' },
-  { href: '/console/settings', label: 'Settings' },
+type NavItem = { href: string; label: string; icon: LucideIcon }
+
+const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
+  {
+    label: 'Overview',
+    items: [
+      { href: '/console', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/console/ai', label: 'AI agents', icon: Sparkles },
+      { href: '/console/performance', label: 'Performance', icon: TrendingUp },
+    ],
+  },
+  {
+    label: 'Sales',
+    items: [
+      { href: '/console/requests', label: 'Requests', icon: Inbox },
+      { href: '/console/clients', label: 'Clients', icon: Users },
+      { href: '/console/communications', label: 'Messages', icon: Mail },
+      { href: '/console/itineraries', label: 'Itineraries', icon: MapIcon },
+    ],
+  },
+  {
+    label: 'Finance',
+    items: [
+      { href: '/console/invoices', label: 'Invoices', icon: FileText },
+      { href: '/console/payments', label: 'Payments', icon: CreditCard },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { href: '/console/hotels', label: 'Hotels', icon: BedDouble },
+      { href: '/console/vehicles', label: 'Vehicles', icon: Car },
+      { href: '/console/team', label: 'Team', icon: UserCog },
+    ],
+  },
+  {
+    label: 'Admin',
+    items: [
+      { href: '/console/website', label: 'Website', icon: Globe },
+      { href: '/console/settings', label: 'Settings', icon: Settings },
+    ],
+  },
 ]
+
+const NAV = NAV_GROUPS.flatMap((g) => g.items)
+
+function isActive(pathname: string, href: string) {
+  return pathname === href || (href !== '/console' && pathname.startsWith(`${href}/`))
+}
+
+function initials(me: Me) {
+  const source = (me.name && me.name !== me.email ? me.name : me.email || '?').trim()
+  const parts = source.split(/[\s@.]+/).filter(Boolean)
+  return ((parts[0]?.[0] || '?') + (parts.length > 1 && me.name !== me.email ? parts[1][0] : '')).toUpperCase()
+}
 
 /** Pages hidden from agents; their API routes use requireAdmin, which also refuses agents. */
 const SUPERVISOR_ONLY = ['/console/performance', '/console/ai', '/console/payments', '/console/team', '/console/website']
@@ -87,7 +149,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
   }, [router])
 
   useEffect(() => {
-    const item = [...NAV].reverse().find((i) => pathname === i.href || (i.href !== '/console' && pathname.startsWith(i.href)))
+    const item = NAV.find((i) => isActive(pathname, i.href))
     document.title = item ? `${item.label} · LankaLux Admin` : 'LankaLux Admin Console'
   }, [pathname])
 
@@ -106,49 +168,78 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
   }
 
   const supervisor = me.role === 'supervisor'
-  const nav = NAV.filter((item) => supervisor || !supervisorOnly(item.href))
+  const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((item) => supervisor || !supervisorOnly(item.href)) })).filter((g) => g.items.length)
   const blocked = !supervisor && supervisorOnly(pathname)
+  const current = NAV.find((i) => isActive(pathname, i.href))
 
   return (
     <StaffProvider value={me}>
       <div className={`ll-shell ${navOpen ? 'nav-open' : ''}`}>
-        <header className="ll-top">
-          <Link href="/console" className="ll-lockup" aria-label="LankaLux">
-            <img src={BRAND.logoSrc} alt="LankaLux" />
-          </Link>
-          <div className="ll-top-actions">
-            <span>
-              {me.name && me.name !== me.email ? `${me.name} · ` : ''}
-              {me.email}
-            </span>
-            <button type="button" className="ll-btn secondary" onClick={logout}>
-              Logout
-            </button>
-            <button type="button" className="ll-menu-btn" aria-label="Open navigation" onClick={() => setNavOpen((v) => !v)}>
-              <span />
-              <span />
-              <span />
+        <aside className="ll-side" aria-label="Main menu">
+          <div className="ll-side-head">
+            <Link href="/console" className="ll-brand" onClick={() => setNavOpen(false)}>
+              <img src={BRAND.logoMarkSrc} alt="" />
+              <span>
+                LankaLux
+                <small>Admin</small>
+              </span>
+            </Link>
+            <button type="button" className="ll-icon-btn ll-side-close" aria-label="Close menu" onClick={() => setNavOpen(false)}>
+              <X size={18} />
             </button>
           </div>
-        </header>
+          <nav>
+            {groups.map((g) => (
+              <div className="ll-nav-group" key={g.label}>
+                <p className="ll-nav-label">{g.label}</p>
+                {g.items.map((item) => {
+                  const Icon = item.icon
+                  const active = isActive(pathname, item.href)
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={active ? 'active' : ''}
+                      aria-current={active ? 'page' : undefined}
+                      onClick={() => setNavOpen(false)}
+                    >
+                      <Icon size={17} strokeWidth={1.75} aria-hidden />
+                      <span>{item.label}</span>
+                      {item.href === '/console/requests' ? <FollowUpBadge /> : null}
+                      {item.href === '/console/ai' && supervisor ? <AiBadge /> : null}
+                    </Link>
+                  )
+                })}
+              </div>
+            ))}
+          </nav>
+          <div className="ll-side-foot">
+            <span className="ll-avatar" aria-hidden>
+              {initials(me)}
+            </span>
+            <span className="ll-me">
+              <strong>{me.name && me.name !== me.email ? me.name : me.email}</strong>
+              <small>{supervisor ? 'Supervisor' : 'Agent'}</small>
+            </span>
+            <button type="button" className="ll-icon-btn" aria-label="Log out" title="Log out" onClick={logout}>
+              <LogOut size={17} />
+            </button>
+          </div>
+        </aside>
         <div className="ll-backdrop" onClick={() => setNavOpen(false)} />
-        <div className="ll-body">
-          <aside className="ll-side">
-            <nav>
-              {nav.map((item) => {
-                const active = pathname === item.href || (item.href !== '/console' && pathname.startsWith(item.href))
-                return (
-                  <Link key={item.href} href={item.href} className={active ? 'active' : ''} onClick={() => setNavOpen(false)}>
-                    {item.label}
-                    {item.href === '/console/requests' ? <FollowUpBadge /> : null}
-                  </Link>
-                )
-              })}
-            </nav>
-            <div className="ll-side-foot">
-              <p>{supervisor ? 'Supervisor' : 'Agent'} console</p>
+        <div className="ll-frame">
+          <header className="ll-top">
+            <button type="button" className="ll-icon-btn ll-menu-btn" aria-label="Open menu" onClick={() => setNavOpen(true)}>
+              <Menu size={20} />
+            </button>
+            <p className="ll-top-title">{current?.label || 'LankaLux'}</p>
+            <div className="ll-top-actions">
+              <Link href="/console/requests/new" className="ll-btn small">
+                <Plus size={16} aria-hidden />
+                <span>New request</span>
+              </Link>
             </div>
-          </aside>
+          </header>
           <main className="ll-main">
             {blocked ? (
               <div className="ll-card">
@@ -163,6 +254,22 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
       </div>
     </StaffProvider>
   )
+}
+
+/** Live dot plus the number of AI actions waiting for the owner. */
+function AiBadge() {
+  const { data } = useConsoleGet<{ overview?: AiOverview }>('/api/v2/ai')
+  const o = data?.overview
+  if (!o) return null
+  const waiting = o.pending.length
+  if (waiting) {
+    return (
+      <span className="ll-nav-badge gold" title={`${waiting} waiting for your approval`}>
+        {waiting}
+      </span>
+    )
+  }
+  return <span className={`ll-live-dot ${o.settings.system_paused ? 'off' : ''}`} title={o.settings.system_paused ? 'Paused' : 'Running'} />
 }
 
 /** Count of clients waiting on a reply from us, next to Requests in the side nav. */
