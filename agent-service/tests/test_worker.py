@@ -187,3 +187,14 @@ def test_sensitive_message_goes_to_a_person(test_db):
     with psycopg.connect(test_db["admin"]) as c:
         assert c.execute("SELECT count(*) FROM public.ai_actions").fetchone()[0] == 0
         assert c.execute("SELECT body FROM public.ai_notifications WHERE kind = 'attention'").fetchone()[0] == "refund request"
+
+
+def test_asking_if_human_pings_the_owner(test_db):
+    _whatsapp_hi(test_db["admin"], "Is this a real person?")
+    w = make_worker(test_db["agent"], FakeLLM(reply=Reply(kind="needs_human", reply="", reason="asked_if_human")))
+    for _ in range(2):
+        w.tick()
+    with psycopg.connect(test_db["admin"]) as c:
+        assert c.execute("SELECT count(*) FROM public.ai_actions").fetchone()[0] == 0
+        title, body = c.execute("SELECT title, body FROM public.ai_notifications WHERE kind = 'attention'").fetchone()
+    assert "real person" in title and "Is this a real person?" in body

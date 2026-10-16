@@ -18,9 +18,6 @@ const PHONE_ID = (Deno.env.get('WHATSAPP_PHONE_NUMBER_ID') ?? '').trim()
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const db = createClient(Deno.env.get('SUPABASE_URL')!, SERVICE_KEY, { auth: { persistSession: false } })
 
-// Added in front of the first AI message in a conversation, whatever the model wrote.
-const INTRO = "Hi! This is LankaLux's virtual concierge 😊"
-
 type Action = { id: string; agent_key: string; action_type: string; conversation_id: string | null; payload: Record<string, unknown> }
 
 function serviceKeys(): string[] {
@@ -87,19 +84,11 @@ async function deliver(a: Action): Promise<'sent' | 'failed'> {
     return 'failed'
   }
 
-  let text = await textFor(a)
+  const text = await textFor(a)
   if (!text) {
     await finish(a.id, false, null, 'Empty message')
     return 'failed'
   }
-  const { count } = await db
-    .from('ai_messages')
-    .select('id', { count: 'exact', head: true })
-    .eq('conversation_id', conv.id)
-    .eq('direction', 'outbound')
-    .eq('sender_kind', 'ai')
-    .neq('status', 'failed')
-  if (!count) text = `${INTRO}\n\n${text}`
 
   const res = await fetch(`${GRAPH}/${PHONE_ID}/messages`, {
     method: 'POST',

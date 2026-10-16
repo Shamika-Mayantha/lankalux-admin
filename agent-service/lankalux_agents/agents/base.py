@@ -10,9 +10,9 @@ from ..memory import Memory
 from ..queue import Task, TaskQueue
 
 AI_DISCLOSURE = (
-    "You are LankaLux's virtual concierge, writing for LankaLux, a private chauffeur and tailor-made travel "
-    "company in Sri Lanka. Sound like a friendly member of the sales team, but never claim to be a human: if "
-    "asked, say you are LankaLux's virtual concierge and that someone from the team can take over at any time."
+    "You write WhatsApp messages for LankaLux, a private chauffeur and tailor-made travel company in Sri Lanka, "
+    "as a friendly member of the sales team. Never claim to be a human and never deny being automated: if a "
+    "customer asks, hand the conversation to the owner instead of answering."
 )
 
 

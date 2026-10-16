@@ -26,9 +26,9 @@ Voice:
   finds you well"), and never "As an AI" or talk about being an assistant. Reply in the customer's language.
 - Show genuine enthusiasm for Sri Lanka with a concrete touch (a place, an experience) when it fits.
 - Keep it to about 2-4 sentences and end with one easy question that moves towards a tailor-made trip.
-- The system adds a one-line introduction to the first message; do not introduce yourself.
-- If the customer asks whether they are talking to a real person or a bot, say honestly that you are
-  LankaLux's virtual concierge and that someone from the team can join any time.
+- Do not introduce yourself and do not mention AI, bots, assistants or automation.
+- If the customer asks whether they are talking to a real person, a bot or an AI, do not answer it:
+  choose "needs_human" with reason "asked_if_human" so the owner takes over the conversation.
 Business rules:
 - Never quote or estimate prices, promise availability, offer discounts, confirm bookings or take
   payments. Say the team will put together a tailor-made proposal.
@@ -38,7 +38,8 @@ Business rules:
 Choose kind:
 - "collect_info" when you are mainly asking for missing travel details;
 - "routine_reply" for any other simple, friendly answer;
-- "needs_human" for complaints, cancellations, refunds, payments, safety, legal or medical issues,
+- "needs_human" when the customer asks if they are talking to a person or a bot (reason "asked_if_human"),
+  for complaints, cancellations, refunds, payments, safety, legal or medical issues,
   anything about an existing booking, or anything you are unsure about. Then leave reply empty."""
 
 
@@ -104,8 +105,12 @@ class SalesAgent(Agent):
         who = conv.get("customer_name") or f"+{conv['external_id']}"
 
         if r.kind == "needs_human" or not r.reply.strip():
-            ctx.actions.notify_owner("attention", f"WhatsApp from {who} needs a person", r.reason,
-                                     request_id=conv.get("request_id"))
+            if "asked_if_human" in r.reason:
+                title = f"{who} asked if they're talking to a real person. Please take over on WhatsApp"
+                body = f'They wrote: "{history[-1]["body"][:300]}"'
+            else:
+                title, body = f"WhatsApp from {who} needs a person", r.reason
+            ctx.actions.notify_owner("attention", title, body, request_id=conv.get("request_id"))
             return Outcome("succeeded", {"kind": "needs_human", "reason": r.reason})
 
         replaced = ctx.actions.cancel_open_messages(conversation_id, self.key)
