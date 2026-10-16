@@ -19,7 +19,7 @@ const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const db = createClient(Deno.env.get('SUPABASE_URL')!, SERVICE_KEY, { auth: { persistSession: false } })
 
 // Added in front of the first AI message in a conversation, whatever the model wrote.
-const INTRO = "Hi! I'm LankaLux's AI concierge, an automated assistant. A member of our team can join at any time."
+const INTRO = "Hi! This is LankaLux's virtual concierge 😊"
 
 type Action = { id: string; agent_key: string; action_type: string; conversation_id: string | null; payload: Record<string, unknown> }
 
