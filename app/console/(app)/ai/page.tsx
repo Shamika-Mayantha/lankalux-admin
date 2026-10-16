@@ -5,6 +5,7 @@ import Link from 'next/link'
 import {
   BellRing,
   Calculator,
+  Check,
   CarFront,
   Crown,
   MapPinned,
@@ -17,7 +18,7 @@ import {
 } from 'lucide-react'
 import { consoleFetch, useConsoleGet } from '@/lib/console-api'
 import { formatAgo } from '@/lib/format'
-import type { AiActivity, AiAgent, AiConversation, AiOverview, AiPendingAction, AiRunningTask } from '@/services/ai-console.service'
+import type { AiActivity, AiAgent, AiConversation, AiOverview, AiPendingAction, AiPing, AiRunningTask } from '@/services/ai-console.service'
 
 /** How often the page refreshes itself while it is open and visible. */
 const LIVE_REFRESH_MS = 5000
@@ -40,6 +41,8 @@ const TASK_LABEL: Record<string, string> = {
   check_upcoming_trips: 'checking upcoming trips',
   generate_itinerary: 'drafting an itinerary',
   review_action: 'reviewing a proposed action',
+  price_guide: 'working out a price guide',
+  status_changed: 'checking a status change',
 }
 
 /** Verb phrases; the actor's name goes in front ("Sales finished qualifying a new lead"). */
@@ -100,10 +103,15 @@ function isMessage(a: AiPendingAction) {
   return a.action_type.startsWith('message.')
 }
 
-type SendResult = { sent: number; waiting: number; failed: number; error?: string } | null
+type SendResult = { sent: number; waiting: number; failed: number; error?: string; channel?: 'email' } | null
 
 function sendNotice(r: SendResult): string | null {
   if (!r) return null
+  if (r.channel === 'email') {
+    if (r.sent) return 'Sent by email from hello@lankalux.com.'
+    if (r.failed) return 'Approved, but the email could not be sent. See the activity feed.'
+    return 'Approved. It goes out as soon as the AI system is running and messages to customers are allowed.'
+  }
   if (r.error) return `Approved. The WhatsApp sender could not be reached (${r.error}), so it will go out on the next try.`
   if (r.sent) return 'Sent on WhatsApp.'
   if (r.failed) return 'Approved, but WhatsApp did not accept it. See the conversation below.'
@@ -131,19 +139,25 @@ function PayloadPreview({ payload }: { payload: Record<string, unknown> }) {
 
 function ApprovalCard({
   a,
+  flag,
   busy,
   onDecide,
 }: {
   a: AiPendingAction
+  /** Why the AI Manager or the Quality check sent it to you, if they did. */
+  flag?: string
   busy: boolean
   onDecide: (id: string, d: 'approve' | 'reject', text?: string) => void
 }) {
   const message = isMessage(a)
-  const [text, setText] = useState(String(a.payload?.text ?? ''))
+  const email = a.payload?.channel === 'email'
+  const [text, setText] = useState(String(a.payload?.text ?? a.payload?.body ?? ''))
   return (
     <div className="ll-card ll-ai-approval">
       <div className="ll-row" style={{ justifyContent: 'space-between', gap: 8 }}>
-        <span className={`ll-pill ${a.level === 3 || message ? 'new' : 'follow_up'}`}>{message ? 'Customer message' : LEVEL_LABEL[a.level] || `Level ${a.level}`}</span>
+        <span className={`ll-pill ${a.level === 3 || message ? 'new' : 'follow_up'}`}>
+          {message ? (email ? 'Customer email' : 'Customer message') : LEVEL_LABEL[a.level] || `Level ${a.level}`}
+        </span>
         <span className="ll-muted ll-small">{formatAgo(a.created_at)}</span>
       </div>
       <h3 style={{ marginTop: 10 }}>{a.summary}</h3>
@@ -161,26 +175,70 @@ function ApprovalCard({
           {typeof a.payload?.customer_said === 'string' && (
             <p className="ll-ai-bubble in">{a.payload.customer_said}</p>
           )}
+          {flag && <p className="ll-ai-flag">{flag}</p>}
+          {email && typeof a.payload?.subject === 'string' && (
+            <p className="ll-small">
+              <span className="ll-muted">Subject:</span> {a.payload.subject}
+              {typeof a.payload?.to === 'string' && <span className="ll-muted"> · to {a.payload.to}</span>}
+            </p>
+          )}
           <label className="ll-small ll-muted" htmlFor={`reply-${a.id}`}>
-            Reply (you can edit it before sending)
+            {email ? 'Email (we add “Dear name,” and the sign-off; you can edit it)' : 'Reply (you can edit it before sending)'}
           </label>
-          <textarea id={`reply-${a.id}`} className="ll-ai-reply" rows={4} value={text} onChange={(e) => setText(e.target.value)} />
+          <textarea id={`reply-${a.id}`} className="ll-ai-reply" rows={email ? 8 : 4} value={text} onChange={(e) => setText(e.target.value)} />
           {a.reasoning && <p className="ll-muted ll-small">Why: {a.reasoning}</p>}
         </>
       ) : (
         <>
+          {flag && <p className="ll-ai-flag">{flag}</p>}
           {a.reasoning && <p className="ll-small">{a.reasoning}</p>}
           <PayloadPreview payload={a.payload} />
         </>
       )}
       <div className="ll-row" style={{ marginTop: 12 }}>
         <button className="ll-btn" disabled={busy || (message && !text.trim())} onClick={() => onDecide(a.id, 'approve', message ? text : undefined)}>
-          {message ? 'Approve and send' : 'Approve'}
+          {message ? (email ? 'Approve and email' : 'Approve and send') : 'Approve'}
         </button>
         <button className="ll-btn secondary" disabled={busy} onClick={() => onDecide(a.id, 'reject')}>
           Reject
         </button>
       </div>
+    </div>
+  )
+}
+
+function Pings({ pings, busy, onRead }: { pings: AiPing[]; busy: boolean; onRead: (ids?: string[]) => void }) {
+  if (pings.length === 0) return null
+  return (
+    <div className="ll-card ll-panel ll-pings">
+      <div className="ll-panel-head">
+        <h2>The AI Manager needs you</h2>
+        <button type="button" className="ll-btn small secondary" disabled={busy} onClick={() => onRead()}>
+          Mark all seen
+        </button>
+      </div>
+      <ul>
+        {pings.map((p) => (
+          <li key={p.id} className={p.kind}>
+            <div>
+              <strong>{p.title}</strong>
+              {p.body && <p>{p.body}</p>}
+              <small>
+                {formatAgo(p.created_at)}
+                {p.request_id && (
+                  <>
+                    {' · '}
+                    <Link href={`/console/requests/${p.request_id}`}>{p.request_id}</Link>
+                  </>
+                )}
+              </small>
+            </div>
+            <button type="button" className="ll-icon-btn" disabled={busy} aria-label="Mark seen" title="Mark seen" onClick={() => onRead([p.id])}>
+              <Check size={15} />
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -336,9 +394,19 @@ export default function AiPage() {
     if (!o) return
     const enable = !o.settings.customer_messaging_enabled
     const msg = enable
-      ? 'Allow the AI to send messages to customers? Every message still needs your approval, and you can take over any conversation.'
+      ? o.settings.owner_approves_messages
+        ? 'Allow the AI to send messages to customers? Every message still needs your approval, and you can take over any conversation.'
+        : 'Allow the AI to send messages to customers? The AI Manager approves routine ones and sends you the rest. You can take over any conversation.'
       : 'Stop all AI messages to customers?'
     if (window.confirm(msg)) send('/api/v2/ai', 'PATCH', { customer_messaging_enabled: enable })
+  }
+
+  function setApprover(owner: boolean) {
+    if (!o || o.settings.owner_approves_messages === owner) return
+    const msg = owner
+      ? 'Approve every customer message yourself again?'
+      : 'Let the AI Manager approve routine customer messages? It sends you anything unusual, and only you can approve prices, discounts, bookings and payments. You can switch back at any time.'
+    if (window.confirm(msg)) send('/api/v2/ai', 'PATCH', { owner_approves_messages: owner })
   }
 
   function decide(id: string, decision: 'approve' | 'reject', text?: string) {
@@ -406,6 +474,17 @@ export default function AiPage() {
           <strong>{loading ? '…' : o?.settings.customer_messaging_enabled ? 'Allowed' : 'Off'}</strong>
         </div>
         <div>
+          <span>Approves messages</span>
+          <div className="ll-seg ll-seg-sm" role="group" aria-label="Who approves customer messages">
+            <button type="button" className={o?.settings.owner_approves_messages ? 'on' : ''} disabled={!o || busy} onClick={() => setApprover(true)}>
+              You
+            </button>
+            <button type="button" className={o && !o.settings.owner_approves_messages ? 'on' : ''} disabled={!o || busy} onClick={() => setApprover(false)}>
+              AI Manager
+            </button>
+          </div>
+        </div>
+        <div>
           <span>Server</span>
           <strong>{loading ? '…' : workerOnline ? 'Online' : 'Offline'}</strong>
           <small>{workerSeen ? `seen ${formatAgo(workerSeen)}` : 'not started yet'}</small>
@@ -437,6 +516,7 @@ export default function AiPage() {
       {tab === 'live' && (
         <div className="ll-room">
           <section>
+            {o && <Pings pings={o.pings} busy={busy} onRead={(ids) => send('/api/v2/ai/pings', 'POST', ids ? { ids } : {})} />}
             <div className="ll-agents">
               {!o
                 ? Array.from({ length: 7 }, (_, i) => <div key={i} className="ll-agent ll-agent-skel" />)
@@ -500,7 +580,7 @@ export default function AiPage() {
           ) : (
             <div className="ll-ai-list">
               {o.pending.map((a) => (
-                <ApprovalCard key={a.id} a={a} busy={busy} onDecide={decide} />
+                <ApprovalCard key={a.id} a={a} flag={o.pings.find((p) => p.action_id === a.id && p.kind === 'approval_needed')?.body} busy={busy} onDecide={decide} />
               ))}
             </div>
           )}

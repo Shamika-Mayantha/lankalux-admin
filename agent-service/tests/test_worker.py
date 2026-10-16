@@ -8,7 +8,8 @@ from pydantic import BaseModel
 
 from lankalux_agents.actions import Actions
 from lankalux_agents.agents import ALL_AGENTS, Context
-from lankalux_agents.agents.manager import ROUTES
+from lankalux_agents.agents.followup import FollowUpEmail
+from lankalux_agents.agents.manager import ROUTES, Review
 from lankalux_agents.agents.sales import Qualification, Reply
 from lankalux_agents.crm import CRM
 from lankalux_agents.db import Database
@@ -22,23 +23,31 @@ from lankalux_agents.worker import Worker
 class FakeLLM:
     """Returns canned structured output; records what it was asked."""
 
-    def __init__(self, fail: bool = False, reply: Reply | None = None):
+    def __init__(self, fail: bool = False, reply: Reply | None = None, review: Review | None = None,
+                 qualification: Qualification | None = None, email: FollowUpEmail | None = None):
         self.calls: list[str] = []
         self.fail = fail
         self.reply = reply or Reply(kind="collect_info", reply="Lovely! When would you like to travel, and how many of you?", reason="dates and party size missing")
+        self.review = review or Review(decision="approve", reason="Routine, friendly question about dates.")
+        self.qualification = qualification or Qualification(readiness="needs_info", missing=["children's ages"], note="Family of 3, Feb; ask ages.")
+        self.email = email or FollowUpEmail(subject="Your Sri Lanka trip", body="Just checking in about your trip in March. Shall I adjust anything?")
 
     def structured(self, system, user, schema: type[BaseModel], **_):
         self.calls.append(schema.__name__)
         if self.fail:
             raise LLMError("model down")
         if schema is Qualification:
-            return Qualification(readiness="needs_info", missing=["children's ages"], note="Family of 3, Feb; ask ages.")
+            return self.qualification
         if schema is Reply:
             return self.reply
+        if schema is Review:
+            return self.review
+        if schema is FollowUpEmail:
+            return self.email
         raise AssertionError(f"unexpected schema {schema}")
 
     def embed(self, text):
-        return [0.0] * 768
+        raise LLMError("no embeddings in the local test database (pgvector is not installed)")
 
 
 def make_worker(dsn: str, llm) -> Worker:
@@ -46,6 +55,14 @@ def make_worker(dsn: str, llm) -> Worker:
     queue = TaskQueue(db, "test-worker", 60)
     ctx = Context(queue=queue, llm=llm, actions=Actions(db), crm=CRM(db), memory=Memory(db, llm))
     return Worker(ctx, db, {cls.key: cls() for cls in ALL_AGENTS}, poll_seconds=0)
+
+
+def drain(w: Worker, limit: int = 20) -> int:
+    """Runs tasks until the queue is empty; returns how many ran."""
+    n = 0
+    while n < limit and w.tick():
+        n += 1
+    return n
 
 
 def test_every_route_targets_a_real_handler():
@@ -126,41 +143,39 @@ def _whatsapp_hi(admin_dsn: str, text: str = "Hi", wamid: str = "wamid.1") -> st
     return str(conv)
 
 
-def test_whatsapp_message_becomes_a_reply_waiting_for_the_owner(test_db):
+def test_whatsapp_reply_is_reviewed_then_waits_for_the_owner(test_db):
     conv = _whatsapp_hi(test_db["admin"])
     llm = FakeLLM()
     w = make_worker(test_db["agent"], llm)
-    assert [w.tick() for _ in range(2)] == [True, True]  # route_event, then handle_inquiry
-    assert llm.calls == ["Reply"]
+    drain(w)  # route_event, handle_inquiry, quality review, manager review
+    assert llm.calls == ["Reply", "Review"]
     with psycopg.connect(test_db["admin"], autocommit=True) as c:
         action_id, kind, level, status, payload = c.execute(
             "SELECT id, action_type, level, status, payload FROM public.ai_actions WHERE conversation_id = %s", (conv,)).fetchone()
-        assert (kind, level, status) == ("message.collect_info", 1, "proposed")
+        assert (kind, level, status) == ("message.collect_info", 2, "proposed")
         assert payload["to"] == "94770000000" and "how many" in payload["text"]
-        assert c.execute("SELECT count(*) FROM public.ai_notifications WHERE kind = 'approval_needed'").fetchone()[0] == 1
+        assert c.execute("SELECT decided_by_kind, decision FROM public.ai_approvals WHERE action_id = %s", (action_id,)).fetchone() == ("manager", "approve")
+        assert "waiting for you" in c.execute("SELECT title FROM public.ai_notifications WHERE kind = 'approval_needed'").fetchone()[0]
 
-        # Even with customer messaging on, a Level 1 message needs the owner while owner_approves_messages is on.
+        # The Manager approved it, but while owner_approves_messages is on the owner still decides.
         c.execute("UPDATE public.ai_settings SET customer_messaging_enabled = true")
         try:
             c.execute("SELECT public.ai_begin_action(%s)", (action_id,))
-            raise AssertionError("gate let an unapproved customer message through")
+            raise AssertionError("gate let a customer message through without the owner")
         except psycopg.errors.RaiseException as err:
             assert "needs owner approval" in str(err)
 
-        owner = c.execute("INSERT INTO auth.users (email) VALUES ('hello@lankalux.com') RETURNING id").fetchone()[0]
-        c.execute("INSERT INTO public.admin_users (user_id, email, role, active) VALUES (%s, 'hello@lankalux.com', 'supervisor', true)", (owner,))
-        c.execute("INSERT INTO public.ai_approvals (action_id, decided_by_kind, decided_by, decision) VALUES (%s, 'owner', %s, 'approve')", (action_id, owner))
+        # Once the owner hands routine messages to the Manager, its approval is enough.
+        c.execute("UPDATE public.ai_settings SET owner_approves_messages = false")
         assert c.execute("SELECT (public.ai_begin_action(%s)).status", (action_id,)).fetchone()[0] == "executing"
 
 
 def test_newer_message_replaces_the_unsent_draft(test_db):
     conv = _whatsapp_hi(test_db["admin"])
     w = make_worker(test_db["agent"], FakeLLM())
-    for _ in range(2):
-        w.tick()
+    drain(w)
     _whatsapp_hi(test_db["admin"], "We are 2 adults in March", "wamid.2")
-    for _ in range(2):
-        w.tick()
+    drain(w)
     with psycopg.connect(test_db["admin"]) as c:
         rows = c.execute("SELECT status FROM public.ai_actions WHERE conversation_id = %s ORDER BY created_at", (conv,)).fetchall()
     assert [r[0] for r in rows] == ["cancelled", "proposed"]

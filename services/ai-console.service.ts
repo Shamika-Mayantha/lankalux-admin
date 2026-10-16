@@ -77,8 +77,23 @@ export type AiRunningTask = {
   updated_at: string
 }
 
+export type AiPing = {
+  id: string
+  kind: 'approval_needed' | 'attention' | 'error' | 'summary' | 'info'
+  title: string
+  body: string
+  request_id: string | null
+  action_id: string | null
+  created_at: string
+}
+
+/** Notifications that ask for the owner (the rest are shown in the activity feed only). */
+const PING_KINDS = ['approval_needed', 'attention', 'error']
+
 export type AiOverview = {
   settings: AiSettings
+  /** Unread notes from the agents that need the owner (Manager escalations, trip gaps, errors). */
+  pings: AiPing[]
   /** Tasks an agent is working on right now (shown live on the AI page). */
   running: AiRunningTask[]
   agents: AiAgent[]
@@ -102,7 +117,7 @@ function todayStart() {
 export async function getAiOverview(): Promise<AiOverview> {
   const db = getServiceClient()
   const since = todayStart()
-  const [settings, agents, pending, activity, queued, running, failed, executed, summary, conversations, runningTasks] = await Promise.all([
+  const [settings, agents, pending, activity, queued, running, failed, executed, summary, conversations, runningTasks, pings] = await Promise.all([
     db.from('ai_settings').select('system_paused, customer_messaging_enabled, owner_approves_messages, max_task_depth, max_tasks_per_request_per_hour, updated_at').maybeSingle(),
     db.from('ai_agents').select('key, name, description, paused, model, last_heartbeat_at, last_error').order('key'),
     db
@@ -126,6 +141,13 @@ export async function getAiOverview(): Promise<AiOverview> {
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .limit(20),
     db.from('ai_tasks').select('id, agent_key, task_type, request_id, updated_at').eq('status', 'running').order('updated_at', { ascending: false }).limit(20),
+    db
+      .from('ai_notifications')
+      .select('id, kind, title, body, request_id, action_id, created_at')
+      .is('read_at', null)
+      .in('kind', PING_KINDS)
+      .order('created_at', { ascending: false })
+      .limit(20),
   ])
   fail(settings.error, 'AI settings')
   fail(agents.error, 'AI agents')
@@ -133,6 +155,7 @@ export async function getAiOverview(): Promise<AiOverview> {
   fail(activity.error, 'AI activity')
   fail(conversations.error, 'conversations')
   fail(runningTasks.error, 'running tasks')
+  fail(pings.error, 'notifications')
   if (!settings.data) throw new AppError('The AI system is not installed in the database yet.', 503)
   const convRows = (conversations.data || []) as Omit<AiConversation, 'messages'>[]
   const byConv = new Map<string, AiMessage[]>()
@@ -151,11 +174,20 @@ export async function getAiOverview(): Promise<AiOverview> {
       byConv.set(m.conversation_id, list)
     }
   }
+  const cfg = settings.data as AiSettings
+  const pingRows = (pings.data || []) as AiPing[]
+  // While the AI Manager approves messages, the owner only sees what needs them: Level 3 work and
+  // anything the Manager or the Quality check flagged. The rest is the Manager's to decide.
+  const flagged = new Set(pingRows.filter((p) => p.kind === 'approval_needed' && p.action_id).map((p) => p.action_id))
+  const pendingRows = ((pending.data || []) as AiPendingAction[]).filter(
+    (a) => cfg.owner_approves_messages || a.level >= 3 || flagged.has(a.id)
+  )
   return {
-    settings: settings.data as AiSettings,
+    settings: cfg,
+    pings: pingRows,
     running: (runningTasks.data || []) as AiRunningTask[],
     agents: (agents.data || []) as AiAgent[],
-    pending: (pending.data || []) as AiPendingAction[],
+    pending: pendingRows,
     activity: (activity.data || []) as AiActivity[],
     conversations: convRows.map((c) => ({ ...c, messages: byConv.get(c.id) || [] })),
     counts: {
@@ -196,10 +228,13 @@ export async function flushApprovedMessages(): Promise<{ sent: number; waiting: 
   }
 }
 
-export async function updateAiSettings(staff: Staff, patch: { system_paused?: unknown; customer_messaging_enabled?: unknown }) {
+export type AiSettingsPatch = { system_paused?: unknown; customer_messaging_enabled?: unknown; owner_approves_messages?: unknown }
+
+export async function updateAiSettings(staff: Staff, patch: AiSettingsPatch) {
   const next: Record<string, unknown> = {}
   if (typeof patch.system_paused === 'boolean') next.system_paused = patch.system_paused
   if (typeof patch.customer_messaging_enabled === 'boolean') next.customer_messaging_enabled = patch.customer_messaging_enabled
+  if (typeof patch.owner_approves_messages === 'boolean') next.owner_approves_messages = patch.owner_approves_messages
   if (Object.keys(next).length === 0) throw new AppError('Nothing to change.', 400)
   const { error } = await getServiceClient()
     .from('ai_settings')
@@ -207,8 +242,23 @@ export async function updateAiSettings(staff: Staff, patch: { system_paused?: un
     .eq('id', true)
   if (error) throw new AppError(`Could not save: ${error.message}`, 500)
   await logOwner(staff, 'settings.changed', next)
-  // Replies approved while the system was paused or messaging was off can go now.
-  if (next.system_paused === false || next.customer_messaging_enabled === true) await flushApprovedMessages()
+  // Replies approved while the system was paused or messaging was off (or approved by the
+  // Manager while the owner still approved messages) can go now.
+  if (next.system_paused === false || next.customer_messaging_enabled === true || next.owner_approves_messages === false) {
+    await flushApprovedMessages()
+  }
+}
+
+/** Marks pings as seen (all of them when no ids are given). */
+export async function markPingsRead(staff: Staff, ids: unknown) {
+  let q = getServiceClient().from('ai_notifications').update({ read_at: new Date().toISOString() }).is('read_at', null)
+  if (Array.isArray(ids)) {
+    const list = ids.filter((i): i is string => typeof i === 'string' && /^[0-9a-f-]{36}$/i.test(i)).slice(0, 50)
+    if (!list.length) throw new AppError('Nothing to mark.', 400)
+    q = q.in('id', list)
+  }
+  const { error } = await q
+  if (error) throw new AppError(`Could not save: ${error.message}`, 500)
 }
 
 /** Hands a conversation to a person (the AI stops replying and its unsent drafts are withdrawn) or back to the AI. */
@@ -260,7 +310,8 @@ export async function decideAiAction(staff: Staff, id: string, decision: unknown
     const t = text.trim()
     if (!t) throw new AppError('The message is empty.', 400)
     if (t.length > 4000) throw new AppError('The message is too long.', 400)
-    if (t !== String((action.payload as { text?: unknown })?.text ?? '').trim()) edited = { text: t }
+    const p = action.payload as { text?: unknown; body?: unknown }
+    if (t !== String(p?.text ?? p?.body ?? '').trim()) edited = { text: t }
   }
 
   const { error } = await db.from('ai_approvals').insert({
@@ -277,6 +328,12 @@ export async function decideAiAction(staff: Staff, id: string, decision: unknown
     if (updErr) throw new AppError(`Could not mark it rejected: ${updErr.message}`, 500)
   }
   await logOwner(staff, decision === 'approve' ? 'action.approved' : 'action.rejected', { action_type: action.action_type, edited: !!edited }, { action_id: id, request_id: action.request_id })
+  // The owner has dealt with it, so its pings are done too.
+  await db.from('ai_notifications').update({ read_at: new Date().toISOString() }).eq('action_id', id).is('read_at', null)
+  if (decision === 'approve' && action.action_type === 'message.follow_up') {
+    const { runEmailFollowUps } = await import('@/services/ai-dispatch.service')
+    return { ...(await runEmailFollowUps()), channel: 'email' as const }
+  }
   if (decision === 'approve' && isMessage) return flushApprovedMessages()
   return null
 }

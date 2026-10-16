@@ -16,7 +16,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = [ROOT.parent / "supabase" / "migrations" / name
-              for name in ("20261016000000_ai_agent_system.sql", "20261016100000_ai_whatsapp_replies.sql")]
+              for name in ("20261016000000_ai_agent_system.sql", "20261016100000_ai_whatsapp_replies.sql",
+                           "20261016200000_ai_autonomy.sql")]
 STUB = ROOT / "tests" / "sql" / "supabase_stub.sql"
 
 

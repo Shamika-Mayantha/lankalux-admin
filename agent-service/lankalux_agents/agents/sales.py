@@ -1,6 +1,7 @@
 """Sales Agent. Qualifies new leads internally (a Level 1 note for staff) and drafts
-WhatsApp replies. A draft is only a proposed action: the database gate requires the
-owner's approval and the customer-messaging switch before the sender may deliver it."""
+WhatsApp replies. A draft is only a proposed Level 2 action: the Quality Agent checks it,
+the AI Manager approves it (or pings the owner), and the database gate still requires the
+customer-messaging switch, and the owner's approval while the owner approves messages."""
 from __future__ import annotations
 
 import json
@@ -8,7 +9,7 @@ import json
 from pydantic import BaseModel, Field
 
 from ..queue import Task
-from .base import AI_DISCLOSURE, Agent, Context, Outcome
+from .base import AI_DISCLOSURE, Agent, Context, Outcome, request_review
 
 QUALIFY_PROMPT = """You help the LankaLux sales team. From the enquiry facts, list which travel details
 are still missing for a tailor-made itinerary (dates, party size, children's ages, interests,
@@ -79,6 +80,11 @@ class SalesAgent(Agent):
         if q.escalate:
             ctx.actions.notify_owner("attention", f"Lead {req.get('client_name') or task.request_id} needs a look",
                                      q.escalate_reason or q.note, request_id=task.request_id)
+        if q.readiness == "ready":
+            # Enough detail for a proposal: the planner drafts an itinerary, pricing adds a guide for staff.
+            for agent, task_type in (("planner", "generate_itinerary"), ("pricing", "price_guide")):
+                ctx.queue.enqueue(agent, task_type, {}, request_id=task.request_id, parent=task,
+                                  dedupe_key=f"{task_type}:{task.request_id}", priority=90, created_by=self.key)
         return Outcome("succeeded", {"readiness": q.readiness, "missing": q.missing, "noted": ran is not None})
 
     def handle_inquiry(self, task: Task, ctx: Context) -> Outcome:
@@ -120,6 +126,5 @@ class SalesAgent(Agent):
             summary=f"WhatsApp reply to {who}", reasoning=r.reason,
             payload={"text": r.reply.strip(), "to": conv["external_id"], "customer_said": history[-1]["body"]},
         )
-        ctx.actions.notify_owner("approval_needed", f"WhatsApp reply to {who} is waiting for you", r.reply.strip(),
-                                 request_id=conv.get("request_id"), action_id=str(action["id"]))
+        request_review(ctx, action, task, priority=15)
         return Outcome("succeeded", {"kind": r.kind, "action_id": str(action["id"]), "replaced": replaced})
