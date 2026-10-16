@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from lankalux_agents.actions import Actions
 from lankalux_agents.agents import ALL_AGENTS, Context
 from lankalux_agents.agents.manager import ROUTES
-from lankalux_agents.agents.sales import Qualification
+from lankalux_agents.agents.sales import Qualification, Reply
 from lankalux_agents.crm import CRM
 from lankalux_agents.db import Database
 from lankalux_agents.events import schedule
@@ -22,9 +22,10 @@ from lankalux_agents.worker import Worker
 class FakeLLM:
     """Returns canned structured output; records what it was asked."""
 
-    def __init__(self, fail: bool = False):
+    def __init__(self, fail: bool = False, reply: Reply | None = None):
         self.calls: list[str] = []
         self.fail = fail
+        self.reply = reply or Reply(kind="collect_info", reply="Lovely! When would you like to travel, and how many of you?", reason="dates and party size missing")
 
     def structured(self, system, user, schema: type[BaseModel], **_):
         self.calls.append(schema.__name__)
@@ -32,6 +33,8 @@ class FakeLLM:
             raise LLMError("model down")
         if schema is Qualification:
             return Qualification(readiness="needs_info", missing=["children's ages"], note="Family of 3, Feb; ask ages.")
+        if schema is Reply:
+            return self.reply
         raise AssertionError(f"unexpected schema {schema}")
 
     def embed(self, text):
@@ -107,3 +110,80 @@ def test_paused_system_does_nothing(test_db):
         assert c.execute("SELECT count(*) FROM public.ai_tasks").fetchone()[0] == 0
         assert c.execute("SELECT count(*) FROM public.ai_events WHERE processed_at IS NULL").fetchone()[0] == 1
         assert c.execute("SELECT count(*) FROM public.ai_agents WHERE last_heartbeat_at IS NOT NULL").fetchone()[0] > 0
+
+
+def _whatsapp_hi(admin_dsn: str, text: str = "Hi", wamid: str = "wamid.1") -> str:
+    """What the whatsapp-webhook Edge Function writes for one inbound message."""
+    with psycopg.connect(admin_dsn, autocommit=True) as c:
+        conv = c.execute("""INSERT INTO public.ai_conversations (channel, external_id, customer_name, last_message_at, service_window_expires_at)
+                            VALUES ('whatsapp', '94770000000', 'Nimal', now(), now() + interval '24 hours')
+                            ON CONFLICT (channel, external_id) DO UPDATE SET last_message_at = now() RETURNING id""").fetchone()[0]
+        msg = c.execute("""INSERT INTO public.ai_messages (conversation_id, direction, sender_kind, body, provider_message_id)
+                           VALUES (%s, 'inbound', 'customer', %s, %s) RETURNING id""", (conv, text, wamid)).fetchone()[0]
+        c.execute("""INSERT INTO public.ai_events (event_type, source_table, source_id, payload, dedupe_key)
+                     VALUES ('whatsapp.message_received', 'ai_messages', %s, %s, %s)""",
+                  (str(msg), psycopg.types.json.Jsonb({"conversation_id": str(conv)}), f"wa:{wamid}"))
+    return str(conv)
+
+
+def test_whatsapp_message_becomes_a_reply_waiting_for_the_owner(test_db):
+    conv = _whatsapp_hi(test_db["admin"])
+    llm = FakeLLM()
+    w = make_worker(test_db["agent"], llm)
+    assert [w.tick() for _ in range(2)] == [True, True]  # route_event, then handle_inquiry
+    assert llm.calls == ["Reply"]
+    with psycopg.connect(test_db["admin"], autocommit=True) as c:
+        action_id, kind, level, status, payload = c.execute(
+            "SELECT id, action_type, level, status, payload FROM public.ai_actions WHERE conversation_id = %s", (conv,)).fetchone()
+        assert (kind, level, status) == ("message.collect_info", 1, "proposed")
+        assert payload["to"] == "94770000000" and "how many" in payload["text"]
+        assert c.execute("SELECT count(*) FROM public.ai_notifications WHERE kind = 'approval_needed'").fetchone()[0] == 1
+
+        # Even with customer messaging on, a Level 1 message needs the owner while owner_approves_messages is on.
+        c.execute("UPDATE public.ai_settings SET customer_messaging_enabled = true")
+        try:
+            c.execute("SELECT public.ai_begin_action(%s)", (action_id,))
+            raise AssertionError("gate let an unapproved customer message through")
+        except psycopg.errors.RaiseException as err:
+            assert "needs owner approval" in str(err)
+
+        owner = c.execute("INSERT INTO auth.users (email) VALUES ('hello@lankalux.com') RETURNING id").fetchone()[0]
+        c.execute("INSERT INTO public.admin_users (user_id, email, role, active) VALUES (%s, 'hello@lankalux.com', 'supervisor', true)", (owner,))
+        c.execute("INSERT INTO public.ai_approvals (action_id, decided_by_kind, decided_by, decision) VALUES (%s, 'owner', %s, 'approve')", (action_id, owner))
+        assert c.execute("SELECT (public.ai_begin_action(%s)).status", (action_id,)).fetchone()[0] == "executing"
+
+
+def test_newer_message_replaces_the_unsent_draft(test_db):
+    conv = _whatsapp_hi(test_db["admin"])
+    w = make_worker(test_db["agent"], FakeLLM())
+    for _ in range(2):
+        w.tick()
+    _whatsapp_hi(test_db["admin"], "We are 2 adults in March", "wamid.2")
+    for _ in range(2):
+        w.tick()
+    with psycopg.connect(test_db["admin"]) as c:
+        rows = c.execute("SELECT status FROM public.ai_actions WHERE conversation_id = %s ORDER BY created_at", (conv,)).fetchall()
+    assert [r[0] for r in rows] == ["cancelled", "proposed"]
+
+
+def test_taken_over_conversation_gets_no_ai_reply(test_db):
+    conv = _whatsapp_hi(test_db["admin"])
+    with psycopg.connect(test_db["admin"], autocommit=True) as c:
+        c.execute("UPDATE public.ai_conversations SET mode = 'human' WHERE id = %s", (conv,))
+    llm = FakeLLM()
+    w = make_worker(test_db["agent"], llm)
+    for _ in range(2):
+        w.tick()
+    assert llm.calls == []
+    with psycopg.connect(test_db["admin"]) as c:
+        assert c.execute("SELECT count(*) FROM public.ai_actions").fetchone()[0] == 0
+
+
+def test_sensitive_message_goes_to_a_person(test_db):
+    _whatsapp_hi(test_db["admin"], "I want a refund")
+    w = make_worker(test_db["agent"], FakeLLM(reply=Reply(kind="needs_human", reply="", reason="refund request")))
+    for _ in range(2):
+        w.tick()
+    with psycopg.connect(test_db["admin"]) as c:
+        assert c.execute("SELECT count(*) FROM public.ai_actions").fetchone()[0] == 0
+        assert c.execute("SELECT body FROM public.ai_notifications WHERE kind = 'attention'").fetchone()[0] == "refund request"

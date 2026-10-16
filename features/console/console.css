@@ -1264,7 +1264,16 @@ button.ll-card,
 .ll-ai-agent { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .ll-ai-activity { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .ll-ai-activity li { display: grid; grid-template-columns: 90px 1fr; gap: 10px; }
+.ll-ai-reply { width: 100%; margin-top: 4px; resize: vertical; }
+.ll-ai-thread { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; max-height: 340px; overflow-y: auto; }
+.ll-ai-bubble { max-width: 85%; margin: 6px 0; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ll-ai-thread .ll-ai-bubble { margin: 0; }
+.ll-ai-bubble.in { align-self: flex-start; background: var(--ivory); border: 1px solid var(--line); }
+.ll-ai-bubble.out { align-self: flex-end; background: var(--gold-soft); }
+.ll-ai-meta { display: block; margin-top: 4px; font-size: 0.72rem; color: var(--muted); }
 @media (max-width: 600px) {
   .ll-ai-agent { flex-direction: column; align-items: flex-start; }
+  .ll-ai-conversation > .ll-row { flex-direction: column; align-items: flex-start; }
+  .ll-ai-bubble { max-width: 100%; }
   .ll-ai-payload div, .ll-ai-activity li { grid-template-columns: 1fr; gap: 2px; }
 }
