@@ -69,8 +69,18 @@ export type AiConversation = {
   messages: AiMessage[]
 }
 
+export type AiRunningTask = {
+  id: string
+  agent_key: string
+  task_type: string
+  request_id: string | null
+  updated_at: string
+}
+
 export type AiOverview = {
   settings: AiSettings
+  /** Tasks an agent is working on right now (shown live on the AI page). */
+  running: AiRunningTask[]
   agents: AiAgent[]
   pending: AiPendingAction[]
   activity: AiActivity[]
@@ -92,7 +102,7 @@ function todayStart() {
 export async function getAiOverview(): Promise<AiOverview> {
   const db = getServiceClient()
   const since = todayStart()
-  const [settings, agents, pending, activity, queued, running, failed, executed, summary, conversations] = await Promise.all([
+  const [settings, agents, pending, activity, queued, running, failed, executed, summary, conversations, runningTasks] = await Promise.all([
     db.from('ai_settings').select('system_paused, customer_messaging_enabled, owner_approves_messages, max_task_depth, max_tasks_per_request_per_hour, updated_at').maybeSingle(),
     db.from('ai_agents').select('key, name, description, paused, model, last_heartbeat_at, last_error').order('key'),
     db
@@ -115,12 +125,14 @@ export async function getAiOverview(): Promise<AiOverview> {
       .neq('channel', 'owner')
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .limit(20),
+    db.from('ai_tasks').select('id, agent_key, task_type, request_id, updated_at').eq('status', 'running').order('updated_at', { ascending: false }).limit(20),
   ])
   fail(settings.error, 'AI settings')
   fail(agents.error, 'AI agents')
   fail(pending.error, 'approvals')
   fail(activity.error, 'AI activity')
   fail(conversations.error, 'conversations')
+  fail(runningTasks.error, 'running tasks')
   if (!settings.data) throw new AppError('The AI system is not installed in the database yet.', 503)
   const convRows = (conversations.data || []) as Omit<AiConversation, 'messages'>[]
   const byConv = new Map<string, AiMessage[]>()
@@ -141,6 +153,7 @@ export async function getAiOverview(): Promise<AiOverview> {
   }
   return {
     settings: settings.data as AiSettings,
+    running: (runningTasks.data || []) as AiRunningTask[],
     agents: (agents.data || []) as AiAgent[],
     pending: (pending.data || []) as AiPendingAction[],
     activity: (activity.data || []) as AiActivity[],

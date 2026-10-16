@@ -1,10 +1,86 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import {
+  BellRing,
+  Calculator,
+  CarFront,
+  Crown,
+  MapPinned,
+  MessagesSquare,
+  Pause,
+  Play,
+  ShieldCheck,
+  Bot,
+  type LucideIcon,
+} from 'lucide-react'
 import { consoleFetch, useConsoleGet } from '@/lib/console-api'
 import { formatAgo } from '@/lib/format'
-import type { AiConversation, AiOverview, AiPendingAction } from '@/services/ai-console.service'
+import type { AiActivity, AiAgent, AiConversation, AiOverview, AiPendingAction, AiRunningTask } from '@/services/ai-console.service'
+
+/** How often the page refreshes itself while it is open and visible. */
+const LIVE_REFRESH_MS = 5000
+
+const AGENT_ICON: Record<string, LucideIcon> = {
+  manager: Crown,
+  sales: MessagesSquare,
+  planner: MapPinned,
+  pricing: Calculator,
+  followup: BellRing,
+  operations: CarFront,
+  quality: ShieldCheck,
+}
+
+const TASK_LABEL: Record<string, string> = {
+  qualify_lead: 'qualifying a new lead',
+  handle_inquiry: 'drafting a WhatsApp reply',
+  daily_summary: 'writing the daily summary',
+  scan_follow_ups: 'checking for quiet leads',
+  check_upcoming_trips: 'checking upcoming trips',
+  generate_itinerary: 'drafting an itinerary',
+  review_action: 'reviewing a proposed action',
+}
+
+/** Verb phrases; the actor's name goes in front ("Sales finished qualifying a new lead"). */
+const EVENT_LABEL: Record<string, string> = {
+  'task.succeeded': 'finished',
+  'task.failed': 'failed',
+  'task.retry': 'will retry',
+  'task.waiting': 'is waiting on',
+  'action.begin': 'started an approved action',
+  'action.executed': 'completed an action',
+  'action.failed': 'could not complete an action',
+  'action.approved': 'approved an action',
+  'action.rejected': 'rejected an action',
+  'settings.changed': 'changed the AI settings',
+  'agent.paused': 'paused an agent',
+  'agent.resumed': 'resumed an agent',
+  'conversation.taken_over': 'took over a conversation',
+  'conversation.handed_back': 'handed a conversation back to the AI',
+  'task.rate_limit': 'hit the hourly limit for a request',
+  'task.depth_limit': 'stopped a chain of tasks at the depth limit',
+}
+
+function capitalise(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+function taskLabel(type: unknown) {
+  const t = String(type || '')
+  return TASK_LABEL[t] || readable(t)
+}
+
+function describe(e: AiActivity) {
+  const base = EVENT_LABEL[e.event] || readable(e.event)
+  if (e.event.startsWith('task.') && e.detail?.task_type) return `${base} ${taskLabel(e.detail.task_type)}`
+  return base
+}
+
+function actorName(e: AiActivity, agents: AiAgent[]) {
+  if (e.actor_kind === 'owner') return 'You'
+  return agents.find((a) => a.key === e.agent_key)?.name || e.agent_key || 'System'
+}
 
 const LEVEL_LABEL: Record<number, string> = { 2: 'Manager or you', 3: 'Needs you' }
 
@@ -143,12 +219,94 @@ function ConversationCard({ c, busy, onMode }: { c: AiConversation; busy: boolea
   )
 }
 
+type AgentState = 'working' | 'idle' | 'paused' | 'offline'
+
+function agentState(ag: AiAgent, o: AiOverview, task: AiRunningTask | undefined): AgentState {
+  if (ag.paused || o.settings.system_paused) return 'paused'
+  if (!online(ag.last_heartbeat_at)) return 'offline'
+  return task ? 'working' : 'idle'
+}
+
+const STATE_LABEL: Record<AgentState, string> = { working: 'Working', idle: 'Idle', paused: 'Paused', offline: 'Offline' }
+
+function AgentCard({ ag, o, busy, onToggle }: { ag: AiAgent; o: AiOverview; busy: boolean; onToggle: () => void }) {
+  const task = o.running.find((t) => t.agent_key === ag.key)
+  const state = agentState(ag, o, task)
+  const last = o.activity.find((e) => e.agent_key === ag.key && e.actor_kind !== 'owner')
+  const Icon = AGENT_ICON[ag.key] || Bot
+  return (
+    <div className={`ll-agent ${state} ${ag.key === 'manager' ? 'lead' : ''}`}>
+      <div className="ll-agent-top">
+        <span className="ll-agent-icon" aria-hidden>
+          <Icon size={18} strokeWidth={1.75} />
+        </span>
+        <div className="ll-agent-name">
+          <strong>{ag.name}</strong>
+          <span className={`ll-agent-state ${state}`}>{STATE_LABEL[state]}</span>
+        </div>
+        <button
+          type="button"
+          className="ll-icon-btn"
+          disabled={busy}
+          aria-label={ag.paused ? `Resume ${ag.name}` : `Pause ${ag.name}`}
+          title={ag.paused ? 'Resume this agent' : 'Pause this agent'}
+          onClick={onToggle}
+        >
+          {ag.paused ? <Play size={15} /> : <Pause size={15} />}
+        </button>
+      </div>
+      <p className="ll-agent-now">
+        {state === 'working' && task ? (
+          <>
+            Now {taskLabel(task.task_type)}
+            {task.request_id && <span className="ll-muted"> · {task.request_id}</span>}
+            <span className="ll-dots" aria-hidden>
+              <i />
+              <i />
+              <i />
+            </span>
+          </>
+        ) : last ? (
+          <span className="ll-muted">
+            {capitalise(describe(last))} · {formatAgo(last.created_at)}
+          </span>
+        ) : (
+          <span className="ll-muted">{ag.description}</span>
+        )}
+      </p>
+      {ag.last_error && <p className="ll-agent-error">Last error: {ag.last_error}</p>}
+    </div>
+  )
+}
+
+function secondsSince(at: number | null) {
+  return at ? Math.max(0, Math.round((Date.now() - at) / 1000)) : null
+}
+
+type Tab = 'live' | 'approvals' | 'whatsapp'
+
 export default function AiPage() {
-  const { data, error, loading, reload } = useConsoleGet<{ overview?: AiOverview }>('/api/v2/ai')
+  const { data, error, loading, reload, refreshing } = useConsoleGet<{ overview?: AiOverview }>('/api/v2/ai')
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [tab, setTab] = useState<Tab>('live')
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null)
+  const [, setTick] = useState(0)
   const o = data?.overview
+
+  // Live view: refresh every few seconds while the tab is visible.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        reload()
+          .then(() => setUpdatedAt(Date.now()))
+          .catch(() => {})
+      }
+      setTick((t) => t + 1)
+    }, LIVE_REFRESH_MS)
+    return () => clearInterval(id)
+  }, [reload])
 
   async function send(path: string, method: string, body: unknown) {
     setBusy(true)
@@ -169,7 +327,7 @@ export default function AiPage() {
     if (!o) return
     const resume = o.settings.system_paused
     const msg = resume
-      ? 'Start the AI system? Agents will begin working on CRM events (internal work only unless customer messaging is also on).'
+      ? 'Start the AI system? Agents will begin working on CRM events (internal work only unless customer messages are also allowed).'
       : 'Pause the whole AI system? Agents stop picking up work and nothing new runs.'
     if (window.confirm(msg)) send('/api/v2/ai', 'PATCH', { system_paused: !resume })
   }
@@ -178,7 +336,7 @@ export default function AiPage() {
     if (!o) return
     const enable = !o.settings.customer_messaging_enabled
     const msg = enable
-      ? 'Allow the AI to send messages to customers? Every message still follows the approval levels, and you can take over any conversation.'
+      ? 'Allow the AI to send messages to customers? Every message still needs your approval, and you can take over any conversation.'
       : 'Stop all AI messages to customers?'
     if (window.confirm(msg)) send('/api/v2/ai', 'PATCH', { customer_messaging_enabled: enable })
   }
@@ -198,145 +356,175 @@ export default function AiPage() {
 
   const workerSeen = o?.agents.reduce<string | null>((latest, a) => (a.last_heartbeat_at && (!latest || a.last_heartbeat_at > latest) ? a.last_heartbeat_at : latest), null) ?? null
   const workerOnline = online(workerSeen)
+  const agents = useMemo(() => {
+    const list = [...(o?.agents || [])]
+    return list.sort((a, b) => (a.key === 'manager' ? -1 : b.key === 'manager' ? 1 : 0))
+  }, [o])
+  const live = !!o && !o.settings.system_paused && workerOnline
+  const secondsAgo = secondsSince(updatedAt)
 
   return (
-    <div>
-      <h1 className="ll-h1">AI agents</h1>
-      <p className="ll-sub">Your AI General Manager and its team. Approve what needs you, and pause anything at any time.</p>
+    <div className="ll-airoom">
+      <div className="ll-page-head">
+        <div>
+          <h1 className="ll-h1">AI control room</h1>
+          <p className="ll-sub">
+            <span className={`ll-live ${live ? 'on' : ''}`}>{live ? 'Live' : o?.settings.system_paused ? 'Paused' : 'Server offline'}</span>
+            <span className="ll-muted"> · {secondsAgo === null || secondsAgo < 3 || refreshing ? 'updated just now' : `updated ${secondsAgo}s ago`} · refreshes every {LIVE_REFRESH_MS / 1000}s</span>
+          </p>
+        </div>
+        {o && (
+          <div className="ll-row" style={{ gap: 8 }}>
+            <button className={`ll-btn small secondary`} disabled={busy} onClick={toggleMessaging}>
+              {o.settings.customer_messaging_enabled ? 'Stop customer messages' : 'Allow customer messages'}
+            </button>
+            <button className={`ll-btn small ${o.settings.system_paused ? '' : 'danger'}`} disabled={busy} onClick={togglePause}>
+              {o.settings.system_paused ? (
+                <>
+                  <Play size={15} aria-hidden /> Start
+                </>
+              ) : (
+                <>
+                  <Pause size={15} aria-hidden /> Pause everything
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
       {error && <div className="ll-error">{error}</div>}
       {actionError && <div className="ll-error">{actionError}</div>}
       {notice && <div className="ll-ok">{notice}</div>}
 
-      <div className="ll-grid">
-        <div className="ll-card">
-          <h3>AI system</h3>
-          <p className="ll-stat">{loading ? <span className="ll-skel ll-skel-stat" /> : o?.settings.system_paused ? 'Paused' : 'Running'}</p>
-          {o && (
-            <button className={`ll-btn ${o.settings.system_paused ? '' : 'danger'}`} disabled={busy} onClick={togglePause}>
-              {o.settings.system_paused ? 'Start' : 'Pause everything'}
-            </button>
-          )}
+      <div className="ll-statbar">
+        <div>
+          <span>AI system</span>
+          <strong>{loading ? '…' : o?.settings.system_paused ? 'Paused' : 'Running'}</strong>
         </div>
-        <div className="ll-card">
-          <h3>Messages to customers</h3>
-          <p className="ll-stat">{loading ? <span className="ll-skel ll-skel-stat" /> : o?.settings.customer_messaging_enabled ? 'Allowed' : 'Off'}</p>
-          {o && (
-            <button className={`ll-btn ${o.settings.customer_messaging_enabled ? 'danger' : 'secondary'}`} disabled={busy} onClick={toggleMessaging}>
-              {o.settings.customer_messaging_enabled ? 'Turn off' : 'Allow'}
-            </button>
-          )}
+        <div>
+          <span>Customer messages</span>
+          <strong>{loading ? '…' : o?.settings.customer_messaging_enabled ? 'Allowed' : 'Off'}</strong>
         </div>
-        <div className="ll-card">
-          <h3>Server</h3>
-          <p className="ll-stat">{loading ? <span className="ll-skel ll-skel-stat" /> : workerOnline ? 'Online' : 'Offline'}</p>
-          <span className="ll-muted ll-small">{workerSeen ? `Last seen ${formatAgo(workerSeen)}` : 'Not started yet'}</span>
+        <div>
+          <span>Server</span>
+          <strong>{loading ? '…' : workerOnline ? 'Online' : 'Offline'}</strong>
+          <small>{workerSeen ? `seen ${formatAgo(workerSeen)}` : 'not started yet'}</small>
         </div>
-        <div className="ll-card">
-          <h3>Waiting for you</h3>
-          <p className="ll-stat">{loading ? <span className="ll-skel ll-skel-stat" /> : o?.pending.length}</p>
-          {o && (
-            <span className="ll-muted ll-small">
-              {o.counts.queued} queued · {o.counts.executed_today} done today · {o.counts.failed_today} failed today
-            </span>
-          )}
+        <div>
+          <span>Working now</span>
+          <strong>{o ? o.counts.running : '…'}</strong>
+          <small>{o ? `${o.counts.queued} queued` : ''}</small>
+        </div>
+        <div>
+          <span>Today</span>
+          <strong>{o ? o.counts.executed_today : '…'}</strong>
+          <small>{o ? `done · ${o.counts.failed_today} failed` : ''}</small>
         </div>
       </div>
 
-      <section className="ll-category">
-        <div className="ll-category-head">
-          <h2>Approvals</h2>
-          <span className="ll-muted">Approving lets the agent go ahead; the database checks your approval again before anything runs.</span>
-        </div>
-        {!o ? (
-          <p className="ll-muted">Loading…</p>
-        ) : o.pending.length === 0 ? (
-          <div className="ll-card">
-            <p className="ll-muted">Nothing is waiting for you.</p>
-          </div>
-        ) : (
-          <div className="ll-ai-list">
-            {o.pending.map((a) => (
-              <ApprovalCard key={a.id} a={a} busy={busy} onDecide={decide} />
-            ))}
-          </div>
-        )}
-      </section>
+      <div className="ll-seg ll-room-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={tab === 'live'} className={tab === 'live' ? 'on' : ''} onClick={() => setTab('live')}>
+          Live
+        </button>
+        <button type="button" role="tab" aria-selected={tab === 'approvals'} className={tab === 'approvals' ? 'on' : ''} onClick={() => setTab('approvals')}>
+          Approvals{o && o.pending.length > 0 && <span className="ll-count">{o.pending.length}</span>}
+        </button>
+        <button type="button" role="tab" aria-selected={tab === 'whatsapp'} className={tab === 'whatsapp' ? 'on' : ''} onClick={() => setTab('whatsapp')}>
+          WhatsApp{o && o.conversations.length > 0 && <span className="ll-count">{o.conversations.length}</span>}
+        </button>
+      </div>
 
-      <section className="ll-category">
-        <div className="ll-category-head">
-          <h2>WhatsApp conversations</h2>
-          <span className="ll-muted">Take over a conversation to stop the AI replying to that customer.</span>
+      {tab === 'live' && (
+        <div className="ll-room">
+          <section>
+            <div className="ll-agents">
+              {!o
+                ? Array.from({ length: 7 }, (_, i) => <div key={i} className="ll-agent ll-agent-skel" />)
+                : agents.map((ag) => (
+                    <AgentCard key={ag.key} ag={ag} o={o} busy={busy} onToggle={() => send(`/api/v2/ai/agents/${ag.key}`, 'PATCH', { paused: !ag.paused })} />
+                  ))}
+            </div>
+            {o?.summary && (
+              <div className="ll-card ll-panel" style={{ marginTop: 16 }}>
+                <div className="ll-panel-head">
+                  <h2>Daily summary</h2>
+                  <span className="ll-muted ll-small">{o.summary.day}</span>
+                </div>
+                <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{o.summary.summary}</p>
+              </div>
+            )}
+          </section>
+          <section className="ll-card ll-panel ll-feed">
+            <div className="ll-panel-head">
+              <h2>Activity</h2>
+              <span className={`ll-live ${live ? 'on' : ''}`}>{live ? 'Live' : 'Idle'}</span>
+            </div>
+            {!o || o.activity.length === 0 ? (
+              <p className="ll-empty">No activity yet. When the agents start working, every step shows up here.</p>
+            ) : (
+              <ol>
+                {o.activity.map((e) => (
+                  <li key={e.id} className={e.event.endsWith('failed') ? 'bad' : e.actor_kind === 'owner' ? 'you' : ''}>
+                    <span className="ll-feed-dot" aria-hidden />
+                    <div>
+                      <p>
+                        <strong>{actorName(e, o.agents)}</strong> {describe(e)}
+                        {e.request_id && (
+                          <>
+                            {' · '}
+                            <Link href={`/console/requests/${e.request_id}`}>{e.request_id}</Link>
+                          </>
+                        )}
+                      </p>
+                      <small>{formatAgo(e.created_at)}</small>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
         </div>
-        {!o || o.conversations.length === 0 ? (
-          <div className="ll-card">
-            <p className="ll-muted">No conversations yet.</p>
-          </div>
-        ) : (
-          <div className="ll-ai-list">
-            {o.conversations.map((c) => (
-              <ConversationCard key={c.id} c={c} busy={busy} onMode={setMode} />
-            ))}
-          </div>
-        )}
-      </section>
+      )}
 
-      {o?.summary && (
-        <section className="ll-category">
-          <div className="ll-category-head">
-            <h2>Daily summary</h2>
-            <span className="ll-muted">{o.summary.day}</span>
-          </div>
-          <div className="ll-card">
-            <p style={{ whiteSpace: 'pre-wrap' }}>{o.summary.summary}</p>
-          </div>
+      {tab === 'approvals' && (
+        <section>
+          <p className="ll-muted ll-small" style={{ margin: '0 0 12px' }}>
+            Approving lets the agent go ahead. The database checks your approval again before anything runs.
+          </p>
+          {!o ? (
+            <p className="ll-muted">Loading…</p>
+          ) : o.pending.length === 0 ? (
+            <div className="ll-card">
+              <p className="ll-empty">Nothing is waiting for you.</p>
+            </div>
+          ) : (
+            <div className="ll-ai-list">
+              {o.pending.map((a) => (
+                <ApprovalCard key={a.id} a={a} busy={busy} onDecide={decide} />
+              ))}
+            </div>
+          )}
         </section>
       )}
 
-      <section className="ll-category">
-        <div className="ll-category-head">
-          <h2>Agents</h2>
-          <span className="ll-muted">A paused agent picks up no new work.</span>
-        </div>
-        <div className="ll-ai-list">
-          {(o?.agents || []).map((ag) => (
-            <div className="ll-card ll-ai-agent" key={ag.key}>
-              <div>
-                <h3>
-                  {ag.name} {ag.paused && <span className="ll-pill expired">Paused</span>}
-                </h3>
-                <p className="ll-muted ll-small">{ag.description}</p>
-                {ag.last_error && <p className="ll-small" style={{ color: 'var(--error-text)' }}>Last error: {ag.last_error}</p>}
-              </div>
-              <button className="ll-btn secondary" disabled={busy} onClick={() => send(`/api/v2/ai/agents/${ag.key}`, 'PATCH', { paused: !ag.paused })}>
-                {ag.paused ? 'Resume' : 'Pause'}
-              </button>
+      {tab === 'whatsapp' && (
+        <section>
+          <p className="ll-muted ll-small" style={{ margin: '0 0 12px' }}>
+            Take over a conversation to stop the AI replying to that customer.
+          </p>
+          {!o || o.conversations.length === 0 ? (
+            <div className="ll-card">
+              <p className="ll-empty">No conversations yet.</p>
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="ll-category">
-        <div className="ll-category-head">
-          <h2>Recent activity</h2>
-        </div>
-        <div className="ll-card">
-          {!o || o.activity.length === 0 ? (
-            <p className="ll-muted">No activity yet.</p>
           ) : (
-            <ul className="ll-ai-activity">
-              {o.activity.map((e) => (
-                <li key={e.id}>
-                  <span className="ll-muted ll-small">{formatAgo(e.created_at)}</span>
-                  <span>
-                    {e.actor_kind === 'owner' ? 'You' : e.agent_key || e.actor_kind} · {readable(e.event)}
-                    {e.request_id && <span className="ll-muted"> · {e.request_id}</span>}
-                  </span>
-                </li>
+            <div className="ll-ai-list ll-convs">
+              {o.conversations.map((c) => (
+                <ConversationCard key={c.id} c={c} busy={busy} onMode={setMode} />
               ))}
-            </ul>
+            </div>
           )}
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   )
 }
