@@ -15,6 +15,7 @@ dev = ["pytest>=8"]
 [project.scripts]
 lankalux-agents = "lankalux_agents.worker:main"
 lankalux-bench = "lankalux_agents.bench:main"
+lankalux-testdrive = "lankalux_agents.testdrive:main"
 
 [build-system]
 requires = ["setuptools>=69"]

@@ -80,6 +80,7 @@ class Worker:
         for key in self.agents:
             self.db.one("SELECT public.ai_heartbeat(%s, %s)", key, error)
         self.ctx.prompts.update(load_prompts(self.db))
+        self.ctx.playbook = load_playbook(self.db, self.ctx.playbook)
         self._last_beat = time.monotonic()
 
     def run_forever(self) -> None:
@@ -95,6 +96,16 @@ class Worker:
 def load_prompts(db: Database) -> dict[str, str]:
     """Owner-approved prompts. The agent role can read but never write these."""
     return {r["key"]: r["system_prompt"] for r in db.all("SELECT key, system_prompt FROM public.ai_agents") if r["system_prompt"]}
+
+
+def load_playbook(db: Database, current: str = "") -> str:
+    """The owner's playbook. Keeps the last good copy if the read fails."""
+    try:
+        row = db.one("SELECT playbook FROM public.ai_settings WHERE id")
+    except Exception as err:  # column not there yet, or a blip
+        log.warning("playbook not loaded: %s", err)
+        return current
+    return (row or {}).get("playbook") or ""
 
 
 def main() -> None:

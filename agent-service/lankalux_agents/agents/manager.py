@@ -58,6 +58,7 @@ class Summary(BaseModel):
 
 class ManagerAgent(Agent):
     key = "manager"
+    uses_playbook = True
     handlers = {
         "route_event": "route_event",
         "review_action": "review_action",
