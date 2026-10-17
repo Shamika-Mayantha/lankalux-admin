@@ -25,6 +25,7 @@ class Context:
     memory: Memory
     prompts: dict[str, str] = field(default_factory=dict)  # owner-approved prompts from ai_agents
     playbook: str = ""  # owner-edited business facts and writing rules (ai_settings.playbook)
+    review_llm: LLM | None = None  # the AI Manager's model when it differs from the drafters'
 
 
 @dataclass

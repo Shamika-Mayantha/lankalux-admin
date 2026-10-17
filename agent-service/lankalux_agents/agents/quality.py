@@ -22,6 +22,9 @@ PROMISES = re.compile(
 )
 SELF_DISCLOSURE = re.compile(r"\b(?:as an ai|i am an ai|i'm an ai|language model|chatbot|i am a bot|i'm a bot|virtual assistant)\b", re.I)
 HUMAN_CLAIM = re.compile(r"\b(?:i am|i'm) (?:a )?(?:real )?(?:human|person)\b|\bnot a (?:bot|robot|ai)\b", re.I)
+# Saying something was already changed, added or booked: only the team does that.
+CHANGE_CLAIM = re.compile(
+    r"\b(?:we|i)(?:'ve| have)\s+(?:already\s+)?(?:added|changed|updated|swapped|replaced|removed|reserved|booked|arranged|moved)\b", re.I)
 # "Sightings aren't guaranteed" is the honest thing to say, not a promise.
 NO_GUARANTEE = re.compile(
     r"\b(?:not|never|aren't|isn't|can't|cannot|can never be|no)\s+(?:be\s+|always\s+)?guarantee[ds]?\b|\bno guarantees?\b", re.I)
@@ -67,6 +70,8 @@ def check_text(text: str, *, max_len: int = 1000) -> tuple[list[str], list[str]]
         hard.append("Mentions a price or an amount. Only the owner may quote prices.")
     if PROMISES.search(NO_GUARANTEE.sub("", t)):
         hard.append("Promises a discount, booking, payment or refund. Only the owner may do that.")
+    if CHANGE_CLAIM.search(t):
+        hard.append("Says we already changed, added or booked something. Only the team does that.")
     if HUMAN_CLAIM.search(t):
         hard.append("Claims to be a human. The AI must never do that.")
     if SELF_DISCLOSURE.search(t):

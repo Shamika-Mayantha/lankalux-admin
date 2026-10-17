@@ -123,7 +123,10 @@ class SalesAgent(Agent):
                 title = f"{who} asked if they're talking to a real person. Please take over on WhatsApp"
                 body = f'They wrote: "{history[-1]["body"][:300]}"'
             else:
-                title, body = f"WhatsApp from {who} needs a person", r.reason
+                title = f"WhatsApp from {who} needs a person"
+                said = f'They wrote: "{history[-1]["body"][:300]}"'
+                # A complaint the model labelled "asked_if_human" would otherwise reach the owner as that label.
+                body = said if "asked_if_human" in r.reason else f"{r.reason}. {said}"
             ctx.actions.notify_owner("attention", title, body, request_id=conv.get("request_id"))
             return Outcome("succeeded", {"kind": "needs_human", "reason": r.reason})
 

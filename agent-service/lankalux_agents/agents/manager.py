@@ -98,7 +98,7 @@ class ManagerAgent(Agent):
             "quality_findings": task.payload.get("quality"),
             "past_corrections": ctx.memory.recall(action.get("summary", ""), limit=3),
         }
-        review = ctx.llm.structured(
+        review = (ctx.review_llm or ctx.llm).structured(
             self.system_prompt(ctx, MANAGER_PROMPT), json.dumps(facts, default=str), Review
         )
         customer_facing = action["action_type"].startswith("message.")

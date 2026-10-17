@@ -52,10 +52,10 @@ class FakeLLM:
         raise LLMError("no embeddings in the local test database (pgvector is not installed)")
 
 
-def make_worker(dsn: str, llm) -> Worker:
+def make_worker(dsn: str, llm, review_llm=None) -> Worker:
     db = Database(dsn, max_size=2)
     queue = TaskQueue(db, "test-worker", 60)
-    ctx = Context(queue=queue, llm=llm, actions=Actions(db), crm=CRM(db), memory=Memory(db, llm))
+    ctx = Context(queue=queue, llm=llm, actions=Actions(db), crm=CRM(db), memory=Memory(db, llm), review_llm=review_llm)
     return Worker(ctx, db, {cls.key: cls() for cls in ALL_AGENTS}, poll_seconds=0)
 
 
@@ -203,7 +203,8 @@ def test_sensitive_message_goes_to_a_person(test_db):
         w.tick()
     with psycopg.connect(test_db["admin"]) as c:
         assert c.execute("SELECT count(*) FROM public.ai_actions").fetchone()[0] == 0
-        assert c.execute("SELECT body FROM public.ai_notifications WHERE kind = 'attention'").fetchone()[0] == "refund request"
+        assert c.execute("SELECT body FROM public.ai_notifications WHERE kind = 'attention'").fetchone()[0] == \
+            'refund request. They wrote: "I want a refund"'
 
 
 def test_asking_if_human_pings_the_owner(test_db):
@@ -225,4 +226,6 @@ def test_complaint_is_not_reported_as_asking_if_human(test_db):
         w.tick()
     with psycopg.connect(test_db["admin"]) as c:
         title = c.execute("SELECT title FROM public.ai_notifications WHERE kind = 'attention'").fetchone()[0]
+        body = c.execute("SELECT body FROM public.ai_notifications WHERE kind = 'attention'").fetchone()[0]
     assert "needs a person" in title and "real person" not in title
+    assert body == 'They wrote: "Our driver was 40 minutes late. Not impressed."'
