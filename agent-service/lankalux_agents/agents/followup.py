@@ -3,7 +3,7 @@ gone quiet, and drafts a short, personal follow-up email for each. A draft is a 
 message.follow_up: the Quality Agent and the AI Manager review it, and the console's
 dispatcher sends it from hello@lankalux.com only once the database gate allows it.
 
-Limits (plain code): at most 3 drafts per run, one follow-up per lead every 4 days,
+Limits (plain code): at most 3 drafts per run, a first follow-up after 5 quiet days, the next no sooner than 10 days later,
 at most 2 automated follow-ups per lead in total, and only leads with an email address."""
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ from ..queue import Task
 from .base import Agent, Context, Outcome, request_review
 from .quality import tidy_email_body
 
-QUIET_DAYS = 3
-MIN_GAP_DAYS = 4
+QUIET_DAYS = 5
+MIN_GAP_DAYS = 10
 MAX_FOLLOW_UPS = 2
 PER_RUN = 3
 

@@ -33,6 +33,7 @@ class Worker:
         self.poll_seconds = poll_seconds
         self.stopping = False
         self._last_beat = 0.0
+        self._scheduled: set[str] = set()
 
     def stop(self, *_: object) -> None:
         log.info("stopping after the current task")
@@ -58,7 +59,7 @@ class Worker:
         if self.paused():
             return False
         pump_events(self.db, self.ctx.queue)
-        schedule(self.ctx.queue)
+        schedule(self.ctx.queue, done=self._scheduled)
         tasks = self.ctx.queue.claim(1)
         if not tasks:
             return False

@@ -27,12 +27,21 @@ def pump_events(db: Database, queue: TaskQueue, limit: int = 50) -> int:
     return len(rows)
 
 
-def schedule(queue: TaskQueue, now: datetime | None = None) -> None:
+def schedule(queue: TaskQueue, now: datetime | None = None, done: set[str] | None = None) -> None:
+    """Queues each period's work once. The database only dedupes tasks still waiting or running,
+    so `done` (kept by the worker) stops a finished or failed period being queued again every tick."""
     local = (now or datetime.now(COLOMBO)).astimezone(COLOMBO)
+    jobs = []
     if local.hour >= DAILY_SUMMARY_HOUR:
         day = local.date().isoformat()
-        queue.enqueue("manager", "daily_summary", {"day": day}, dedupe_key=f"daily_summary:{day}", priority=90)
+        jobs.append(("manager", "daily_summary", {"day": day}, f"daily_summary:{day}", 90))
     if 8 <= local.hour < 20:
         stamp = local.strftime("%Y-%m-%dT%H")
-        queue.enqueue("followup", "scan_follow_ups", {}, dedupe_key=f"followups:{stamp}", priority=120)
-        queue.enqueue("operations", "check_upcoming_trips", {}, dedupe_key=f"trips:{stamp}", priority=120)
+        jobs.append(("followup", "scan_follow_ups", {}, f"followups:{stamp}", 120))
+        jobs.append(("operations", "check_upcoming_trips", {}, f"trips:{stamp}", 120))
+    for agent, task_type, payload, key, priority in jobs:
+        if done is not None and key in done:
+            continue
+        queue.enqueue(agent, task_type, payload, dedupe_key=key, priority=priority)
+        if done is not None:
+            done.add(key)

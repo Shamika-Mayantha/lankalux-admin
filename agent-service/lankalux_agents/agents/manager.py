@@ -122,13 +122,16 @@ class ManagerAgent(Agent):
         return Outcome("succeeded", {"decision": review.decision, "reason": review.reason})
 
     def daily_summary(self, task: Task, ctx: Context) -> Outcome:
+        day = task.payload.get("day") or date.today().isoformat()
+        if ctx.actions.db.one("SELECT 1 AS done FROM public.ai_daily_summaries WHERE day = %s", day):
+            return Outcome("succeeded", {"day": day, "skipped": "already written"})
         facts = ctx.crm.day_stats()
         facts["stale_follow_ups"] = ctx.crm.stale_follow_ups(limit=10)
-        out = ctx.llm.structured(SUMMARY_PROMPT, json.dumps(facts, default=str), Summary, temperature=0.3)
-        day = task.payload.get("day") or date.today().isoformat()
+        facts_json = json.dumps(facts, default=str)  # dates and timestamps become text
+        out = ctx.llm.structured(SUMMARY_PROMPT, facts_json, Summary, temperature=0.3)
         ctx.actions.db.one(
             "INSERT INTO public.ai_daily_summaries (day, summary, stats) VALUES (%s, %s, %s) ON CONFLICT (day) DO NOTHING RETURNING day",
-            day, out.summary, jsonb(facts),
+            day, out.summary, jsonb(json.loads(facts_json)),
         )
         ctx.actions.notify_owner("summary", f"Daily summary {day}", out.summary)
         return Outcome("succeeded", {"day": day, "attention": out.attention})
