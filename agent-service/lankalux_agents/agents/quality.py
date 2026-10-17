@@ -32,6 +32,13 @@ NO_GUARANTEE = re.compile(
 ASKED_IF_HUMAN = re.compile(
     r"\b(?:real|actual|live) (?:person|human)\b|\b(?:are you|is this|am i (?:talking|speaking|chatting) (?:to|with))\b[^.?!\n]{0,30}"
     r"\b(?:bot|robot|ai|a\.i\.|automated|human|person|machine|chatgpt)\b|\bchat ?bot\b", re.I)
+# Stock phrases that make a message read as machine-written sales copy.
+STOCK = re.compile(
+    r"\b(?:perfect|sounds? (?:wonderful|amazing|lovely|great|fantastic|exciting)|(?:great|wonderful|excellent|fantastic) choice|"
+    r"craft(?:ed|ing)?|special touch(?:es)?|just right|that way,? (?:i|we) can|i'?m (?:so |really )?excited|"
+    r"tailor(?:ed)? (?:the|your|it|everything) (?:trip |tour |journey )?(?:just )?for you|unforgettable|dream (?:trip|holiday|vacation)|"
+    r"embark|seamless(?:ly)?|rest assured|(?:happy|delighted) to (?:help|assist)|feel free to|don'?t hesitate|hidden gems?|"
+    r"nestled|tapestry|truly magical)\b", re.I)
 EMOJI = re.compile(
     "[\U0001F000-\U0001FAFF\U00002600-\U000027BF\U0001F900-\U0001F9FF\uFE0F\u200D\u2B50\u2B06\u2934\u2935\u2190-\u21FF]+")
 GREETING = re.compile(r"^\s*(?:dear|hi|hello|hey|good (?:morning|afternoon|evening))\b[^\n]{0,40},?\s*\n+", re.I)
@@ -41,6 +48,10 @@ SIGN_OFF = re.compile(r"\n+\s*(?:warm(?:est)? regards|kind regards|best regards|
 
 def asked_if_human(customer_text: str) -> bool:
     return bool(ASKED_IF_HUMAN.search((customer_text or "").replace("\u2019", "'")))
+
+
+def stock_phrases(text: str) -> list[str]:
+    return sorted({m.group(0).lower() for m in STOCK.finditer((text or "").replace("\u2019", "'"))})
 
 
 def undash(text: str) -> str:
@@ -93,6 +104,8 @@ def check_text(text: str, *, max_len: int = 1000) -> tuple[list[str], list[str]]
         soft.append("Asks more than two questions at once.")
     if EMOJI.search(t):
         soft.append("Uses emojis.")
+    if stock := stock_phrases(t):
+        soft.append("Sounds like sales copy: " + ", ".join(f'"{p}"' for p in stock) + ".")
     return hard, soft
 
 
