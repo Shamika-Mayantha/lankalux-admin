@@ -47,12 +47,18 @@ class Memory:
         except Exception as err:
             log.warning("embedding failed: %s", err)
             return rows
-        rows += self.db.all(
-            """SELECT kind, content, created_at, 1 - (embedding <=> %s::extensions.vector) AS similarity
-               FROM public.ai_memory
-               WHERE embedding IS NOT NULL
-                 AND (kind IN ('correction', 'experience') OR (kind = 'business_rule' AND approved))
-               ORDER BY embedding <=> %s::extensions.vector LIMIT %s""",
-            emb, emb, limit,
-        )
+        # The agent role's search_path doesn't include the extensions schema, so the
+        # pgvector operator is named in full. A failed lookup only loses context.
+        try:
+            rows += self.db.all(
+                """SELECT kind, content, created_at,
+                          1 - (embedding OPERATOR(extensions.<=>) %s::extensions.vector) AS similarity
+                   FROM public.ai_memory
+                   WHERE embedding IS NOT NULL
+                     AND (kind IN ('correction', 'experience') OR (kind = 'business_rule' AND approved))
+                   ORDER BY embedding OPERATOR(extensions.<=>) %s::extensions.vector LIMIT %s""",
+                emb, emb, limit,
+            )
+        except Exception as err:
+            log.warning("memory search failed: %s", err)
         return rows
