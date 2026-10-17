@@ -20,6 +20,15 @@ type Review = {
 
 type Override = { path: string; image_url: string; updated_at: string }
 
+type Promotion = {
+  id: string
+  title: string
+  message: string
+  ends_on: string | null
+  is_active: boolean
+  sort_order: number
+}
+
 const MAX_EDGE = 2400
 
 /**
@@ -48,18 +57,19 @@ async function prepareForUpload(file: File): Promise<File> {
 }
 
 export default function WebsitePage() {
-  const [tab, setTab] = useState<'reviews' | 'photos'>('reviews')
+  const [tab, setTab] = useState<'reviews' | 'photos' | 'promotions'>('reviews')
   return (
     <div>
       <h1 className="ll-h1">Website</h1>
       <p className="ll-sub">
-        Reviews and photos shown on lankalux.com. Changes appear on the live site within about a minute.
+        Reviews, photos and promotions shown on lankalux.com. Changes appear on the live site within about a minute.
       </p>
       <div className="ll-tabs">
         {(
           [
             ['reviews', 'Reviews'],
             ['photos', 'Photos'],
+            ['promotions', 'Promotions'],
           ] as const
         ).map(([id, label]) => (
           <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
@@ -67,7 +77,7 @@ export default function WebsitePage() {
           </button>
         ))}
       </div>
-      {tab === 'reviews' ? <ReviewsPanel /> : <PhotosPanel />}
+      {tab === 'reviews' ? <ReviewsPanel /> : tab === 'photos' ? <PhotosPanel /> : <PromotionsPanel />}
     </div>
   )
 }
@@ -289,6 +299,186 @@ function ReviewEditor({
         <button className="ll-btn ghost" type="button" onClick={onCancel}>
           Cancel
         </button>
+      </div>
+    </form>
+  )
+}
+
+/** Today in Sri Lanka, to tell whether a promotion has ended. */
+function todayInSriLanka() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Colombo' })
+}
+
+function promotionStatus(p: Promotion): { label: string; tone: 'new' | 'expired' } {
+  if (!p.is_active) return { label: 'Hidden', tone: 'expired' }
+  if (p.ends_on && p.ends_on < todayInSriLanka()) return { label: 'Ended', tone: 'expired' }
+  return { label: 'Live on the site', tone: 'new' }
+}
+
+function formatDay(ymd: string) {
+  return new Date(ymd + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function PromotionsPanel() {
+  const [promotions, setPromotions] = useState<Promotion[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(() => {
+    setLoading(true)
+    consoleFetch('/api/v2/website/promotions')
+      .then((d) => setPromotions(d.promotions || []))
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(load, [load])
+
+  async function run(action: () => Promise<unknown>) {
+    setBusy(true)
+    setError(null)
+    try {
+      await action()
+      load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Something went wrong.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const patch = (id: string, body: Partial<Promotion>) =>
+    consoleFetch(`/api/v2/website/promotions/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+
+  const live = promotions.filter((p) => promotionStatus(p).tone === 'new').length
+
+  return (
+    <div>
+      <p className="ll-muted" style={{ marginTop: 0, maxWidth: 720 }}>
+        A promotion shows as a “Current offer” note on the homepage, every journey page and the guide pages. It disappears
+        by itself after its last day, or when you hide it.{' '}
+        {live === 0 ? 'Nothing is showing on the site right now.' : `${live} showing on the site.`}
+      </p>
+
+      {error && <div className="ll-error">{error}</div>}
+      {loading && !promotions.length && <p className="ll-muted">Loading promotions…</p>}
+
+      <div style={{ display: 'grid', gap: 12, maxWidth: 880 }}>
+        {promotions.map((p) => {
+          const status = promotionStatus(p)
+          return editing === p.id ? (
+            <PromotionEditor
+              key={p.id}
+              promotion={p}
+              busy={busy}
+              onCancel={() => setEditing(null)}
+              onSave={(values) =>
+                run(async () => {
+                  await patch(p.id, values)
+                  setEditing(null)
+                })
+              }
+            />
+          ) : (
+            <div className="ll-card" key={p.id} style={{ opacity: status.tone === 'new' ? 1 : 0.6 }}>
+              <h3 style={{ marginTop: 0 }}>{p.title}</h3>
+              <p>{p.message}</p>
+              <p className="ll-muted">{p.ends_on ? `Shows until ${formatDay(p.ends_on)}` : 'No end date: shows until you hide it'}</p>
+              <div className="ll-row" style={{ marginTop: 12 }}>
+                <span className={`ll-pill ${status.tone}`}>{status.label}</span>
+                <button className="ll-btn secondary" disabled={busy} onClick={() => setEditing(p.id)}>
+                  Edit
+                </button>
+                <button className="ll-btn secondary" disabled={busy} onClick={() => run(() => patch(p.id, { is_active: !p.is_active }))}>
+                  {p.is_active ? 'Hide' : 'Show'}
+                </button>
+                <button
+                  className="ll-btn danger"
+                  disabled={busy}
+                  onClick={() => {
+                    if (confirm('Delete this promotion? This cannot be undone.')) {
+                      run(() => consoleFetch(`/api/v2/website/promotions/${p.id}`, { method: 'DELETE' }))
+                    }
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <PromotionEditor
+        busy={busy}
+        heading="Add a promotion"
+        onSave={(values) => run(() => consoleFetch('/api/v2/website/promotions', { method: 'POST', body: JSON.stringify(values) }))}
+      />
+    </div>
+  )
+}
+
+function PromotionEditor({
+  promotion,
+  busy,
+  heading,
+  onSave,
+  onCancel,
+}: {
+  promotion?: Promotion
+  busy: boolean
+  heading?: string
+  onSave: (values: { title: string; message: string; ends_on: string | null }) => void
+  onCancel?: () => void
+}) {
+  const [title, setTitle] = useState(promotion?.title ?? '')
+  const [message, setMessage] = useState(promotion?.message ?? '')
+  const [endsOn, setEndsOn] = useState(promotion?.ends_on ?? '')
+  return (
+    <form
+      className="ll-form ll-card"
+      style={promotion ? undefined : { marginTop: 24 }}
+      onSubmit={(e) => {
+        e.preventDefault()
+        onSave({ title, message, ends_on: endsOn || null })
+        if (!promotion) {
+          setTitle('')
+          setMessage('')
+          setEndsOn('')
+        }
+      }}
+    >
+      {heading && <h3>{heading}</h3>}
+      <label>
+        Title
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Free safari jeep" maxLength={120} required />
+      </label>
+      <label>
+        Message
+        <textarea
+          rows={3}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Confirmed bookings include a free safari jeep at one selected park (jeep only, not park tickets)."
+          maxLength={600}
+          required
+        />
+      </label>
+      <label>
+        Last day it shows (optional)
+        <input type="date" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} />
+      </label>
+      <div className="ll-row">
+        <button className="ll-btn" type="submit" disabled={busy}>
+          {promotion ? 'Save' : 'Add promotion'}
+        </button>
+        {onCancel && (
+          <button className="ll-btn ghost" type="button" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
       </div>
     </form>
   )

@@ -87,6 +87,14 @@ export const WEBSITE_PHOTO_SLOTS: WebsitePhotoSlot[] = [
   { path: 'images/signaturejourney/depart.jpg', section: 'Signature Journey', label: 'Departure', usedOn: ['Coastal Retreat Journey', 'Hill Country Journey', 'Nature Wildlife Journey', 'Signature Journey'] },
   { path: 'images/signaturejourney/sigjhp1.jpg', section: 'Signature Journey', label: 'Cover', usedOn: ['10 Day Sri Lanka Itinerary', 'Homepage', 'How Many Days In Sri Lanka', 'Journeys', 'Sigiriya', 'Signature Journey'] },
   { path: 'images/signaturejourney/sigjourneycmb.jpg', section: 'Signature Journey', label: 'Colombo', usedOn: ['Nature Wildlife Journey', 'Signature Journey'] },
+  { path: 'images/hq/tea-hills.jpg', section: 'Redesign photos', label: 'Misty tea hills (homepage opening)', usedOn: ['Homepage'] },
+  { path: 'images/hq/rainforest.jpg', section: 'Redesign photos', label: 'Rainforest stream', usedOn: ['Homepage'] },
+  { path: 'images/hq/nine-arch-bridge.jpg', section: 'Redesign photos', label: 'Nine Arch Bridge', usedOn: ['Ella'] },
+  { path: 'images/hq/coconut-tree-hill.jpg', section: 'Redesign photos', label: 'Coconut Tree Hill', usedOn: ['Mirissa'] },
+  { path: 'images/hq/galle-lighthouse.jpg', section: 'Redesign photos', label: 'Galle lighthouse', usedOn: ['Galle'] },
+  { path: 'images/hq/elephants.jpg', section: 'Redesign photos', label: 'Elephants in the wild', usedOn: ['Udawalawe'] },
+  { path: 'images/hq/coast-bay.jpg', section: 'Redesign photos', label: 'Palm-lined bay', usedOn: ['Best Time To Visit Sri Lanka'] },
+  { path: 'images/hq/tea-leaves.jpg', section: 'Redesign photos', label: 'Tea leaves close-up', usedOn: ['Journeys'] },
 ]
 
 export function isWebsitePhotoPath(value: unknown): boolean {

@@ -6,6 +6,7 @@ import { isWebsitePhotoPath, isWebsiteReviewPage } from '@/config/website-conten
 const UPLOAD_BUCKET = process.env.SUPABASE_UPLOADS_BUCKET || 'client-uploads'
 const PHOTO_PREFIX = 'website'
 const MIGRATION_HINT = 'Website content tables are missing. Run supabase/migrations/20261009010000_website_content.sql.'
+const PROMOTIONS_HINT = 'The promotions table is missing. Run supabase/migrations/20261017000000_website_promotions.sql.'
 
 export type WebsiteReview = {
   id: string
@@ -14,6 +15,15 @@ export type WebsiteReview = {
   author: string
   sort_order: number
   is_visible: boolean
+}
+
+export type WebsitePromotion = {
+  id: string
+  title: string
+  message: string
+  ends_on: string | null
+  is_active: boolean
+  sort_order: number
 }
 
 export type WebsitePhotoOverride = {
@@ -161,10 +171,102 @@ export async function resetPhoto(slotPath: string): Promise<void> {
   if (error) fail(error, 'Could not reset the photo.')
 }
 
-/** Published content for lankalux.com: visible reviews grouped by page, and photo overrides keyed by original path. */
+const PROMOTION_COLUMNS = 'id, title, message, ends_on, is_active, sort_order'
+
+function failPromotions(err: unknown, fallback: string): never {
+  if (isMissingTableError(err)) throw new AppError(PROMOTIONS_HINT, 500)
+  fail(err, fallback)
+}
+
+function cleanEndsOn(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') return null
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new AppError('End date must be a date.', 400)
+  return value
+}
+
+/** Today in Sri Lanka, as YYYY-MM-DD: a promotion ending today still shows today. */
+function todayInSriLanka(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Colombo' })
+}
+
+export async function listPromotions(): Promise<WebsitePromotion[]> {
+  const { data, error } = await getServiceClient()
+    .from('website_promotions')
+    .select(PROMOTION_COLUMNS)
+    .order('sort_order')
+    .order('created_at')
+  if (error) failPromotions(error, 'Could not load promotions.')
+  return (data || []) as WebsitePromotion[]
+}
+
+export async function createPromotion(input: Record<string, unknown>): Promise<WebsitePromotion> {
+  const supabase = getServiceClient()
+  const { data: last } = await supabase
+    .from('website_promotions')
+    .select('sort_order')
+    .order('sort_order', { ascending: false })
+    .limit(1)
+  const { data, error } = await supabase
+    .from('website_promotions')
+    .insert({
+      title: cleanText(input.title, 'Title', 120),
+      message: cleanText(input.message, 'Message', 600),
+      ends_on: cleanEndsOn(input.ends_on),
+      is_active: input.is_active !== false,
+      sort_order: ((last?.[0]?.sort_order as number | undefined) ?? 0) + 10,
+    })
+    .select(PROMOTION_COLUMNS)
+    .single()
+  if (error) failPromotions(error, 'Could not save the promotion.')
+  return data as WebsitePromotion
+}
+
+export async function updatePromotion(id: string, input: Record<string, unknown>): Promise<WebsitePromotion> {
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if ('title' in input) patch.title = cleanText(input.title, 'Title', 120)
+  if ('message' in input) patch.message = cleanText(input.message, 'Message', 600)
+  if ('ends_on' in input) patch.ends_on = cleanEndsOn(input.ends_on)
+  if ('is_active' in input) patch.is_active = input.is_active === true
+  const { data, error } = await getServiceClient()
+    .from('website_promotions')
+    .update(patch)
+    .eq('id', id)
+    .select(PROMOTION_COLUMNS)
+    .maybeSingle()
+  if (error) failPromotions(error, 'Could not update the promotion.')
+  if (!data) throw new AppError('Promotion not found.', 404)
+  return data as WebsitePromotion
+}
+
+export async function deletePromotion(id: string): Promise<void> {
+  const { error } = await getServiceClient().from('website_promotions').delete().eq('id', id)
+  if (error) failPromotions(error, 'Could not delete the promotion.')
+}
+
+/**
+ * Active promotions that have not ended. null when the table does not exist yet (migration not run),
+ * so lankalux.com keeps its built-in offer instead of showing none.
+ */
+async function publishedPromotions(): Promise<{ title: string; message: string; ends_on: string | null }[] | null> {
+  const today = todayInSriLanka()
+  const { data, error } = await getServiceClient()
+    .from('website_promotions')
+    .select('title, message, ends_on')
+    .eq('is_active', true)
+    .or(`ends_on.is.null,ends_on.gte.${today}`)
+    .order('sort_order')
+    .order('created_at')
+  if (error) {
+    if (isMissingTableError(error)) return null
+    fail(error, 'Could not load promotions.')
+  }
+  return data || []
+}
+
+/** Published content for lankalux.com: visible reviews grouped by page, photo overrides keyed by original path, and live promotions. */
 export async function getPublishedSiteContent() {
   const supabase = getServiceClient()
-  const [reviewsRes, photosRes] = await Promise.all([
+  const [reviewsRes, photosRes, promotions] = await Promise.all([
     supabase
       .from('website_reviews')
       .select('page, quote, author')
@@ -172,6 +274,7 @@ export async function getPublishedSiteContent() {
       .order('sort_order')
       .order('created_at'),
     supabase.from('website_photos').select('path, image_url'),
+    publishedPromotions(),
   ])
   if (reviewsRes.error) fail(reviewsRes.error, 'Could not load reviews.')
   if (photosRes.error) fail(photosRes.error, 'Could not load photos.')
@@ -183,5 +286,5 @@ export async function getPublishedSiteContent() {
   for (const row of photosRes.data || []) {
     if (isWebsitePhotoPath(row.path)) photos[row.path] = row.image_url
   }
-  return { reviews, photos }
+  return { reviews, photos, promotions }
 }
