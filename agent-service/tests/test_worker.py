@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from lankalux_agents.actions import Actions
 from lankalux_agents.agents import ALL_AGENTS, Context
 from lankalux_agents.agents.followup import FollowUpEmail
-from lankalux_agents.agents.manager import ROUTES, Review
+from lankalux_agents.agents.manager import ROUTES, Review, Summary
 from lankalux_agents.agents.sales import Qualification, Reply
 from lankalux_agents.crm import CRM
 from lankalux_agents.db import Database
@@ -47,6 +47,8 @@ class FakeLLM:
             return self.review
         if schema is FollowUpEmail:
             return self.email
+        if schema is Summary:
+            return Summary(summary="Quiet day.")
         raise AssertionError(f"unexpected schema {schema}")
 
     def embed(self, text):
@@ -86,6 +88,29 @@ def test_schedule_is_idempotent_per_period():
     schedule(Q(), at)
     assert seen.count("daily_summary:2026-10-16") == 2  # the database dedupes; the key is stable
     assert "followups:2026-10-16T18" in seen
+    # Once a period's work has been queued, the worker doesn't queue it again (live on 17 Oct
+    # finished scans were re-queued every tick, about 5,000 times a day).
+    seen.clear()
+    done: set[str] = set()
+    schedule(Q(), at, done)
+    schedule(Q(), at, done)
+    assert seen.count("daily_summary:2026-10-16") == 1 and seen.count("followups:2026-10-16T18") == 1
+
+
+def test_daily_summary_is_written_once(test_db):
+    # Live on 17 Oct the summary failed on a timestamp in its facts and was retried all evening.
+    with psycopg.connect(test_db["admin"], autocommit=True) as c:
+        c.execute("""INSERT INTO public."Client Requests" (id, client_name, status, number_of_adults)
+                     VALUES ('req-id-009', 'Mia', 'follow_up', 2)""")
+    llm = FakeLLM()
+    w = make_worker(test_db["agent"], llm)
+    for _ in range(2):
+        w.ctx.queue.enqueue("manager", "daily_summary", {"day": "2026-10-17"}, priority=1)
+        drain(w)
+    assert llm.calls.count("Summary") == 1
+    with psycopg.connect(test_db["admin"]) as c:
+        assert c.execute("SELECT summary FROM public.ai_daily_summaries WHERE day = '2026-10-17'").fetchone()[0] == "Quiet day."
+        assert c.execute("SELECT count(*) FROM public.ai_tasks WHERE task_type = 'daily_summary' AND status = 'failed'").fetchone()[0] == 0
 
 
 def test_new_lead_flows_to_a_staff_note(test_db):
