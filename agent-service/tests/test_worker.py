@@ -24,7 +24,7 @@ from lankalux_agents.worker import Worker
 class FakeLLM:
     """Returns canned structured output; records what it was asked."""
 
-    def __init__(self, fail: bool = False, reply: Reply | None = None, review: Review | None = None,
+    def __init__(self, fail: bool = False, reply: Reply | list[Reply] | None = None, review: Review | None = None,
                  qualification: Qualification | None = None, email: FollowUpEmail | None = None):
         self.calls: list[str] = []
         self.systems: list[str] = []
@@ -42,7 +42,7 @@ class FakeLLM:
         if schema is Qualification:
             return self.qualification
         if schema is Reply:
-            return self.reply
+            return self.reply.pop(0) if isinstance(self.reply, list) else self.reply
         if schema is Review:
             return self.review
         if schema is FollowUpEmail:
@@ -230,6 +230,20 @@ def test_complaint_is_not_reported_as_asking_if_human(test_db):
         body = c.execute("SELECT body FROM public.ai_notifications WHERE kind = 'attention'").fetchone()[0]
     assert "needs a person" in title and "real person" not in title
     assert body == 'They wrote: "Our driver was 40 minutes late. Not impressed."'
+
+
+def test_ordinary_enquiry_mislabelled_as_asking_if_human_gets_a_reply(test_db):
+    # Live on 17 Oct: "Can i get details about my trip to sri lanka" was handed to the owner as "asked_if_human".
+    _whatsapp_hi(test_db["admin"], "Hello\nCan i get details about my trip to sri lanka")
+    llm = FakeLLM(reply=[Reply(kind="needs_human", reply="", reason="asked_if_human"),
+                         Reply(kind="collect_info", reply="Lovely to hear from you. When are you thinking of travelling?", reason="dates missing")])
+    w = make_worker(test_db["agent"], llm)
+    for _ in range(2):
+        w.tick()
+    assert llm.calls.count("Reply") == 2 and "does NOT ask" in llm.systems[-1]
+    with psycopg.connect(test_db["admin"]) as c:
+        assert c.execute("SELECT count(*) FROM public.ai_notifications WHERE kind = 'attention'").fetchone()[0] == 0
+        assert c.execute("SELECT action_type FROM public.ai_actions").fetchone()[0] == "message.collect_info"
 
 
 def test_pulse_checks_in_while_a_task_is_still_running(test_db, monkeypatch):
