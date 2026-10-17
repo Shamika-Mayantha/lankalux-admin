@@ -74,6 +74,9 @@ const EVENT_LABEL: Record<string, string> = {
 /** Answers on lankalux.com from admin itself, so it does not depend on the agent server. */
 const CONCIERGE = 'concierge'
 
+/** How the agent cards are laid out: the Manager leads, then the owner's chosen order. */
+const AGENT_ORDER = ['manager', 'sales', 'followup', 'operations', 'planner', 'pricing', 'quality', CONCIERGE]
+
 function capitalise(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
@@ -617,8 +620,11 @@ export default function AiPage() {
   const workerSeen = o?.agents.reduce<string | null>((latest, a) => (a.key !== CONCIERGE && a.last_heartbeat_at && (!latest || a.last_heartbeat_at > latest) ? a.last_heartbeat_at : latest), null) ?? null
   const workerOnline = online(workerSeen)
   const agents = useMemo(() => {
-    const list = [...(o?.agents || [])]
-    return list.sort((a, b) => (a.key === 'manager' ? -1 : b.key === 'manager' ? 1 : 0))
+    const rank = (key: string) => {
+      const i = AGENT_ORDER.indexOf(key)
+      return i === -1 ? AGENT_ORDER.length : i
+    }
+    return [...(o?.agents || [])].sort((a, b) => rank(a.key) - rank(b.key))
   }, [o])
   const live = !!o && !o.settings.system_paused && workerOnline
   const secondsAgo = secondsSince(updatedAt)
