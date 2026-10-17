@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .db import Database
+from .db import Database, jsonb
 
 REQUEST_FIELDS = """id, request_code, client_name, email, whatsapp, status, start_date, end_date, duration,
   number_of_adults, number_of_children, children_ages, origin_country, interests, requested_destinations,
@@ -54,10 +54,14 @@ class CRM:
 
     def conversation(self, conversation_id: str) -> dict | None:
         return self.db.one(
-            """SELECT id, channel, external_id, request_id, customer_name, mode, service_window_expires_at
+            """SELECT id, channel, external_id, request_id, customer_name, mode, service_window_expires_at, lead
                FROM public.ai_conversations WHERE id = %s""",
             conversation_id,
         )
+
+    def save_lead(self, conversation_id: str, lead: dict) -> None:
+        """The trip sheet: what the customer already told us, so nobody asks again."""
+        self.db.one("UPDATE public.ai_conversations SET lead = %s WHERE id = %s RETURNING id", jsonb(lead), conversation_id)
 
     def conversation_messages(self, conversation_id: str, limit: int = 12) -> list[dict]:
         """The latest messages, oldest first, as the model should read them."""

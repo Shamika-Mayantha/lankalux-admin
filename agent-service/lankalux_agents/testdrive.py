@@ -105,7 +105,7 @@ def run(llm: OllamaLLM, playbook: str, review_llm: OllamaLLM | None = None) -> R
         for who, text in chat.messages:
             r.add(f"> {'Customer' if who == 'customer' else 'LankaLux'}: {text}")
         r.add(f"Good outcome: {chat.expect}")
-        facts = {"customer_name": chat.customer or None,
+        facts = {"customer_name": chat.customer or None, "trip_sheet": {},
                  "conversation": [{"from": who, "text": text} for who, text in chat.messages], "lead": chat.lead}
         try:
             t = time.monotonic()
