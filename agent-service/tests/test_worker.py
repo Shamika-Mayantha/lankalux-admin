@@ -11,7 +11,7 @@ from lankalux_agents.actions import Actions
 from lankalux_agents.agents import ALL_AGENTS, Context
 from lankalux_agents.agents.followup import FollowUpEmail
 from lankalux_agents.agents.manager import ROUTES, Review, Summary
-from lankalux_agents.agents.sales import Qualification, Reply
+from lankalux_agents.agents.sales import HANDED_OVER, Qualification, Reply, TripSheet, first_name
 from lankalux_agents.crm import CRM
 from lankalux_agents.db import Database
 from lankalux_agents.events import schedule
@@ -291,3 +291,75 @@ def test_pulse_checks_in_while_a_task_is_still_running(test_db, monkeypatch):
         w.pulse()
     with psycopg.connect(test_db["admin"]) as c:
         assert c.execute("SELECT count(*) FROM public.ai_agents WHERE last_heartbeat_at > now() - interval '1 minute'").fetchone()[0] == len(w.agents)
+
+
+def _chat(admin_dsn: str, messages: list[tuple[str, str]], lead: dict | None = None, name: str = "Nimal") -> str:
+    """A WhatsApp chat with history; the last message is the customer's new one."""
+    with psycopg.connect(admin_dsn, autocommit=True) as c:
+        conv = c.execute("""INSERT INTO public.ai_conversations (channel, external_id, customer_name, last_message_at,
+                                                             service_window_expires_at, lead)
+                            VALUES ('whatsapp', '94770000001', %s, now(), now() + interval '24 hours', %s) RETURNING id""",
+                         (name, psycopg.types.json.Jsonb(lead or {}))).fetchone()[0]
+        for i, (who, text) in enumerate(messages):
+            inbound = who == "customer"
+            msg = c.execute("""INSERT INTO public.ai_messages (conversation_id, direction, sender_kind, body, status, created_at)
+                               VALUES (%s, %s, %s, %s, %s, now() - make_interval(mins => %s)) RETURNING id""",
+                            (conv, "inbound" if inbound else "outbound", "customer" if inbound else "ai", text,
+                             "received" if inbound else "sent", len(messages) - i)).fetchone()[0]
+        c.execute("""INSERT INTO public.ai_events (event_type, source_table, source_id, payload, dedupe_key)
+                     VALUES ('whatsapp.message_received', 'ai_messages', %s, %s, 'wa:chat')""",
+                  (str(msg), psycopg.types.json.Jsonb({"conversation_id": str(conv)})))
+    return str(conv)
+
+
+def _draft(admin_dsn: str, conv: str) -> str | None:
+    with psycopg.connect(admin_dsn) as c:
+        row = c.execute("SELECT payload->>'text' FROM public.ai_actions WHERE conversation_id = %s AND status = 'proposed'",
+                        (conv,)).fetchone()
+    return row[0] if row else None
+
+
+def test_draft_that_reasks_known_details_is_written_again(test_db):
+    conv = _chat(test_db["admin"], [("customer", "Hi, 2 adults, 20 to 28 November. No need hotels.")],
+                 lead={"dateNotes": "20 to 28 November", "adults": 2, "children": 0, "declined": ["hotels"]})
+    llm = FakeLLM(reply=[
+        Reply(kind="collect_info", reply="Perfect, I'm excited! When are you planning to travel, and what hotels do you like?", reason="x"),
+        Reply(kind="collect_info", reply="Thanks Nimal. What would you most like to do, beaches, wildlife or culture?", reason="x",
+              sheet=TripSheet(dateNotes="20 to 28 November", adults=2)),
+    ])
+    drain(make_worker(test_db["agent"], llm))
+    assert llm.calls == ["Reply", "Reply", "Review"]
+    assert "already answered" in llm.systems[1] and "sales phrases (i'm excited)" in llm.systems[1]
+    assert _draft(test_db["admin"], conv).startswith("Thanks Nimal. What would you most like")
+    with psycopg.connect(test_db["admin"]) as c:
+        lead = c.execute("SELECT lead FROM public.ai_conversations WHERE id = %s", (conv,)).fetchone()[0]
+    assert lead["declined"] == ["hotels"] and lead["adults"] == 2  # kept, and saved by the agent role
+
+
+def test_repeated_message_is_never_sent(test_db):
+    same = "Thanks! Could you tell me what you'd like to see in Sri Lanka?"
+    conv = _chat(test_db["admin"], [("customer", "Hi"), ("lankalux", same), ("customer", "ok")])
+    llm = FakeLLM(reply=Reply(kind="collect_info", reply=same, reason="x"))
+    drain(make_worker(test_db["agent"], llm))
+    assert llm.calls == ["Reply", "Reply"]
+    assert _draft(test_db["admin"], conv) is None
+    with psycopg.connect(test_db["admin"]) as c:
+        assert "repeating" in c.execute("SELECT body FROM public.ai_notifications WHERE kind = 'attention'").fetchone()[0]
+
+
+def test_enough_details_hands_over_for_an_itinerary(test_db):
+    conv = _chat(test_db["admin"], [("customer", "2 adults, 20 to 28 November, beaches and wildlife. Give me an itinerary first")])
+    sheet = TripSheet(dateNotes="20 to 28 November", adults=2, interests="beaches, wildlife", wantsItinerary=True)
+    llm = FakeLLM(reply=Reply(kind="collect_info", reply="Lovely. Which hotels would you like?", reason="x", sheet=sheet))
+    drain(make_worker(test_db["agent"], llm))
+    assert _draft(test_db["admin"], conv) == HANDED_OVER.format(name=", Nimal")
+    with psycopg.connect(test_db["admin"]) as c:
+        title, body = c.execute("SELECT title, body FROM public.ai_notifications WHERE title LIKE '%%itinerary%%'").fetchone()
+        lead = c.execute("SELECT lead FROM public.ai_conversations WHERE id = %s", (conv,)).fetchone()[0]
+    assert title == "Nimal is ready for an itinerary" and "2 adults" in body and "beaches, wildlife" in body
+    assert lead["handedOverAt"]
+
+
+def test_our_own_profile_name_is_not_used_as_the_customer_name():
+    assert first_name("LankaLux") is None and first_name("Lanka Lux Tours") is None
+    assert first_name("nimal perera") == "Nimal" and first_name("+94 77") is None
