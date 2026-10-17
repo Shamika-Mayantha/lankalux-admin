@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from .agents.base import Context
 from .agents.followup import FOLLOW_UP_PROMPT, FollowUpAgent, FollowUpEmail
 from .agents.manager import MANAGER_PROMPT, ManagerAgent, Review
-from .agents.quality import check_text
+from .agents.quality import asked_if_human, check_text, tidy_email_body, tidy_message
 from .agents.sales import QUALIFY_PROMPT, REPLY_PROMPT, Qualification, Reply, SalesAgent
 from .db import Database, jsonb
 from .llm import LLMError, OllamaLLM
@@ -90,12 +90,13 @@ def _ctx(playbook: str) -> Context:
     return Context(queue=None, llm=None, actions=None, crm=None, memory=None, playbook=playbook)  # type: ignore[arg-type]
 
 
-def run(llm: OllamaLLM, playbook: str) -> Report:
+def run(llm: OllamaLLM, playbook: str, review_llm: OllamaLLM | None = None) -> Report:
     ctx = _ctx(playbook)
     sales, manager, followup = SalesAgent(), ManagerAgent(), FollowUpAgent()
     r = Report()
     r.add(f"# AI test drive ({time.strftime('%d %b %Y %H:%M')})")
-    r.add(f"Model {llm.model}. Playbook {'loaded' if playbook.strip() else 'NOT loaded'} ({len(playbook)} characters).")
+    review_llm = review_llm or llm
+    r.add(f"Model {llm.model}, AI Manager {review_llm.model}. Playbook {'loaded' if playbook.strip() else 'NOT loaded'} ({len(playbook)} characters).")
     r.add("Nothing below was sent to anyone.")
 
     for chat in CHATS:
@@ -114,12 +115,17 @@ def run(llm: OllamaLLM, playbook: str) -> Report:
             r.add(f"**Sales failed:** {err}")
             r.summary["errors"] += 1
             continue
-        if reply.kind == "needs_human" or not reply.reply.strip():
-            r.add(f"**Sales:** hands it to you ({reply.reason}). Nothing drafted. ({took:.0f}s)")
+        text = tidy_message(reply.reply)
+        if reply.kind == "needs_human" or not text:
+            if asked_if_human(chat.messages[-1][1]):
+                why = "asked if they're talking to a real person"
+            else:
+                why = "needs a person" if "asked_if_human" in reply.reason else reply.reason
+            r.add(f"**Sales:** hands it to you ({why}). Nothing drafted. ({took:.0f}s)")
             r.summary["to_owner"] += 1
             continue
-        r.add(f"**Sales drafts** ({reply.kind}, {took:.0f}s): {reply.reply}")
-        hard, soft = check_text(reply.reply)
+        r.add(f"**Sales drafts** ({reply.kind}, {took:.0f}s): {text}")
+        hard, soft = check_text(text)
         if hard:
             r.add(f"**Quality:** stops it and pings you: {' '.join(hard)}")
             r.summary["to_owner"] += 1
@@ -127,11 +133,11 @@ def run(llm: OllamaLLM, playbook: str) -> Report:
         if soft:
             r.add(f"**Quality notes:** {' '.join(soft)}")
         draft = {"action_type": f"message.{reply.kind}", "summary": f"WhatsApp reply to {chat.customer or 'a new contact'}",
-                 "reasoning": reply.reason, "payload": {"text": reply.reply}}
+                 "reasoning": reply.reason, "payload": {"text": text}}
         review_facts = {"draft": draft, "conversation": facts["conversation"], "lead": chat.lead,
                         "quality_findings": {"ok": not soft, "notes": soft}, "past_corrections": []}
         try:
-            review = llm.structured(manager.system_prompt(ctx, MANAGER_PROMPT), json.dumps(review_facts), Review)
+            review = review_llm.structured(manager.system_prompt(ctx, MANAGER_PROMPT), json.dumps(review_facts), Review)
         except LLMError as err:
             r.add(f"**Manager failed:** {err}")
             r.summary["errors"] += 1
@@ -148,8 +154,9 @@ def run(llm: OllamaLLM, playbook: str) -> Report:
         r.add(f"**Subject:** {mail.subject}")
         r.add("Dear David,")
         r.add("")
-        r.add(mail.body.strip())
-        hard, soft = check_text(mail.body, max_len=2500)
+        body = tidy_email_body(mail.body)
+        r.add(body)
+        hard, soft = check_text(body, max_len=2500)
         r.add(f"**Quality:** {'stops it: ' + ' '.join(hard) if hard else 'passes' + (' (' + ' '.join(soft) + ')' if soft else '')}")
     except LLMError as err:
         r.add(f"**Follow-up failed:** {err}")
@@ -175,6 +182,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--no-save", action="store_true", help="print only; do not store the report")
     ap.add_argument("--playbook", help="read the playbook from this file instead of the database")
+    ap.add_argument("--manager-model", help="try the AI Manager on another Ollama model, e.g. qwen3:8b")
     args = ap.parse_args()
 
     url = os.environ.get("AGENT_DATABASE_URL", "")
@@ -185,9 +193,11 @@ def main() -> None:
     elif db:
         playbook = (db.one("SELECT playbook FROM public.ai_settings WHERE id") or {}).get("playbook") or ""
 
-    llm = OllamaLLM(os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/"),
-                    os.environ.get("AGENT_MODEL", "qwen3:4b"), os.environ.get("EMBED_MODEL", "nomic-embed-text"))
-    report = run(llm, playbook)
+    base = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
+    model, embed = os.environ.get("AGENT_MODEL", "qwen3:4b"), os.environ.get("EMBED_MODEL", "nomic-embed-text")
+    manager_model = args.manager_model or os.environ.get("MANAGER_MODEL") or model
+    llm = OllamaLLM(base, model, embed)
+    report = run(llm, playbook, OllamaLLM(base, manager_model, embed) if manager_model != model else None)
     if db and not args.no_save:
         db.one("""INSERT INTO public.ai_activity_log (actor_kind, agent_key, event, detail)
                   VALUES ('agent', 'manager', 'testdrive.report', %s) RETURNING id""",

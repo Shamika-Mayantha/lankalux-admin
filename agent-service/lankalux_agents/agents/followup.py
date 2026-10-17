@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from ..queue import Task
 from .base import Agent, Context, Outcome, request_review
+from .quality import tidy_email_body
 
 QUIET_DAYS = 3
 MIN_GAP_DAYS = 4
@@ -27,7 +28,8 @@ quiet. Write a short, personal nudge (60-120 words) that:
 - refers to their actual trip (dates, places, interests) from the facts;
 - adds one genuinely useful, specific touch (a seasonal tip, a place that suits their interests) without
   inventing facts about their booking;
-- offers to adjust the plan and ends with one easy question;
+- offers to adjust the plan and ends with one easy question (only offer: never say anything has
+  already been added, changed or booked);
 - sounds like a person: no "I hope this email finds you well", no pressure, no exclamation-mark spam.
 Never mention prices, discounts, availability, deadlines or payments. Never mention AI or automation.
 If this is the second follow-up, keep it lighter and make clear we will not keep chasing.
@@ -68,7 +70,7 @@ class FollowUpAgent(Agent):
             action = ctx.actions.propose(
                 agent_key=self.key, action_type="message.follow_up", task_id=task.id, request_id=rid,
                 summary=f"Follow-up email to {who}", reasoning=f"No reply for {QUIET_DAYS}+ days (follow-up {sent + 1} of {MAX_FOLLOW_UPS}).",
-                payload={"channel": "email", "to": req.get("email"), "subject": mail.subject.strip(), "body": mail.body.strip()},
+                payload={"channel": "email", "to": req.get("email"), "subject": mail.subject.strip(), "body": tidy_email_body(mail.body)},
             )
             request_review(ctx, action, Task(id=task.id, agent_key=self.key, task_type=task.task_type, payload={},
                                              request_id=rid, depth=task.depth), priority=60)

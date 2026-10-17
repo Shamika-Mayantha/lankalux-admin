@@ -36,6 +36,9 @@ Decide:
   money; asks about prices, discounts, payments, refunds, cancellations or an existing booking; has an
   unusual request (very large group, VIP, medical, accessibility, safety, legal); the draft misreads the
   customer or might embarrass LankaLux; or you are not sure.
+  Also escalate when the draft asks for something the customer already gave (for example asks about
+  children when they said "2 adults"), ignores a question the customer asked, or when a Quality note
+  points to a real problem.
 - "reject": the draft is wrong or unsuitable and should not be sent at all (it will also be shown to the owner).
 Never approve anything that quotes or estimates prices, promises availability, offers discounts, confirms
 bookings, takes payments, or claims to be a human. Explain your decision in one or two plain sentences
@@ -95,7 +98,7 @@ class ManagerAgent(Agent):
             "quality_findings": task.payload.get("quality"),
             "past_corrections": ctx.memory.recall(action.get("summary", ""), limit=3),
         }
-        review = ctx.llm.structured(
+        review = (ctx.review_llm or ctx.llm).structured(
             self.system_prompt(ctx, MANAGER_PROMPT), json.dumps(facts, default=str), Review
         )
         customer_facing = action["action_type"].startswith("message.")

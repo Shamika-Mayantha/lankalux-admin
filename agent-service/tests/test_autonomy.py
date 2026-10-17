@@ -6,7 +6,7 @@ import pytest
 
 from lankalux_agents.agents.manager import Review
 from lankalux_agents.agents.pricing import parse_price, price_guide
-from lankalux_agents.agents.quality import check_text
+from lankalux_agents.agents.quality import asked_if_human, check_text, tidy_email_body, tidy_message
 from lankalux_agents.agents.sales import Qualification, Reply
 from test_worker import FakeLLM, _whatsapp_hi, drain, make_worker
 
@@ -38,6 +38,23 @@ def test_quality_rules():
     assert any("human" in h for h in hard)
     _, soft = check_text("As an AI I can help with that.")
     assert soft
+
+
+def test_quality_lessons_from_the_first_test_drive():
+    # Saying sightings aren't guaranteed is honest, not a promise (curly apostrophe as the model writes it).
+    assert check_text("Yala can be intense, and sightings aren\u2019t guaranteed.") == ([], [])
+    assert check_text("Whale watching is never guaranteed.") == ([], [])
+    assert check_text("We guarantee you'll see a leopard.")[0]
+    assert "Uses emojis." in check_text("Hi Mark! \U0001F60A")[1]
+    assert tidy_message("Hi Mark! \U0001F60A What's your top interest? \U0001F33F") == "Hi Mark! What's your top interest?"
+    assert tidy_email_body("Hi David,\n\nYour trip sounds lovely.\n\nShall we adjust it?\n\nWarm regards\nLankaLux") == \
+        "Your trip sounds lovely.\n\nShall we adjust it?"
+    assert asked_if_human("Hi, quick one, am I talking to a real person or a bot?")
+    assert asked_if_human("is this a bot?")
+    assert not asked_if_human("Our driver was 40 minutes late and nobody answered the phone.")
+    # The second test drive's follow-up email claimed "we've added a tea-country drive".
+    assert check_text("We\u2019ve added a gentle tea-country drive instead of the train.")[0]
+    assert check_text("We can swap the train for a tea-country drive if you like.") == ([], [])
 
 
 def test_price_in_a_reply_goes_to_the_owner_not_the_manager(test_db):
@@ -74,6 +91,14 @@ def test_manager_approval_needs_no_owner_ping_in_manager_mode(test_db):
     assert _one(test_db["admin"], "SELECT count(*) FROM public.ai_notifications")[0] == 0
     with psycopg.connect(test_db["admin"], autocommit=True) as c:
         assert c.execute("SELECT (public.ai_begin_action(%s)).status", (action_id,)).fetchone()[0] == "executing"
+
+
+def test_manager_can_review_with_its_own_model(test_db):
+    # MANAGER_MODEL: drafts come from one model, the AI Manager's verdict from another.
+    _whatsapp_hi(test_db["admin"])
+    strict = FakeLLM(review=Review(decision="escalate", reason="Asks for something the customer already gave."))
+    drain(make_worker(test_db["agent"], FakeLLM(), review_llm=strict))
+    assert _one(test_db["admin"], "SELECT count(*) FROM public.ai_notifications WHERE body LIKE 'Asks for something%%'")[0] == 1
 
 
 def test_manager_cannot_approve_level_3(test_db):
