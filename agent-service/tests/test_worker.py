@@ -4,6 +4,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import psycopg
+import pytest
 from pydantic import BaseModel
 
 from lankalux_agents.actions import Actions
@@ -235,8 +236,19 @@ def test_pulse_checks_in_while_a_task_is_still_running(test_db, monkeypatch):
     # A reply can take minutes on the CPU; the background pulse keeps every agent online meanwhile.
     import lankalux_agents.worker as worker_mod
     w = make_worker(test_db["agent"], FakeLLM())
+    w.stopping = True  # a stop waiting for the current task must not take the agents offline
     calls = []
-    monkeypatch.setattr(worker_mod.time, "sleep", lambda _s: calls.append(1) or setattr(w, "stopping", len(calls) >= 2))
-    w.pulse()
+
+    class Done(Exception):
+        pass
+
+    def sleep(_s):
+        calls.append(1)
+        if len(calls) > 2:
+            raise Done
+
+    monkeypatch.setattr(worker_mod.time, "sleep", sleep)
+    with pytest.raises(Done):
+        w.pulse()
     with psycopg.connect(test_db["admin"]) as c:
         assert c.execute("SELECT count(*) FROM public.ai_agents WHERE last_heartbeat_at > now() - interval '1 minute'").fetchone()[0] == len(w.agents)

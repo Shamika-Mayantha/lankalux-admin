@@ -89,8 +89,9 @@ class Worker:
 
     def pulse(self) -> None:
         """Keeps checking in while a long model call runs, so the console never shows the
-        agents offline just because one reply takes a few minutes on the CPU."""
-        while not self.stopping:
+        agents offline just because one reply takes a few minutes on the CPU. It keeps
+        going while a stop waits for the current task; the thread dies with the process."""
+        while True:
             time.sleep(HEARTBEAT_SECONDS)
             try:
                 self.beat()
