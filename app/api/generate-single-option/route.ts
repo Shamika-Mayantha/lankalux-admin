@@ -5,6 +5,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { enRouteDesignRules, placesPromptSection } from '@/services/itinerary-prompt'
 import { rejectNonAdmin } from '@/app/api/v2/_guard'
+import { NO_DASHES_RULE, undashDeep } from '@/lib/no-dashes'
 
 function cleanGeneratedDayTitle(rawTitle: unknown, dayNumber: number, location?: string) {
   const title = typeof rawTitle === 'string' ? rawTitle.trim() : ''
@@ -164,7 +165,7 @@ export async function POST(request: Request) {
       ? new Date(requestData.end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
       : 'Not specified'
 
-    // When dates exist, build per-day date labels so the AI can use them in titles (e.g. "Day 1 – Saturday, March 15")
+    // When dates exist, build per-day date labels so the AI can use them in titles (e.g. "Day 1: Saturday, March 15")
     const dayDateLabels: string[] = []
     if (requestData.start_date && requestData.end_date) {
       const start = new Date(requestData.start_date)
@@ -177,7 +178,7 @@ export async function POST(request: Request) {
         d.setDate(d.getDate() + i)
         const weekday = d.toLocaleDateString('en-US', { weekday: 'long' })
         const full = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-        dayDateLabels.push(`Day ${i + 1} – ${weekday}, ${full}`)
+        dayDateLabels.push(`Day ${i + 1}: ${weekday}, ${full}`)
       }
     }
     const hasDayDates = dayDateLabels.length > 0
@@ -305,7 +306,7 @@ ${requestData.additional_preferences && requestData.additional_preferences.trim(
 - **MANDATORY: The "days" array MUST contain exactly that many day objects - one day for each day from start date to end date, inclusive.**
 - Day 1 must correspond to ${startDateFormatted}
 - The last day must correspond to ${endDateFormatted}
-${hasDayDates ? `- **DATE IN TITLES: Travel dates are set. Each day's "title" MUST start with the date label for that day (e.g. "Day 1 – Saturday, March 15, 2025: Your theme here"). Use the exact date labels provided below so the itinerary shows the real date for each day.**` : ''}
+${hasDayDates ? `- **DATE IN TITLES: Travel dates are set. Each day's "title" MUST start with the date label for that day (e.g. "Day 1: Saturday, March 15, 2025: Your theme here"). Use the exact date labels provided below so the itinerary shows the real date for each day.**` : ''}
 ${dayDatesBlock}
 - **ROUTE PLANNING - CRITICAL RULES:**
 
@@ -420,7 +421,8 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
 2. Calculate the number of days from the start date to the end date (inclusive) - count each day including both start and end dates.
 3. The "days" array MUST contain exactly that calculated number of day objects - one for each day from start to end date.
 4. Always respond with valid JSON only. Never use markdown. Return only the JSON object.
-5. Day 1 corresponds to the start date, and the last day corresponds to the end date.`,
+5. Day 1 corresponds to the start date, and the last day corresponds to the end date.
+6. ${NO_DASHES_RULE}`,
             },
             {
               role: 'user',
@@ -602,7 +604,7 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
       }
     }
     
-    // When travel dates exist, add "date" to each day and ensure title starts with the date label (e.g. "Day 1 – Saturday, March 15, 2025: ...")
+    // When travel dates exist, add "date" to each day and ensure title starts with the date label (e.g. "Day 1: Saturday, March 15, 2025: ...")
     if (hasDayDates && dayDateLabels.length > 0 && newOption.days && Array.isArray(newOption.days)) {
       const start = new Date(requestData.start_date)
       start.setHours(0, 0, 0, 0)
@@ -634,7 +636,7 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
     
     // Update or add the option to the existing options array
     const updatedOptions = [...existingOptions]
-    updatedOptions[optionIndex] = newOption
+    updatedOptions[optionIndex] = undashDeep(newOption)
     
     // Ensure array has 3 slots
     while (updatedOptions.length < 3) {

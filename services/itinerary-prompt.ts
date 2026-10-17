@@ -23,16 +23,16 @@ const STYLE_INSTRUCTIONS: Record<ItineraryStyle, string> = {
   relaxed:
     'Create a RELAXED, comfort-focused itinerary. Fewer hotel changes, later starts, spa and beach time, scenic rather than strenuous days. Still cover the requested route without rushing.',
   experience:
-    'Create an EXPERIENCE / EXPLORATION itinerary. Lean into wildlife, walking, trains, local food and distinctive places. Keep driving realistic — never sacrifice sleep for sightseeing.',
+    'Create an EXPERIENCE / EXPLORATION itinerary. Lean into wildlife, walking, trains, local food and distinctive places. Keep driving realistic and never sacrifice sleep for sightseeing.',
 }
 
 const STYLE_STOP_DENSITY: Record<ItineraryStyle, string> = {
   balanced:
-    'Every day: at least 4 timed, named activities. Transfer days: 2 of those must be En route: hidden or roadside places. Stay days: 4–7 timed highlights including nearby lesser-known stops, with real breathing room.',
+    'Every day: at least 4 timed, named activities. Transfer days: 2 of those must be En route: hidden or roadside places. Stay days: 4 to 7 timed highlights including nearby lesser-known stops, with real breathing room.',
   relaxed:
-    'Every day: at least 4 timed, named activities. Transfer days: 2 scenic En route: pauses plus a gentle arrival. Stay days: 4–6 timed highlights with a long lunch or hotel window. Never stack climbs.',
+    'Every day: at least 4 timed, named activities. Transfer days: 2 scenic En route: pauses plus a gentle arrival. Stay days: 4 to 6 timed highlights with a long lunch or hotel window. Never stack climbs.',
   experience:
-    'Every day: at least 4 timed, named activities. Transfer days: 2–4 distinctive En route: stops (train, village, walk, lesser-known shrine). Stay days: 5–8 timed highlights. Still finish before guests are exhausted.',
+    'Every day: at least 4 timed, named activities. Transfer days: 2 to 4 distinctive En route: stops (train, village, walk, lesser-known shrine). Stay days: 5 to 8 timed highlights. Still finish before guests are exhausted.',
 }
 
 export function formatDate(iso: string | null) {
@@ -42,13 +42,13 @@ export function formatDate(iso: string | null) {
 
 export function enRouteDesignRules(style: ItineraryStyle): string {
   return `ALONG-THE-WAY DESIGN (this is what makes a LankaLux day feel complete)
-- A day is not only the overnight town. On every transfer, weave in the worthwhile places that sit ON THAT ROAD — waterfalls, working tea factories, gardens, cave temples, village tanks, viewpoints, bridges, hatcheries, mangrove boats. Also add lesser-known nearby places that sit a short detour off the day's route.
+- A day is not only the overnight town. On every transfer, weave in the worthwhile places that sit ON THAT ROAD: waterfalls, working tea factories, gardens, cave temples, village tanks, viewpoints, bridges, hatcheries, mangrove boats. Also add lesser-known nearby places that sit a short detour off the day's route.
 - ${STYLE_STOP_DENSITY[style]}
-- HARD MINIMUM: every day's "activities" array must contain at least 4 timed items that geographically match that day (overnight town, nearby sights, or the road being driven). Arrival and departure days still need 4 — airport, a city or coast pause, and two named nearby stops.
-- Prefix roadside or hidden-nearby pauses with "En route:" so the client can see them in the highlights list. Example: "10:30 AM - En route: pause at Ramboda Falls — a roadside cascade in the tea hairpins, ten minutes from the car."
+- HARD MINIMUM: every day's "activities" array must contain at least 4 timed items that geographically match that day (overnight town, nearby sights, or the road being driven). Arrival and departure days still need 4: airport, a city or coast pause, and two named nearby stops.
+- Prefix roadside or hidden-nearby pauses with "En route:" so the client can see them in the highlights list. Example: "10:30 AM - En route: pause at Ramboda Falls, a roadside cascade in the tea hairpins, ten minutes from the car."
 - Name the specific place. Never write "scenic drive", "free time", "leisure at hotel" or "visit local attractions" without a proper place name.
 - Choose the best-fit stops for this party's ages, energy and interests. Prefer real hidden gems over repeating the same headline twice.
-- Optional_activities are extras if time and mood allow — a second hike, a cultural show, a garden, a boat. They must also be real named places and do not count toward the 4 required activities.
+- Optional_activities are extras if time and mood allow: a second hike, a cultural show, a garden, a boat. They must also be real named places and do not count toward the 4 required activities.
 - One headline experience per day (the fortress, the temple, the safari, the train). Supporting stops sit around it, not in competition with it.
 - Ethical wildlife only: observation and conservation. No elephant riding, no bathing shows, no handling baby turtles for photos.
 - Do not invent hotels. Do not copy competitor wording, hotel names, meal-plan labels, or shopping-mall lists.
@@ -86,7 +86,7 @@ export function buildItineraryPrompt(
 
   return `You are a luxury travel designer for LankaLux, a Sri Lankan tailor-made journey company.
 
-Write ONE itinerary only — ${meta.label}: ${meta.subtitle}.
+Write ONE itinerary only, the ${meta.label}: ${meta.subtitle}.
 ${STYLE_INSTRUCTIONS[style]}
 
 CLIENT

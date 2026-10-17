@@ -8,6 +8,7 @@ import { hotelsForRequest, saveGeneratedOption, saveGenerationLog, toStructured,
 import { AppError } from '@/services/supabase.server'
 import type { ClientRequestRow, StructuredItinerary } from '@/types/domain'
 import { extractJsonObject } from '@/validation/itinerary.schema'
+import { NO_DASHES_RULE, undashDeep } from '@/lib/no-dashes'
 
 function openaiMessage(err: unknown): string {
   const anyErr = err as { status?: number; code?: string; message?: string; error?: { message?: string; code?: string } }
@@ -48,7 +49,7 @@ export async function generateOneItinerary(opts: {
         {
           role: 'system',
           content:
-            'You design LankaLux itineraries. Reply with a single valid JSON object matching the requested schema. Never wrap in markdown. Every day must include at least 4 timed activities that match that day, including named en-route or nearby hidden places. Write in LankaLux voice — never copied from another operator.',
+            'You design LankaLux itineraries. Reply with a single valid JSON object matching the requested schema. Never wrap in markdown. Every day must include at least 4 timed activities that match that day, including named en-route or nearby hidden places. Write in LankaLux voice, never copied from another operator. ' + NO_DASHES_RULE,
         },
         { role: 'user', content: buildItineraryPrompt(opts.request, opts.style, expectedDays, hotels) },
       ],
@@ -60,7 +61,7 @@ export async function generateOneItinerary(opts: {
     if (!raw) throw new AppError('AI request failed: empty response.', 502)
 
     const json = extractJsonObject(raw)
-    const generated = toStructured(json, opts.request.start_date)
+    const generated = undashDeep(toStructured(json, opts.request.start_date))
     const applied = applyHotelsToDays(generated.days, hotels, { replace: true })
     const payload = { ...generated, days: applied.days }
     if (payload.days.length !== expectedDays) {

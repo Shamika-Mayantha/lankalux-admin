@@ -5,6 +5,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { enRouteDesignRules, placesPromptSection } from '@/services/itinerary-prompt'
 import { rejectNonAdmin } from '@/app/api/v2/_guard'
+import { NO_DASHES_RULE, undashDeep } from '@/lib/no-dashes'
 
 function cleanGeneratedDayTitle(rawTitle: unknown, dayNumber: number, location?: string) {
   const title = typeof rawTitle === 'string' ? rawTitle.trim() : ''
@@ -491,7 +492,7 @@ Return JSON in this format: { "title": "...", "summary": "...", "total_kilometer
               {
                 role: 'system',
                 content:
-                  'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries with clear structure. Always generate FRESH, UNIQUE, and CREATIVE options. CRITICAL: Every single day MUST include an "image" field that showcases the day\'s highlight. Always respond with valid JSON only. Never use markdown. Never add explanations. Return only the JSON object.',
+                  'You are a luxury travel consultant specializing in bespoke Sri Lanka experiences. Create premium, curated itineraries with clear structure. Always generate FRESH, UNIQUE, and CREATIVE options. CRITICAL: Every single day MUST include an "image" field that showcases the day\'s highlight. Always respond with valid JSON only. Never use markdown. Never add explanations. Return only the JSON object. ' + NO_DASHES_RULE,
               },
               {
                 role: 'user',
@@ -596,7 +597,7 @@ Return JSON in this format: { "title": "...", "summary": "...", "total_kilometer
         console.log(`Generating option ${i + 1} of ${numOptions}...`)
         
         const option = await generateSingleOption(i + 1, itineraryOptions.options)
-        itineraryOptions.options.push(option)
+        itineraryOptions.options.push(undashDeep(option))
         
         // Save incrementally after each option is generated
         const partialOptionsString = JSON.stringify(itineraryOptions)

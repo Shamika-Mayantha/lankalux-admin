@@ -30,7 +30,8 @@ quiet. Write a short, personal nudge (60-120 words) that:
   inventing facts about their booking;
 - offers to adjust the plan and ends with one easy question (only offer: never say anything has
   already been added, changed or booked);
-- sounds like a person: no "I hope this email finds you well", no pressure, no exclamation-mark spam.
+- sounds like a person: no "I hope this email finds you well", no pressure, no exclamation-mark spam,
+  no long dashes (— or –); use commas or full stops instead.
 Never mention prices, discounts, availability, deadlines or payments. Never mention AI or automation.
 If this is the second follow-up, keep it lighter and make clear we will not keep chasing.
 Return the body (plain paragraphs separated by a blank line) and a short, friendly subject."""

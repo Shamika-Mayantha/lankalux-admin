@@ -3,6 +3,7 @@ import OpenAI from 'openai'
 import { CHAT_KNOWLEDGE_SUMMARY } from '@/lib/chat-knowledge'
 import { toIsoDate } from '@/lib/website-lead'
 import { clientIp, isRateLimited } from '@/lib/rate-limit'
+import { NO_DASHES_RULE, undash } from '@/lib/no-dashes'
 
 const MAX_MESSAGE_CHARS = 2000
 
@@ -324,6 +325,7 @@ Voice:
 - If you know their name from the draft, use it sparingly and naturally — never every sentence.
 - If they never shared a name, do not nag. Address them in a neutral, warm way (“you”) and move on.
 - Avoid sounding like a checklist. Vary sentence shape; do not open every reply the same way.
+- ${NO_DASHES_RULE}
 - If they are vague, offer 2–3 gentle options or a simple either/or.
 - We only create a CRM request when they tap “Send request” — never say it is already created.
 - Do NOT generate full or day-by-day itineraries in chat; explain that tailored itineraries are prepared by the team after request submission.
@@ -417,7 +419,7 @@ Output STRICT JSON only with this shape:
     return jsonResponse(
       {
         success: true,
-        reply,
+        reply: undash(reply),
         draft: nextDraft,
         missingFields: Array.isArray(parsed?.missingFields) ? parsed.missingFields : missing,
         suggestSendRequest,
