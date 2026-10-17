@@ -229,3 +229,14 @@ def test_complaint_is_not_reported_as_asking_if_human(test_db):
         body = c.execute("SELECT body FROM public.ai_notifications WHERE kind = 'attention'").fetchone()[0]
     assert "needs a person" in title and "real person" not in title
     assert body == 'They wrote: "Our driver was 40 minutes late. Not impressed."'
+
+
+def test_pulse_checks_in_while_a_task_is_still_running(test_db, monkeypatch):
+    # A reply can take minutes on the CPU; the background pulse keeps every agent online meanwhile.
+    import lankalux_agents.worker as worker_mod
+    w = make_worker(test_db["agent"], FakeLLM())
+    calls = []
+    monkeypatch.setattr(worker_mod.time, "sleep", lambda _s: calls.append(1) or setattr(w, "stopping", len(calls) >= 2))
+    w.pulse()
+    with psycopg.connect(test_db["admin"]) as c:
+        assert c.execute("SELECT count(*) FROM public.ai_agents WHERE last_heartbeat_at > now() - interval '1 minute'").fetchone()[0] == len(w.agents)

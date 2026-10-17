@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import signal
 import sys
+import threading
 import time
 
 from .actions import Actions
@@ -74,16 +75,30 @@ class Worker:
         row = self.db.one("SELECT system_paused FROM public.ai_settings WHERE id")
         return bool(row is None or row["system_paused"])
 
+    def beat(self, error: str | None = None) -> None:
+        for key in self.agents:
+            self.db.one("SELECT public.ai_heartbeat(%s, %s)", key, error)
+
     def heartbeat(self, error: str | None = None) -> None:
         if time.monotonic() - self._last_beat < HEARTBEAT_SECONDS:
             return
-        for key in self.agents:
-            self.db.one("SELECT public.ai_heartbeat(%s, %s)", key, error)
+        self.beat(error)
         self.ctx.prompts.update(load_prompts(self.db))
         self.ctx.playbook = load_playbook(self.db, self.ctx.playbook)
         self._last_beat = time.monotonic()
 
+    def pulse(self) -> None:
+        """Keeps checking in while a long model call runs, so the console never shows the
+        agents offline just because one reply takes a few minutes on the CPU."""
+        while not self.stopping:
+            time.sleep(HEARTBEAT_SECONDS)
+            try:
+                self.beat()
+            except Exception:
+                log.warning("heartbeat failed", exc_info=True)
+
     def run_forever(self) -> None:
+        threading.Thread(target=self.pulse, name="heartbeat", daemon=True).start()
         while not self.stopping:
             try:
                 if not self.tick():
