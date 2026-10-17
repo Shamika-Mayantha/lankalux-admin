@@ -75,7 +75,7 @@ export function styleFromNumber(n: number): ItineraryStyle {
   return 'balanced'
 }
 
-export const PROMPT_VERSION = 'll-itinerary-v5-2026-09-10'
+export const PROMPT_VERSION = 'll-itinerary-v6-2026-10-17'
 export const ID_PREFIX = 'req-id-'
 export const INACTIVITY_MS = 45 * 60 * 1000
 export const WHATSAPP_BUSINESS_DEFAULT = '94763261788'

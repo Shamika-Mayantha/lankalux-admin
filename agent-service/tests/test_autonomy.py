@@ -51,6 +51,9 @@ def test_quality_lessons_from_the_first_test_drive():
         "Your trip sounds lovely.\n\nShall we adjust it?"
     assert asked_if_human("Hi, quick one, am I talking to a real person or a bot?")
     assert asked_if_human("is this a bot?")
+    # Long dashes read as AI-written, so they never reach a customer.
+    assert tidy_message("Lovely choice \u2014 January is great. 10\u201312 days?") == "Lovely choice, January is great. 10 to 12 days?"
+    assert tidy_email_body("Your trip \u2014 elephants and beaches \u2014 sounds lovely.") == "Your trip, elephants and beaches, sounds lovely."
     assert not asked_if_human("Our driver was 40 minutes late and nobody answered the phone.")
     # The second test drive's follow-up email claimed "we've added a tea-country drive".
     assert check_text("We\u2019ve added a gentle tea-country drive instead of the train.")[0]

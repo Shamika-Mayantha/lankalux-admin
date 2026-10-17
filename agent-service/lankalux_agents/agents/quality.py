@@ -43,9 +43,18 @@ def asked_if_human(customer_text: str) -> bool:
     return bool(ASKED_IF_HUMAN.search((customer_text or "").replace("\u2019", "'")))
 
 
+def undash(text: str) -> str:
+    """Long dashes read as machine-written, so LankaLux text never uses them."""
+    t = re.sub(r"(\d)\s*[\u2013\u2014]\s*(\d)", r"\1 to \2", text)
+    t = re.sub(r"\s*[\u2013\u2014]\s*([.,!?;:)])", r"\1", t)
+    t = re.sub(r"\s*[\u2013\u2014]\s*$", "", t, flags=re.M)
+    t = re.sub(r"\s*[\u2013\u2014]\s*", ", ", t)
+    return re.sub(r",\s*,", ",", t)
+
+
 def tidy_message(text: str) -> str:
-    """WhatsApp replies: LankaLux writes without emojis (the model adds them however it is told)."""
-    t = EMOJI.sub("", text)
+    """WhatsApp replies: LankaLux writes without emojis or long dashes (the model adds them however it is told)."""
+    t = undash(EMOJI.sub("", text))
     t = re.sub(r"[ \t]+([,.!?])", r"\1", t)
     return re.sub(r"[ \t]{2,}", " ", t).strip()
 
@@ -56,7 +65,7 @@ def tidy_email_body(text: str) -> str:
     for _ in range(2):
         t = GREETING.sub("", t, count=1)
     t = SIGN_OFF.sub("", t)
-    return EMOJI.sub("", t).strip()
+    return undash(EMOJI.sub("", t)).strip()
 
 
 def check_text(text: str, *, max_len: int = 1000) -> tuple[list[str], list[str]]:
