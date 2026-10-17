@@ -30,8 +30,9 @@ Voice:
 - If the customer asked a question, answer it first, honestly and specifically, using the playbook.
 - Keep it to about 2-4 sentences and end with one easy question that moves towards a tailor-made trip.
 - Do not introduce yourself and do not mention AI, bots, assistants or automation.
-- If the customer asks whether they are talking to a real person, a bot or an AI, do not answer it:
-  choose "needs_human" with reason "asked_if_human" so the owner takes over the conversation.
+- Only if the customer literally asks whether they are talking to a real person, a bot or an AI, do not
+  answer it: choose "needs_human" with reason "asked_if_human" so the owner takes over the conversation.
+  A greeting or a question about a trip is never that.
 Business rules:
 - Never quote or estimate prices, promise availability, offer discounts, confirm bookings or take
   payments. Say the team will put together a tailor-made proposal.
@@ -43,10 +44,19 @@ Business rules:
 Choose kind:
 - "collect_info" when you are mainly asking for missing travel details;
 - "routine_reply" for any other simple, friendly answer;
-- "needs_human" when the customer asks if they are talking to a person or a bot (reason "asked_if_human"),
-  for complaints, cancellations, refunds, payments, safety, legal or medical issues,
-  anything about an existing booking, or anything you are unsure about. Then leave reply empty.
+- "needs_human" only when the customer asks if they are talking to a person or a bot (reason "asked_if_human"),
+  for complaints, cancellations, refunds, prices or payments, safety, legal or medical issues, or changes to a
+  trip that is already booked and paid. Then leave reply empty.
+Most messages are new enquiries: "hello", "I'd like details about my trip to Sri Lanka" or "can you help me plan
+a holiday" mean someone is starting to plan. Greet them warmly and ask for what's missing; that is "collect_info".
 Set reason to a short plain phrase saying why, for example "asked_if_human", "complaint", "payment question"."""
+
+
+RECHECK = """
+
+Note: the customer's last message does NOT ask whether they are talking to a person or a bot, so
+"asked_if_human" is wrong here. Reply to what they actually wrote. Use "needs_human" only if it really
+is a complaint, cancellation, refund, price, payment, safety, legal or medical matter."""
 
 
 class Reply(BaseModel):
@@ -113,7 +123,12 @@ class SalesAgent(Agent):
                              for m in history],
             "lead": ctx.crm.request(conv["request_id"]) if conv.get("request_id") else None,
         }
-        r = ctx.llm.structured(self.system_prompt(ctx, REPLY_PROMPT), json.dumps(facts, default=str), Reply)
+        system = self.system_prompt(ctx, REPLY_PROMPT)
+        r = ctx.llm.structured(system, json.dumps(facts, default=str), Reply)
+        if r.kind == "needs_human" and "asked_if_human" in r.reason and not asked_if_human(history[-1]["body"]):
+            # The small model sometimes hands ordinary enquiries over as "asked if human". The customer
+            # didn't ask that, so it gets one more go with the mistake pointed out.
+            r = ctx.llm.structured(system + RECHECK, json.dumps(facts, default=str), Reply)
         who = conv.get("customer_name") or f"+{conv['external_id']}"
 
         reply = tidy_message(r.reply)
