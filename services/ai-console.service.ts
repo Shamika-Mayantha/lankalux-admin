@@ -66,6 +66,8 @@ export type AiConversation = {
   request_id: string | null
   last_message_at: string | null
   service_window_expires_at: string | null
+  /** Trip details the Website Concierge collected (website chats only). */
+  lead: Record<string, unknown> | null
   messages: AiMessage[]
 }
 
@@ -100,6 +102,8 @@ export type AiOverview = {
   pending: AiPendingAction[]
   activity: AiActivity[]
   conversations: AiConversation[]
+  /** Chats with the Website Concierge on lankalux.com. */
+  websiteChats: AiConversation[]
   counts: { queued: number; running: number; failed_today: number; executed_today: number }
   summary: { day: string; summary: string } | null
 }
@@ -136,10 +140,10 @@ export async function getAiOverview(): Promise<AiOverview> {
     db.from('ai_daily_summaries').select('day, summary').order('day', { ascending: false }).limit(1).maybeSingle(),
     db
       .from('ai_conversations')
-      .select('id, channel, external_id, customer_name, mode, request_id, last_message_at, service_window_expires_at')
+      .select('id, channel, external_id, customer_name, mode, request_id, last_message_at, service_window_expires_at, lead')
       .neq('channel', 'owner')
       .order('last_message_at', { ascending: false, nullsFirst: false })
-      .limit(20),
+      .limit(50),
     db.from('ai_tasks').select('id, agent_key, task_type, request_id, updated_at').eq('status', 'running').order('updated_at', { ascending: false }).limit(20),
     db
       .from('ai_notifications')
@@ -157,7 +161,12 @@ export async function getAiOverview(): Promise<AiOverview> {
   fail(runningTasks.error, 'running tasks')
   fail(pings.error, 'notifications')
   if (!settings.data) throw new AppError('The AI system is not installed in the database yet.', 503)
-  const convRows = (conversations.data || []) as Omit<AiConversation, 'messages'>[]
+  // Website chats are many and short, so they get their own list instead of crowding out WhatsApp.
+  const allConvs = (conversations.data || []) as Omit<AiConversation, 'messages'>[]
+  const convRows = [
+    ...allConvs.filter((c) => c.channel !== 'website').slice(0, 20),
+    ...allConvs.filter((c) => c.channel === 'website').slice(0, 30),
+  ]
   const byConv = new Map<string, AiMessage[]>()
   if (convRows.length) {
     const { data: msgs, error: msgErr } = await db
@@ -165,12 +174,12 @@ export async function getAiOverview(): Promise<AiOverview> {
       .select('conversation_id, direction, sender_kind, body, status, created_at')
       .in('conversation_id', convRows.map((c) => c.id))
       .order('created_at', { ascending: false })
-      .limit(300)
+      .limit(600)
     fail(msgErr, 'messages')
     for (const m of (msgs || []) as (AiMessage & { conversation_id: string })[]) {
       const list = byConv.get(m.conversation_id) || []
-      // Keep the latest 8 per conversation, shown oldest first.
-      if (list.length < 8) list.unshift({ direction: m.direction, sender_kind: m.sender_kind, body: m.body, status: m.status, created_at: m.created_at })
+      // Keep the latest 12 per conversation, shown oldest first.
+      if (list.length < 12) list.unshift({ direction: m.direction, sender_kind: m.sender_kind, body: m.body, status: m.status, created_at: m.created_at })
       byConv.set(m.conversation_id, list)
     }
   }
@@ -189,7 +198,8 @@ export async function getAiOverview(): Promise<AiOverview> {
     agents: (agents.data || []) as AiAgent[],
     pending: pendingRows,
     activity: (activity.data || []) as AiActivity[],
-    conversations: convRows.map((c) => ({ ...c, messages: byConv.get(c.id) || [] })),
+    conversations: convRows.filter((c) => c.channel !== 'website').map((c) => ({ ...c, messages: byConv.get(c.id) || [] })),
+    websiteChats: convRows.filter((c) => c.channel === 'website').map((c) => ({ ...c, messages: byConv.get(c.id) || [] })),
     counts: {
       queued: queued.count || 0,
       running: running.count || 0,
@@ -361,4 +371,30 @@ export async function updateAiPlaybook(staff: Staff, playbook: unknown): Promise
   if (error) throw new AppError(`Could not save the playbook: ${error.message}`, 500)
   await logOwner(staff, 'playbook.changed', { characters: text.length })
   return { playbook: text, updated_at: now }
+}
+
+const INSTRUCTIONS_MAX = 4000
+
+/** The owner's extra instructions for one agent (today only the Website Concierge reads them live). */
+export async function getAgentInstructions(key: string): Promise<{ instructions: string; updated_at: string | null }> {
+  const { data, error } = await getServiceClient().from('ai_agents').select('system_prompt, updated_at').eq('key', key).maybeSingle()
+  if (error) throw new AppError(`Could not load the agent: ${error.message}`, 500)
+  if (!data) throw new AppError('Unknown agent.', 404)
+  return { instructions: (data.system_prompt as string) || '', updated_at: (data.updated_at as string | null) ?? null }
+}
+
+export async function updateAgentInstructions(staff: Staff, key: string, instructions: unknown) {
+  if (typeof instructions !== 'string') throw new AppError('Instructions must be text.', 400)
+  const text = instructions.replace(/\r\n/g, '\n').trim()
+  if (text.length > INSTRUCTIONS_MAX) throw new AppError(`Too long (${text.length} of ${INSTRUCTIONS_MAX} characters).`, 400)
+  const now = new Date().toISOString()
+  const { data, error } = await getServiceClient()
+    .from('ai_agents')
+    .update({ system_prompt: text, updated_by: staff.id, updated_at: now })
+    .eq('key', key)
+    .select('key')
+  if (error) throw new AppError(`Could not save: ${error.message}`, 500)
+  if (!data || data.length === 0) throw new AppError('Unknown agent.', 404)
+  await logOwner(staff, 'agent.instructions_changed', { agent: key, characters: text.length })
+  return { instructions: text, updated_at: now }
 }

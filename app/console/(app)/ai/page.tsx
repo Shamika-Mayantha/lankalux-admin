@@ -8,6 +8,7 @@ import {
   Check,
   CarFront,
   Crown,
+  Globe,
   MapPinned,
   MessagesSquare,
   Pause,
@@ -31,6 +32,7 @@ const AGENT_ICON: Record<string, LucideIcon> = {
   followup: BellRing,
   operations: CarFront,
   quality: ShieldCheck,
+  concierge: Globe,
 }
 
 const TASK_LABEL: Record<string, string> = {
@@ -65,7 +67,12 @@ const EVENT_LABEL: Record<string, string> = {
   'conversation.handed_back': 'handed a conversation back to the AI',
   'task.rate_limit': 'hit the hourly limit for a request',
   'task.depth_limit': 'stopped a chain of tasks at the depth limit',
+  'website.request_created': 'passed a website chat to the team as a new request',
+  'agent.instructions_changed': "changed an agent's instructions",
 }
+
+/** Answers on lankalux.com from admin itself, so it does not depend on the agent server. */
+const CONCIERGE = 'concierge'
 
 function capitalise(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1)
@@ -245,21 +252,45 @@ function Pings({ pings, busy, onRead }: { pings: AiPing[]; busy: boolean; onRead
   )
 }
 
-function ConversationCard({ c, busy, onMode }: { c: AiConversation; busy: boolean; onMode: (id: string, mode: 'ai' | 'human') => void }) {
+/** "2 adults · 2027-03-12 to 2027-03-22 · culture, wildlife" from what the concierge collected. */
+function leadSummary(lead: Record<string, unknown> | null): string {
+  if (!lead) return ''
+  const parts: string[] = []
+  const adults = typeof lead.adults === 'number' ? lead.adults : null
+  const children = typeof lead.children === 'number' ? lead.children : 0
+  if (adults) parts.push(`${adults} adult${adults === 1 ? '' : 's'}${children ? `, ${children} child${children === 1 ? '' : 'ren'}` : ''}`)
+  if (typeof lead.startDate === 'string' && typeof lead.endDate === 'string') parts.push(`${lead.startDate} to ${lead.endDate}`)
+  else if (typeof lead.dateNotes === 'string') parts.push(lead.dateNotes)
+  if (typeof lead.email === 'string') parts.push(lead.email)
+  if (typeof lead.whatsapp === 'string') parts.push(lead.whatsapp)
+  if (typeof lead.interests === 'string') parts.push(lead.interests)
+  return parts.join(' · ')
+}
+
+function ConversationCard({ c, busy, onMode }: { c: AiConversation; busy: boolean; onMode: (c: AiConversation, mode: 'ai' | 'human') => void }) {
+  const website = c.channel === 'website'
   const windowOpen = replyWindowOpen(c.service_window_expires_at)
+  const details = website ? leadSummary(c.lead) : ''
   return (
     <div className="ll-card ll-ai-conversation">
       <div className="ll-row" style={{ justifyContent: 'space-between', gap: 8 }}>
         <div>
-          <h3>{c.customer_name || `+${c.external_id}`}</h3>
+          <h3>{c.customer_name || (website ? 'Website visitor' : `+${c.external_id}`)}</h3>
           <p className="ll-muted ll-small">
-            +{c.external_id} · {c.last_message_at ? formatAgo(c.last_message_at) : 'no messages'}
-            {!windowOpen && ' · reply window closed'}
+            {website ? 'Website chat' : `+${c.external_id}`} · {c.last_message_at ? formatAgo(c.last_message_at) : 'no messages'}
+            {!website && !windowOpen && ' · reply window closed'}
+            {c.request_id && (
+              <>
+                {' · '}
+                <Link href={`/console/requests/${c.request_id}`}>{c.request_id}</Link>
+              </>
+            )}
           </p>
+          {details && <p className="ll-small" style={{ margin: '4px 0 0' }}>{details}</p>}
         </div>
         <div className="ll-row" style={{ gap: 8 }}>
           <span className={`ll-pill ${c.mode === 'ai' ? 'follow_up' : 'expired'}`}>{c.mode === 'ai' ? 'AI' : 'You'}</span>
-          <button className="ll-btn secondary" disabled={busy} onClick={() => onMode(c.id, c.mode === 'ai' ? 'human' : 'ai')}>
+          <button className="ll-btn secondary" disabled={busy} onClick={() => onMode(c, c.mode === 'ai' ? 'human' : 'ai')}>
             {c.mode === 'ai' ? 'Take over' : 'Hand back to AI'}
           </button>
         </div>
@@ -270,7 +301,7 @@ function ConversationCard({ c, busy, onMode }: { c: AiConversation; busy: boolea
             {m.body}
             <span className="ll-ai-meta">
               {formatAgo(m.created_at)}
-              {m.direction === 'outbound' && ` · ${m.status}`}
+              {!website && m.direction === 'outbound' && ` · ${m.status}`}
             </span>
           </p>
         ))}
@@ -282,6 +313,7 @@ function ConversationCard({ c, busy, onMode }: { c: AiConversation; busy: boolea
 type AgentState = 'working' | 'idle' | 'paused' | 'offline'
 
 function agentState(ag: AiAgent, o: AiOverview, task: AiRunningTask | undefined): AgentState {
+  if (ag.key === CONCIERGE) return ag.paused ? 'paused' : 'idle'
   if (ag.paused || o.settings.system_paused) return 'paused'
   if (!online(ag.last_heartbeat_at)) return 'offline'
   return task ? 'working' : 'idle'
@@ -339,7 +371,7 @@ function AgentCard({ ag, o, busy, onToggle }: { ag: AiAgent; o: AiOverview; busy
   )
 }
 
-/** The business facts and writing rules the Sales, Follow-up and Manager agents follow. */
+/** The business facts and writing rules the Sales, Follow-up, Manager and Website Concierge agents follow. */
 function PlaybookEditor() {
   const { data, error, loading, reload } = useConsoleGet<{ playbook?: AiPlaybook }>('/api/v2/ai/playbook')
   const [draft, setDraft] = useState<string | null>(null)
@@ -372,7 +404,7 @@ function PlaybookEditor() {
         <div>
           <h2>Playbook</h2>
           <p className="ll-muted ll-small" style={{ margin: '4px 0 0' }}>
-            What the agents know about LankaLux and how they write. Sales, Follow-up and the AI Manager read it before every message; changes apply within a minute.
+            What the agents know about LankaLux and how they write. Sales, Follow-up, the AI Manager and the Website Concierge read it before every message; changes apply within a minute.
           </p>
         </div>
         {data?.playbook?.updated_at && <span className="ll-muted ll-small">saved {formatAgo(data.playbook.updated_at)}</span>}
@@ -407,11 +439,97 @@ function PlaybookEditor() {
   )
 }
 
+/** The Website Concierge: on/off and the owner's extra instructions on top of the playbook. */
+function ConciergeEditor({ agent, busy, onToggle }: { agent: AiAgent | undefined; busy: boolean; onToggle: () => void }) {
+  const path = `/api/v2/ai/agents/${CONCIERGE}`
+  const { data, error, loading, reload } = useConsoleGet<{ instructions?: string; updated_at?: string | null }>(path)
+  const [draft, setDraft] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+  const current = data?.instructions ?? ''
+  const text = draft ?? current
+  const dirty = draft !== null && draft.trim() !== current.trim()
+
+  async function save() {
+    setSaving(true)
+    setSaveError(null)
+    setSaved(false)
+    try {
+      await consoleFetch(path, { method: 'PUT', body: JSON.stringify({ instructions: text }) })
+      await reload()
+      setDraft(null)
+      setSaved(true)
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Could not save.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="ll-card ll-panel" style={{ marginBottom: 16 }}>
+      <div className="ll-panel-head">
+        <div>
+          <h2>Website Concierge</h2>
+          <p className="ll-muted ll-small" style={{ margin: '4px 0 0' }}>
+            The chat on lankalux.com. It answers general questions from the playbook, takes trip details and passes them to the team as a new request, and sends tailored itineraries, prices and bookings to email or WhatsApp. It runs even while the agent system is paused.
+          </p>
+        </div>
+        {agent && (
+          <button type="button" className={`ll-btn small ${agent.paused ? '' : 'secondary'}`} disabled={busy} onClick={onToggle}>
+            {agent.paused ? (
+              <>
+                <Play size={15} aria-hidden /> Turn on
+              </>
+            ) : (
+              <>
+                <Pause size={15} aria-hidden /> Turn off
+              </>
+            )}
+          </button>
+        )}
+      </div>
+      {!agent && <div className="ll-error">The Website Concierge is not installed in the database yet.</div>}
+      {agent?.paused && <p className="ll-muted ll-small">Off: visitors who open the chat are pointed to email and WhatsApp.</p>}
+      {agent?.last_error && <div className="ll-error">Last error: {agent.last_error}</div>}
+      {error && <div className="ll-error">{error}</div>}
+      {saveError && <div className="ll-error">{saveError}</div>}
+      {saved && !dirty && <div className="ll-ok">Saved. The concierge uses it from its next reply.</div>}
+      <label className="ll-small" htmlFor="concierge-instructions" style={{ display: 'block', margin: '8px 0 6px' }}>
+        Extra instructions <span className="ll-muted">(optional, on top of the playbook: offers to mention, things to avoid, tone)</span>
+      </label>
+      <textarea
+        id="concierge-instructions"
+        className="ll-ai-reply"
+        rows={5}
+        value={loading && draft === null ? 'Loading…' : text}
+        disabled={loading || saving}
+        placeholder="e.g. Mention that December and January book up early."
+        onChange={(e) => {
+          setDraft(e.target.value)
+          setSaved(false)
+        }}
+      />
+      <div className="ll-row" style={{ marginTop: 12, justifyContent: 'flex-end', gap: 8 }}>
+        {dirty && (
+          <button type="button" className="ll-btn secondary" disabled={saving} onClick={() => setDraft(null)}>
+            Undo changes
+          </button>
+        )}
+        <button type="button" className="ll-btn" disabled={!dirty || saving} onClick={save}>
+          {saving ? 'Saving…' : 'Save instructions'}
+        </button>
+      </div>
+    </section>
+  )
+}
+
 function secondsSince(at: number | null) {
   return at ? Math.max(0, Math.round((Date.now() - at) / 1000)) : null
 }
 
-type Tab = 'live' | 'approvals' | 'whatsapp' | 'playbook'
+type Tab = 'live' | 'approvals' | 'whatsapp' | 'website' | 'playbook'
 
 export default function AiPage() {
   const { data, error, loading, reload, refreshing } = useConsoleGet<{ overview?: AiOverview }>('/api/v2/ai')
@@ -484,15 +602,19 @@ export default function AiPage() {
     send(`/api/v2/ai/actions/${id}`, 'POST', { decision, text })
   }
 
-  function setMode(id: string, mode: 'ai' | 'human') {
-    const msg =
-      mode === 'human'
+  function setMode(c: AiConversation, mode: 'ai' | 'human') {
+    const id = c.id
+    const msg = c.channel === 'website'
+      ? mode === 'human'
+        ? 'Take over this website chat? The concierge stops replying and tells the visitor the team will reach them by email or WhatsApp.'
+        : 'Hand this website chat back to the concierge? It will reply to the visitor again.'
+      : mode === 'human'
         ? 'Take over this conversation? The AI stops replying to this customer and its unsent drafts are withdrawn.'
         : 'Hand this conversation back to the AI? It will draft replies again (each still needs your approval).'
     if (window.confirm(msg)) send(`/api/v2/ai/conversations/${id}`, 'PATCH', { mode })
   }
 
-  const workerSeen = o?.agents.reduce<string | null>((latest, a) => (a.last_heartbeat_at && (!latest || a.last_heartbeat_at > latest) ? a.last_heartbeat_at : latest), null) ?? null
+  const workerSeen = o?.agents.reduce<string | null>((latest, a) => (a.key !== CONCIERGE && a.last_heartbeat_at && (!latest || a.last_heartbeat_at > latest) ? a.last_heartbeat_at : latest), null) ?? null
   const workerOnline = online(workerSeen)
   const agents = useMemo(() => {
     const list = [...(o?.agents || [])]
@@ -584,6 +706,9 @@ export default function AiPage() {
         <button type="button" role="tab" aria-selected={tab === 'whatsapp'} className={tab === 'whatsapp' ? 'on' : ''} onClick={() => setTab('whatsapp')}>
           WhatsApp{o && o.conversations.length > 0 && <span className="ll-count">{o.conversations.length}</span>}
         </button>
+        <button type="button" role="tab" aria-selected={tab === 'website'} className={tab === 'website' ? 'on' : ''} onClick={() => setTab('website')}>
+          Website chat{o && o.websiteChats.length > 0 && <span className="ll-count">{o.websiteChats.length}</span>}
+        </button>
       </div>
 
       {tab === 'live' && (
@@ -592,7 +717,7 @@ export default function AiPage() {
             {o && <Pings pings={o.pings} busy={busy} onRead={(ids) => send('/api/v2/ai/pings', 'POST', ids ? { ids } : {})} />}
             <div className="ll-agents">
               {!o
-                ? Array.from({ length: 7 }, (_, i) => <div key={i} className="ll-agent ll-agent-skel" />)
+                ? Array.from({ length: 8 }, (_, i) => <div key={i} className="ll-agent ll-agent-skel" />)
                 : agents.map((ag) => (
                     <AgentCard key={ag.key} ag={ag} o={o} busy={busy} onToggle={() => send(`/api/v2/ai/agents/${ag.key}`, 'PATCH', { paused: !ag.paused })} />
                   ))}
@@ -661,6 +786,30 @@ export default function AiPage() {
       )}
 
       {tab === 'playbook' && <PlaybookEditor />}
+
+      {tab === 'website' && (
+        <section>
+          <ConciergeEditor
+            agent={o?.agents.find((a) => a.key === CONCIERGE)}
+            busy={busy}
+            onToggle={() => {
+              const ag = o?.agents.find((a) => a.key === CONCIERGE)
+              if (ag) send(`/api/v2/ai/agents/${CONCIERGE}`, 'PATCH', { paused: !ag.paused })
+            }}
+          />
+          {!o || o.websiteChats.length === 0 ? (
+            <div className="ll-card">
+              <p className="ll-empty">No website chats yet.</p>
+            </div>
+          ) : (
+            <div className="ll-ai-list ll-convs">
+              {o.websiteChats.map((c) => (
+                <ConversationCard key={c.id} c={c} busy={busy} onMode={setMode} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {tab === 'whatsapp' && (
         <section>
