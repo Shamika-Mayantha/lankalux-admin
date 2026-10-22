@@ -4,8 +4,8 @@
 // - Telegram posts group messages here (checked with X-Telegram-Bot-Api-Secret-Token). They are
 //   stored in telegram_messages; nothing is answered automatically. Claude reads them on a
 //   schedule and writes replies as 'out' rows.
-// - The database (x-internal-token, checked against Vault) asks to 'send' unsent replies, or to
-//   'register' this function as the bot's webhook.
+// - The database (x-internal-token, checked against Vault) asks to 'send' unsent replies, to
+//   'register' this function as the bot's webhook, or for 'info' on webhook health.
 // Replies only go to chats marked allowed in telegram_chats. Deploy with verify_jwt = false.
 //
 // Secret (Supabase dashboard, never in code or chat): TELEGRAM_BOT_TOKEN from @BotFather.
@@ -114,6 +114,17 @@ Deno.serve(async (req) => {
       })
       const me = await telegram('getMe', {})
       return Response.json({ ok: true, bot: me.username, can_read_all_group_messages: me.can_read_all_group_messages })
+    }
+    if (action === 'info') {
+      // Delivery health only; the webhook URL and secret are left out.
+      const info = await telegram('getWebhookInfo', {})
+      return Response.json({
+        ok: true,
+        pending_update_count: info.pending_update_count,
+        last_error_date: info.last_error_date ?? null,
+        last_error_message: info.last_error_message ?? null,
+        url_host: info.url ? new URL(info.url).host : null,
+      })
     }
     return Response.json({ ok: true, sent: await sendPending() })
   } catch (e) {
