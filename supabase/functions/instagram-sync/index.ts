@@ -20,6 +20,7 @@ const MAX_MEDIA = 100
 const REFRESH_AFTER_DAYS = 7
 const REEL_METRICS = 'views,reach,likes,comments,saved,shares,total_interactions,ig_reels_avg_watch_time,ig_reels_video_view_total_time'
 const FEED_METRICS = 'views,reach,likes,comments,saved,shares,total_interactions,profile_visits,follows'
+const BASIC_METRICS = 'reach,likes,comments,saved,shares'
 
 async function authorised(req: Request) {
   const syncToken = req.headers.get('x-instagram-sync-token') ?? ''
@@ -69,19 +70,24 @@ async function currentToken(): Promise<string> {
 }
 
 async function insightsFor(m: { id: string; media_product_type?: string }, token: string) {
-  const metrics = m.media_product_type === 'REELS' ? REEL_METRICS : FEED_METRICS
-  try {
-    const r = await get(`${m.id}/insights`, { metric: metrics }, token)
-    const out: Record<string, number> = {}
-    for (const row of r.data ?? []) out[row.name] = row.values?.[0]?.value ?? row.total_value?.value ?? null
-    return out
-  } catch (e) {
-    // Some media (old posts, stories, ads) refuse some metrics; keep the post without them.
-    return { error: (e as Error).message }
+  // One unsupported metric fails the whole call, so fall back to a basic set before giving up.
+  const tries = [m.media_product_type === 'REELS' ? REEL_METRICS : FEED_METRICS, BASIC_METRICS]
+  let lastError = ''
+  for (const metrics of tries) {
+    try {
+      const r = await get(`${m.id}/insights`, { metric: metrics }, token)
+      const out: Record<string, number> = {}
+      for (const row of r.data ?? []) out[row.name] = row.values?.[0]?.value ?? row.total_value?.value ?? null
+      return out
+    } catch (e) {
+      lastError = (e as Error).message
+    }
   }
+  // Some media (old posts, stories, ads) refuse insights; keep the post without them.
+  return { error: lastError }
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (!(await authorised(req))) return new Response('Unauthorised', { status: 401 })
   try {
     const token = await currentToken()
@@ -105,7 +111,7 @@ Deno.serve(async (req) => {
       page = await get(page.paging.next, {}, token)
     }
 
-    const rows = []
+    const rows: Record<string, unknown>[] = []
     for (const m of media.slice(0, MAX_MEDIA)) {
       rows.push({
         id: m.id,
