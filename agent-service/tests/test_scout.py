@@ -55,7 +55,7 @@ class FakeLLM:
             traveller=True, score=86, summary="Couple planning 10 days in March, wants a driver.",
             dates="March, 10 days", party="2 adults", places=["Sigiriya", "Ella"], budget="", interests="culture, tea country",
             reply="Hi there! Ten days is a lovely length — enough for the Cultural Triangle, Kandy and Ella without rushing. 🙂 "
-                  "We run private driver-guide trips at LankaLux and are happy to help if useful.",
+                  "We run private driver-guide trips at LankaLux if you want a hand with one.",
             reason="Actively planning and asking about drivers.")
         self.calls: list[str] = []
         self.users: list[str] = []
