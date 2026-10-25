@@ -299,5 +299,5 @@ def test_migrations_can_run_twice(test_db):
     folder = ROOT.parent / "supabase" / "migrations"
     with psycopg.connect(test_db["admin"], autocommit=True) as c:
         # Each migration resets the agent list to include every agent so far, so the latest one is what re-runs.
-        c.execute((folder / "20261026000000_ai_win_back.sql").read_text())
-        assert c.execute("SELECT count(*) FROM public.ai_agents WHERE key IN ('scout', 'winback')").fetchone()[0] == 2
+        c.execute((folder / "20261026100000_ai_partners.sql").read_text())
+        assert c.execute("SELECT count(*) FROM public.ai_agents WHERE key IN ('scout', 'winback', 'partners')").fetchone()[0] == 3

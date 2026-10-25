@@ -461,9 +461,7 @@ export async function sendReplyEmail(opts: {
   const { messageId } = await sendLankaLuxMail({
     to,
     subject,
-    text: unsub ? `${compiled.text}
-
-Would rather not hear from us? Unsubscribe here and we will not email you again: ${unsub}` : compiled.text,
+    text: unsub ? `${compiled.text}\n\nWould rather not hear from us? Unsubscribe here and we will not email you again: ${unsub}` : compiled.text,
     html: compiled.html,
     requestId: opts.requestId,
     sender: opts.sender,

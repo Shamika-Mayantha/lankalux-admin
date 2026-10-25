@@ -22,9 +22,12 @@ from .leads import LeadStore
 from .llm import LLMError, OllamaLLM
 from .memory import Memory
 from .queue import Task, TaskQueue
+from .sites import Sites
 from .sources import Feeds, Reddit
 
 log = logging.getLogger("lankalux_agents")
+# How the Partner agent introduces itself to the websites it reads.
+SITE_USER_AGENT = "LankaLuxPartnerBot/1.0 (+https://lankalux.com; hello@lankalux.com)"
 HEARTBEAT_SECONDS = 60
 
 
@@ -153,7 +156,7 @@ def main() -> None:
         feeds=Feeds(settings.user_agent),
     )
     ctx = Context(queue=queue, llm=llm, actions=Actions(db), crm=CRM(db), memory=Memory(db, llm), review_llm=review_llm,
-                  leads=LeadStore(db), sources=sources)
+                  leads=LeadStore(db), sources=sources, sites=Sites(SITE_USER_AGENT))
     worker = Worker(ctx, db, {cls.key: cls() for cls in ALL_AGENTS}, settings.poll_seconds)
     signal.signal(signal.SIGTERM, worker.stop)
     signal.signal(signal.SIGINT, worker.stop)

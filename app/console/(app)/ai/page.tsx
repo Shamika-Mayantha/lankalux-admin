@@ -15,6 +15,7 @@ import {
   Play,
   Radar,
   Undo2,
+  Handshake,
   ShieldCheck,
   Bot,
   type LucideIcon,
@@ -23,6 +24,7 @@ import { consoleFetch, useConsoleGet } from '@/lib/console-api'
 import { formatAgo } from '@/lib/format'
 import { AiEmailsPanel } from '@/features/console/AiEmailsPanel'
 import { AiLeadsPanel } from '@/features/console/AiLeadsPanel'
+import { AiPartnersPanel } from '@/features/console/AiPartnersPanel'
 import type { AiActivity, AiAgent, AiConversation, AiOverview, AiPendingAction, AiPing, AiPlaybook, AiRunningTask } from '@/services/ai-console.service'
 
 /** How often the page refreshes itself while it is open and visible. */
@@ -39,6 +41,7 @@ const AGENT_ICON: Record<string, LucideIcon> = {
   concierge: Globe,
   scout: Radar,
   winback: Undo2,
+  partners: Handshake,
 }
 
 const TASK_LABEL: Record<string, string> = {
@@ -55,6 +58,8 @@ const TASK_LABEL: Record<string, string> = {
   judge_lead: 'reading a lead',
   scan_win_backs: 'looking for past enquiries to win back',
   draft_win_back: 'writing a win-back email',
+  plan_partners: 'planning partner emails',
+  research_partner: 'reading a partner website',
 }
 
 /** Verb phrases; the actor's name goes in front ("Sales finished qualifying a new lead"). */
@@ -89,7 +94,7 @@ const EVENT_LABEL: Record<string, string> = {
 const CONCIERGE = 'concierge'
 
 /** How the agent cards are laid out: the Manager leads, then the owner's chosen order. */
-const AGENT_ORDER = ['manager', 'sales', 'followup', 'operations', 'planner', 'pricing', 'quality', CONCIERGE, 'scout', 'winback']
+const AGENT_ORDER = ['manager', 'sales', 'followup', 'operations', 'planner', 'pricing', 'quality', CONCIERGE, 'scout', 'winback', 'partners']
 
 function capitalise(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1)
@@ -548,7 +553,7 @@ function secondsSince(at: number | null) {
   return at ? Math.max(0, Math.round((Date.now() - at) / 1000)) : null
 }
 
-type Tab = 'live' | 'approvals' | 'leads' | 'emails' | 'whatsapp' | 'website' | 'playbook'
+type Tab = 'live' | 'approvals' | 'leads' | 'partners' | 'emails' | 'whatsapp' | 'website' | 'playbook'
 
 export default function AiPage() {
   const { data, error, loading, reload, refreshing } = useConsoleGet<{ overview?: AiOverview }>('/api/v2/ai')
@@ -725,6 +730,9 @@ export default function AiPage() {
         <button type="button" role="tab" aria-selected={tab === 'leads'} className={tab === 'leads' ? 'on' : ''} onClick={() => setTab('leads')}>
           Leads
         </button>
+        <button type="button" role="tab" aria-selected={tab === 'partners'} className={tab === 'partners' ? 'on' : ''} onClick={() => setTab('partners')}>
+          Partners
+        </button>
         <button type="button" role="tab" aria-selected={tab === 'emails'} className={tab === 'emails' ? 'on' : ''} onClick={() => setTab('emails')}>
           Emails
         </button>
@@ -745,7 +753,7 @@ export default function AiPage() {
             {o && <Pings pings={o.pings} busy={busy} onRead={(ids) => send('/api/v2/ai/pings', 'POST', ids ? { ids } : {})} />}
             <div className="ll-agents">
               {!o
-                ? Array.from({ length: 10 }, (_, i) => <div key={i} className="ll-agent ll-agent-skel" />)
+                ? Array.from({ length: 11 }, (_, i) => <div key={i} className="ll-agent ll-agent-skel" />)
                 : agents.map((ag) => (
                     <AgentCard key={ag.key} ag={ag} o={o} busy={busy} onToggle={() => send(`/api/v2/ai/agents/${ag.key}`, 'PATCH', { paused: !ag.paused })} />
                   ))}
@@ -814,6 +822,8 @@ export default function AiPage() {
       )}
 
       {tab === 'leads' && <AiLeadsPanel />}
+
+      {tab === 'partners' && <AiPartnersPanel />}
 
       {tab === 'emails' && <AiEmailsPanel agents={o?.agents || []} />}
 

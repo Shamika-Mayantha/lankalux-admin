@@ -44,6 +44,7 @@ def schedule(queue: TaskQueue, now: datetime | None = None, done: set[str] | Non
         stamp = local.strftime("%Y-%m-%dT%H")
         jobs.append(("followup", "scan_follow_ups", {}, f"followups:{stamp}", 120))
         jobs.append(("operations", "check_upcoming_trips", {}, f"trips:{stamp}", 120))
+        jobs.append(("partners", "plan_partners", {}, f"partners:{stamp}", 160))
     # A restart late in the day queues both searches; the scout skips one that comes too soon after the other.
     for hour in LEAD_SEARCH_HOURS:
         if local.hour >= hour:

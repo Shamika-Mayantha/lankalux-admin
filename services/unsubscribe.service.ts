@@ -17,13 +17,18 @@ export function normalEmail(value: unknown): string | null {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.length <= 254 ? e : null
 }
 
-export async function isUnsubscribed(email: string | null | undefined): Promise<boolean> {
+/** wholeDomain: for businesses, anyone at the same company who opted out counts (not for gmail.com and the like). */
+export async function isUnsubscribed(email: string | null | undefined, opts: { wholeDomain?: boolean } = {}): Promise<boolean> {
   const e = normalEmail(email)
   if (!e) return false
-  const { data, error } = await getServiceClient().from('ai_email_optouts').select('email').eq('email', e).maybeSingle()
+  const domain = e.split('@')[1]
+  const q = getServiceClient().from('ai_email_optouts').select('email').limit(1)
+  const { data, error } = opts.wholeDomain && !FREE_MAIL.has(domain) ? await q.like('email', `%@${domain}`) : await q.eq('email', e)
   if (error) throw new AppError(`Could not check the unsubscribe list: ${error.message}`, 500)
-  return !!data
+  return (data || []).length > 0
 }
+
+const FREE_MAIL = new Set(['gmail.com', 'googlemail.com', 'outlook.com', 'hotmail.com', 'live.com', 'yahoo.com', 'icloud.com', 'me.com', 'aol.com', 'proton.me', 'protonmail.com', 'gmx.com', 'gmx.de', 'web.de'])
 
 /** A fresh link for one email. */
 export async function unsubscribeUrlFor(email: string, actionId: string | null): Promise<string> {

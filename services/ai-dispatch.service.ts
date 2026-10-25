@@ -55,8 +55,10 @@ async function notify(kind: string, title: string, body: string, requestId: stri
 /** AI emails about a request, sent from hello@ on the request's email thread. Win-backs are marketing: they carry an unsubscribe link. */
 export const REQUEST_EMAIL_ACTIONS = ['message.follow_up', 'message.win_back']
 const MARKETING_ACTIONS = new Set(['message.win_back'])
+/** Introductions to travel businesses: a new email (no request), with an opt-out link. */
+const PARTNER_ACTION = 'message.partner_intro'
 
-/** Approved follow-up and win-back emails. */
+/** Approved follow-up, win-back and partner emails. */
 export async function runEmailFollowUps() {
   const db = getServiceClient()
   const { data, error } = await db
@@ -64,7 +66,7 @@ export async function runEmailFollowUps() {
     .select('action_id, ai_actions!inner(id, agent_key, action_type, request_id, payload, status)')
     .eq('decision', 'approve')
     .eq('ai_actions.status', 'proposed')
-    .in('ai_actions.action_type', REQUEST_EMAIL_ACTIONS)
+    .in('ai_actions.action_type', [...REQUEST_EMAIL_ACTIONS, PARTNER_ACTION])
     .limit(10)
   if (error) throw new Error(`Could not read approved follow-ups: ${error.message}`)
   const seen = new Set<string>()
@@ -73,12 +75,25 @@ export async function runEmailFollowUps() {
     const a = (row as unknown as { ai_actions: ActionRow }).ai_actions
     if (seen.has(a.id)) continue
     seen.add(a.id)
-    if (a.payload?.channel !== 'email' || !a.request_id) continue
+    const partner = a.action_type === PARTNER_ACTION
+    if (a.payload?.channel !== 'email' || (!a.request_id && !partner)) continue
     if (!(await begin(a.id))) {
       out.waiting++
       continue
     }
+    if (partner) {
+      try {
+        const sent = await sendPartnerEmail(a)
+        await finish(a.id, true, sent, null)
+        out.sent++
+      } catch (err) {
+        await finish(a.id, false, null, err instanceof Error ? err.message : String(err))
+        out.failed++
+      }
+      continue
+    }
     try {
+      if (!a.request_id) continue
       // The gate already refused unsubscribed addresses; check the address the email will actually go to as well.
       const to = (await getRequest(a.request_id)).email || ''
       if (await isUnsubscribed(to)) throw new Error('This person unsubscribed, so it was not sent.')
@@ -97,6 +112,46 @@ export async function runEmailFollowUps() {
     }
   }
   return out
+}
+
+/** A first introduction to a travel business, from hello@, with an opt-out line. Marks the partner emailed. */
+async function sendPartnerEmail(a: ActionRow) {
+  const to = String(a.payload.to || '')
+  if (await isUnsubscribed(to, { wholeDomain: true })) throw new Error('This business opted out, so it was not sent.')
+  const subject = String(a.payload.subject || '').trim() || 'A ground partner in Sri Lanka'
+  const body = (await approvedText(a.id, String(a.payload.body || ''))).trim()
+  if (!body) throw new Error('The email is empty.')
+  const name = String(a.payload.partner_name || '')
+  const greeting = name && !/^https?:|\./.test(name) ? `Hello ${name} team,` : 'Hello,'
+  const unsub = await unsubscribeUrlFor(to, a.id)
+  const text = [
+    greeting,
+    '',
+    body,
+    '',
+    'Kind regards,',
+    'The LankaLux team',
+    'hello@lankalux.com · https://lankalux.com',
+    '',
+    `If you would rather not hear from us, reply "no thanks" or unsubscribe here: ${unsub}`,
+  ].join('\n')
+  const paras = body.split(/\n\n+/).map((p) => `<p style="margin:0 0 14px">${esc(p).replace(/\n/g, '<br/>')}</p>`).join('')
+  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#252523;max-width:600px">
+<p style="margin:0 0 14px">${esc(greeting)}</p>${paras}
+<p style="margin:18px 0 0">Kind regards,<br/>The LankaLux team<br/><a href="https://lankalux.com" style="color:#B18544">lankalux.com</a> · hello@lankalux.com</p>
+<p style="margin:28px 0 0;font-size:12px;color:#8a8a84">If you would rather not hear from us, reply "no thanks" or <a href="${unsub}" style="color:#8a8a84">unsubscribe</a>.</p></div>`
+  await deliverMail({
+    from: { name: 'LankaLux', address: MAIN_ADDRESS },
+    to,
+    subject,
+    text,
+    html,
+    headers: { 'List-Unsubscribe': `<${unsub}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+  })
+  if (typeof a.payload.partner_id === 'string') {
+    await getServiceClient().from('ai_partners').update({ status: 'emailed' }).eq('id', a.payload.partner_id).eq('status', 'drafted')
+  }
+  return { to, subject }
 }
 
 /** The owner may have edited the draft when approving; the latest edit wins. */

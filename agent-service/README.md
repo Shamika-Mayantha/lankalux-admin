@@ -31,6 +31,9 @@ worker (this service, Oracle VM)
 * The Win-back agent (`agents/winback.py`) drafts, on Mondays, up to 10 emails a week to past
   enquiries that never booked (Level 3: the owner approves each). The dispatcher adds an
   unsubscribe link; `ai_email_optouts` is enforced by `ai_begin_action()` for every AI email.
+* The Partner agent (`agents/partners.py`, `sites.py`) reads the public pages of travel businesses
+  the owner adds (`ai_partners`), only where robots.txt allows and never private addresses, and
+  proposes at most 5 introduction emails a day (Level 3, with an opt-out link).
 * Everything starts switched off: `ai_settings.system_paused = true` and
   `customer_messaging_enabled = false`.
 

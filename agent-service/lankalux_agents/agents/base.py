@@ -29,6 +29,7 @@ class Context:
     configs: dict[str, dict] = field(default_factory=dict)  # owner-set ai_agents.config, read-only
     leads: Any = None  # LeadStore, for the Lead Scout
     sources: Any = None  # ScoutSources: Reddit and public feeds the Lead Scout reads
+    sites: Any = None  # Sites: reads a business's public web pages for the Partner agent
 
 
 @dataclass
