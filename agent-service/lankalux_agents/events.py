@@ -2,14 +2,18 @@
 Both are idempotent: event tasks are deduped by event id, scheduled ones by period."""
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from .db import Database
 from .queue import TaskQueue
 
+log = logging.getLogger(__name__)
+
 COLOMBO = ZoneInfo("Asia/Colombo")
 DAILY_SUMMARY_HOUR = 18  # 6pm Sri Lanka time
+LEAD_SEARCH_HOURS = (9, 17)  # the Lead Scout searches at 9am and 5pm Sri Lanka time
 
 
 def pump_events(db: Database, queue: TaskQueue, limit: int = 50) -> int:
@@ -39,9 +43,16 @@ def schedule(queue: TaskQueue, now: datetime | None = None, done: set[str] | Non
         stamp = local.strftime("%Y-%m-%dT%H")
         jobs.append(("followup", "scan_follow_ups", {}, f"followups:{stamp}", 120))
         jobs.append(("operations", "check_upcoming_trips", {}, f"trips:{stamp}", 120))
+    # A restart late in the day queues both searches; the scout skips one that comes too soon after the other.
+    for hour in LEAD_SEARCH_HOURS:
+        if local.hour >= hour:
+            jobs.append(("scout", "scan_for_leads", {}, f"leads:{local.date().isoformat()}:{hour}", 140))
     for agent, task_type, payload, key, priority in jobs:
         if done is not None and key in done:
             continue
-        queue.enqueue(agent, task_type, payload, dedupe_key=key, priority=priority)
+        try:
+            queue.enqueue(agent, task_type, payload, dedupe_key=key, priority=priority)
+        except Exception as err:  # e.g. an agent whose database row is not installed yet: skip it, keep the rest
+            log.warning("could not schedule %s.%s: %s", agent, task_type, err)
         if done is not None:
             done.add(key)

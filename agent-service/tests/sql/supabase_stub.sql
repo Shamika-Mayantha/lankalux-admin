@@ -3,7 +3,8 @@
 CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN;
 DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role NOLOGIN; END IF; END $$;
 CREATE SCHEMA auth; CREATE SCHEMA extensions;
-CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+-- gen_random_uuid() is built in since Postgres 13; pgcrypto is only loaded where the server ships it.
+DO $$ BEGIN CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions; EXCEPTION WHEN feature_not_supported OR undefined_file THEN NULL; END $$;
 CREATE TABLE auth.users (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), email text);
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.sub', true), '')::uuid $$;
 CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT '{}'::jsonb $$;

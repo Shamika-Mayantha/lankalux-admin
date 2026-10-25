@@ -13,12 +13,15 @@ import {
   MessagesSquare,
   Pause,
   Play,
+  Radar,
   ShieldCheck,
   Bot,
   type LucideIcon,
 } from 'lucide-react'
 import { consoleFetch, useConsoleGet } from '@/lib/console-api'
 import { formatAgo } from '@/lib/format'
+import { AiEmailsPanel } from '@/features/console/AiEmailsPanel'
+import { AiLeadsPanel } from '@/features/console/AiLeadsPanel'
 import type { AiActivity, AiAgent, AiConversation, AiOverview, AiPendingAction, AiPing, AiPlaybook, AiRunningTask } from '@/services/ai-console.service'
 
 /** How often the page refreshes itself while it is open and visible. */
@@ -33,6 +36,7 @@ const AGENT_ICON: Record<string, LucideIcon> = {
   operations: CarFront,
   quality: ShieldCheck,
   concierge: Globe,
+  scout: Radar,
 }
 
 const TASK_LABEL: Record<string, string> = {
@@ -45,6 +49,8 @@ const TASK_LABEL: Record<string, string> = {
   review_action: 'reviewing a proposed action',
   price_guide: 'working out a price guide',
   status_changed: 'checking a status change',
+  scan_for_leads: 'searching for new leads',
+  judge_lead: 'reading a lead',
 }
 
 /** Verb phrases; the actor's name goes in front ("Sales finished qualifying a new lead"). */
@@ -69,13 +75,17 @@ const EVENT_LABEL: Record<string, string> = {
   'task.depth_limit': 'stopped a chain of tasks at the depth limit',
   'website.request_created': 'passed a website chat to the team as a new request',
   'agent.instructions_changed': "changed an agent's instructions",
+  'lead.replied': 'replied to a lead',
+  'lead.not_relevant': 'set a lead aside',
+  'lead.new': 'moved a lead back to new',
+  'lead.converted': 'made a request from a lead',
 }
 
 /** Answers on lankalux.com from admin itself, so it does not depend on the agent server. */
 const CONCIERGE = 'concierge'
 
 /** How the agent cards are laid out: the Manager leads, then the owner's chosen order. */
-const AGENT_ORDER = ['manager', 'sales', 'followup', 'operations', 'planner', 'pricing', 'quality', CONCIERGE]
+const AGENT_ORDER = ['manager', 'sales', 'followup', 'operations', 'planner', 'pricing', 'quality', CONCIERGE, 'scout']
 
 function capitalise(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1)
@@ -407,7 +417,7 @@ function PlaybookEditor() {
         <div>
           <h2>Playbook</h2>
           <p className="ll-muted ll-small" style={{ margin: '4px 0 0' }}>
-            What the agents know about LankaLux and how they write. Sales, Follow-up, the AI Manager and the Website Concierge read it before every message; changes apply within a minute.
+            What the agents know about LankaLux and how they write. Sales, Follow-up, the AI Manager, the Website Concierge and the Lead Scout read it before every message; changes apply within a minute.
           </p>
         </div>
         {data?.playbook?.updated_at && <span className="ll-muted ll-small">saved {formatAgo(data.playbook.updated_at)}</span>}
@@ -532,7 +542,7 @@ function secondsSince(at: number | null) {
   return at ? Math.max(0, Math.round((Date.now() - at) / 1000)) : null
 }
 
-type Tab = 'live' | 'approvals' | 'whatsapp' | 'website' | 'playbook'
+type Tab = 'live' | 'approvals' | 'leads' | 'emails' | 'whatsapp' | 'website' | 'playbook'
 
 export default function AiPage() {
   const { data, error, loading, reload, refreshing } = useConsoleGet<{ overview?: AiOverview }>('/api/v2/ai')
@@ -706,6 +716,12 @@ export default function AiPage() {
         <button type="button" role="tab" aria-selected={tab === 'approvals'} className={tab === 'approvals' ? 'on' : ''} onClick={() => setTab('approvals')}>
           Approvals{o && o.pending.length > 0 && <span className="ll-count">{o.pending.length}</span>}
         </button>
+        <button type="button" role="tab" aria-selected={tab === 'leads'} className={tab === 'leads' ? 'on' : ''} onClick={() => setTab('leads')}>
+          Leads
+        </button>
+        <button type="button" role="tab" aria-selected={tab === 'emails'} className={tab === 'emails' ? 'on' : ''} onClick={() => setTab('emails')}>
+          Emails
+        </button>
         <button type="button" role="tab" aria-selected={tab === 'playbook'} className={tab === 'playbook' ? 'on' : ''} onClick={() => setTab('playbook')}>
           Playbook
         </button>
@@ -723,7 +739,7 @@ export default function AiPage() {
             {o && <Pings pings={o.pings} busy={busy} onRead={(ids) => send('/api/v2/ai/pings', 'POST', ids ? { ids } : {})} />}
             <div className="ll-agents">
               {!o
-                ? Array.from({ length: 8 }, (_, i) => <div key={i} className="ll-agent ll-agent-skel" />)
+                ? Array.from({ length: 9 }, (_, i) => <div key={i} className="ll-agent ll-agent-skel" />)
                 : agents.map((ag) => (
                     <AgentCard key={ag.key} ag={ag} o={o} busy={busy} onToggle={() => send(`/api/v2/ai/agents/${ag.key}`, 'PATCH', { paused: !ag.paused })} />
                   ))}
@@ -790,6 +806,10 @@ export default function AiPage() {
           )}
         </section>
       )}
+
+      {tab === 'leads' && <AiLeadsPanel />}
+
+      {tab === 'emails' && <AiEmailsPanel agents={o?.agents || []} />}
 
       {tab === 'playbook' && <PlaybookEditor />}
 

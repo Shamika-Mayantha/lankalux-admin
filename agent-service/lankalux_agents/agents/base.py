@@ -26,6 +26,9 @@ class Context:
     prompts: dict[str, str] = field(default_factory=dict)  # owner-approved prompts from ai_agents
     playbook: str = ""  # owner-edited business facts and writing rules (ai_settings.playbook)
     review_llm: LLM | None = None  # the AI Manager's model when it differs from the drafters'
+    configs: dict[str, dict] = field(default_factory=dict)  # owner-set ai_agents.config, read-only
+    leads: Any = None  # LeadStore, for the Lead Scout
+    sources: Any = None  # ScoutSources: Reddit and public feeds the Lead Scout reads
 
 
 @dataclass

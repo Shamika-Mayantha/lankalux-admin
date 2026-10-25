@@ -210,7 +210,7 @@ export async function getAiOverview(): Promise<AiOverview> {
   }
 }
 
-async function logOwner(staff: Staff, event: string, detail: Record<string, unknown>, extra: { action_id?: string; request_id?: string | null } = {}) {
+export async function logOwner(staff: Staff, event: string, detail: Record<string, unknown>, extra: { action_id?: string; request_id?: string | null } = {}) {
   const { error } = await getServiceClient()
     .from('ai_activity_log')
     .insert({ actor_kind: 'owner', actor_user: staff.id, event, detail, action_id: extra.action_id, request_id: extra.request_id ?? null })

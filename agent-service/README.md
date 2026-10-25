@@ -24,6 +24,10 @@ worker (this service, Oracle VM)
   approval. See `../supabase/migrations/20261016000000_ai_agent_system.sql`.
 * No inbound ports. The VM only connects out (Postgres over TLS, and later HTTPS to admin
   and Meta via Supabase Edge Functions).
+* The Lead Scout (`agents/scout.py`) reads public posts only: Reddit through its official API
+  (needs `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET`) and RSS feeds the owner lists in
+  `ai_agents.config` for `scout`, where robots.txt allows. It never posts or emails; the owner
+  replies from the LankaLux account. Leads are in `ai_leads`.
 * Everything starts switched off: `ai_settings.system_paused = true` and
   `customer_messaging_enabled = false`.
 

@@ -16,6 +16,10 @@ class Settings:
     lease_seconds: int
     admin_api_url: str
     admin_api_secret: str
+    # Reddit's official API for the Lead Scout (a free "script" app). Empty: Reddit is skipped.
+    reddit_client_id: str = ""
+    reddit_client_secret: str = ""
+    reddit_username: str = ""
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -33,9 +37,19 @@ class Settings:
             lease_seconds=int(os.environ.get("LEASE_SECONDS", "600")),
             admin_api_url=os.environ.get("ADMIN_AGENT_API_URL", "").rstrip("/"),
             admin_api_secret=os.environ.get("ADMIN_AGENT_API_SECRET", ""),
+            reddit_client_id=os.environ.get("REDDIT_CLIENT_ID", ""),
+            reddit_client_secret=os.environ.get("REDDIT_CLIENT_SECRET", ""),
+            reddit_username=os.environ.get("REDDIT_USERNAME", ""),
         )
 
     def redacted(self) -> dict[str, str]:
         """Safe to log: never includes the database password or API secret."""
         host = self.database_url.split("@")[-1].split("?")[0]
-        return {"db": host, "ollama": self.ollama_url, "model": self.model, "manager_model": self.manager_model, "worker": self.worker_id}
+        return {"db": host, "ollama": self.ollama_url, "model": self.model, "manager_model": self.manager_model, "worker": self.worker_id,
+                "reddit": "set" if self.reddit_client_id and self.reddit_client_secret else "not set"}
+
+    @property
+    def user_agent(self) -> str:
+        """How the Lead Scout introduces itself to Reddit and to sites' robots.txt."""
+        who = f" (by /u/{self.reddit_username})" if self.reddit_username else ""
+        return f"server:com.lankalux.leadscout:v1{who}"

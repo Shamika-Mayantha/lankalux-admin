@@ -13,13 +13,16 @@ import time
 
 from .actions import Actions
 from .agents import ALL_AGENTS, Agent, Context, Outcome
+from .agents.scout import ScoutSources
 from .config import Settings
 from .crm import CRM
 from .db import Database
 from .events import pump_events, schedule
+from .leads import LeadStore
 from .llm import LLMError, OllamaLLM
 from .memory import Memory
 from .queue import Task, TaskQueue
+from .sources import Feeds, Reddit
 
 log = logging.getLogger("lankalux_agents")
 HEARTBEAT_SECONDS = 60
@@ -85,6 +88,7 @@ class Worker:
             return
         self.beat(error)
         self.ctx.prompts.update(load_prompts(self.db))
+        self.ctx.configs = load_configs(self.db, self.ctx.configs)
         self.ctx.playbook = load_playbook(self.db, self.ctx.playbook)
         self._last_beat = time.monotonic()
 
@@ -115,6 +119,16 @@ def load_prompts(db: Database) -> dict[str, str]:
     return {r["key"]: r["system_prompt"] for r in db.all("SELECT key, system_prompt FROM public.ai_agents") if r["system_prompt"]}
 
 
+def load_configs(db: Database, current: dict[str, dict]) -> dict[str, dict]:
+    """Owner-set agent settings (ai_agents.config), e.g. which sources the Lead Scout reads.
+    Keeps the last good copy if the read fails."""
+    try:
+        return {r["key"]: r["config"] for r in db.all("SELECT key, config FROM public.ai_agents") if isinstance(r["config"], dict)}
+    except Exception as err:
+        log.warning("agent configs not loaded: %s", err)
+        return current
+
+
 def load_playbook(db: Database, current: str = "") -> str:
     """The owner's playbook. Keeps the last good copy if the read fails."""
     try:
@@ -134,7 +148,12 @@ def main() -> None:
     queue = TaskQueue(db, settings.worker_id, settings.lease_seconds)
     review_llm = (OllamaLLM(settings.ollama_url, settings.manager_model, settings.embed_model)
                   if settings.manager_model != settings.model else None)
-    ctx = Context(queue=queue, llm=llm, actions=Actions(db), crm=CRM(db), memory=Memory(db, llm), review_llm=review_llm)
+    sources = ScoutSources(
+        reddit=Reddit(settings.reddit_client_id, settings.reddit_client_secret, settings.user_agent),
+        feeds=Feeds(settings.user_agent),
+    )
+    ctx = Context(queue=queue, llm=llm, actions=Actions(db), crm=CRM(db), memory=Memory(db, llm), review_llm=review_llm,
+                  leads=LeadStore(db), sources=sources)
     worker = Worker(ctx, db, {cls.key: cls() for cls in ALL_AGENTS}, settings.poll_seconds)
     signal.signal(signal.SIGTERM, worker.stop)
     signal.signal(signal.SIGINT, worker.stop)
