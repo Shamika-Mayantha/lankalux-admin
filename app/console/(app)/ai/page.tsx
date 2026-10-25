@@ -14,6 +14,7 @@ import {
   Pause,
   Play,
   Radar,
+  Undo2,
   ShieldCheck,
   Bot,
   type LucideIcon,
@@ -37,6 +38,7 @@ const AGENT_ICON: Record<string, LucideIcon> = {
   quality: ShieldCheck,
   concierge: Globe,
   scout: Radar,
+  winback: Undo2,
 }
 
 const TASK_LABEL: Record<string, string> = {
@@ -51,6 +53,8 @@ const TASK_LABEL: Record<string, string> = {
   status_changed: 'checking a status change',
   scan_for_leads: 'searching for new leads',
   judge_lead: 'reading a lead',
+  scan_win_backs: 'looking for past enquiries to win back',
+  draft_win_back: 'writing a win-back email',
 }
 
 /** Verb phrases; the actor's name goes in front ("Sales finished qualifying a new lead"). */
@@ -85,7 +89,7 @@ const EVENT_LABEL: Record<string, string> = {
 const CONCIERGE = 'concierge'
 
 /** How the agent cards are laid out: the Manager leads, then the owner's chosen order. */
-const AGENT_ORDER = ['manager', 'sales', 'followup', 'operations', 'planner', 'pricing', 'quality', CONCIERGE, 'scout']
+const AGENT_ORDER = ['manager', 'sales', 'followup', 'operations', 'planner', 'pricing', 'quality', CONCIERGE, 'scout', 'winback']
 
 function capitalise(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1)
@@ -205,7 +209,9 @@ function ApprovalCard({
             </p>
           )}
           <label className="ll-small ll-muted" htmlFor={`reply-${a.id}`}>
-            {email ? 'Email (we add “Dear name,” and the sign-off; you can edit it)' : 'Reply (you can edit it before sending)'}
+            {email
+              ? `Email (we add “Dear name,” and the sign-off${a.action_type === 'message.win_back' ? ', plus an unsubscribe link' : ''}; you can edit it)`
+              : 'Reply (you can edit it before sending)'}
           </label>
           <textarea id={`reply-${a.id}`} className="ll-ai-reply" rows={email ? 8 : 4} value={text} onChange={(e) => setText(e.target.value)} />
           {a.reasoning && <p className="ll-muted ll-small">Why: {a.reasoning}</p>}
@@ -739,7 +745,7 @@ export default function AiPage() {
             {o && <Pings pings={o.pings} busy={busy} onRead={(ids) => send('/api/v2/ai/pings', 'POST', ids ? { ids } : {})} />}
             <div className="ll-agents">
               {!o
-                ? Array.from({ length: 9 }, (_, i) => <div key={i} className="ll-agent ll-agent-skel" />)
+                ? Array.from({ length: 10 }, (_, i) => <div key={i} className="ll-agent ll-agent-skel" />)
                 : agents.map((ag) => (
                     <AgentCard key={ag.key} ag={ag} o={o} busy={busy} onToggle={() => send(`/api/v2/ai/agents/${ag.key}`, 'PATCH', { paused: !ag.paused })} />
                   ))}

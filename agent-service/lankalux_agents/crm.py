@@ -104,6 +104,12 @@ class CRM:
         )
         return int((row or {}).get("n") or 0)
 
+    def unsubscribed(self, email: str | None) -> bool:
+        """The address asked for no more emails (the database refuses to send to it anyway)."""
+        return bool(self.db.one(
+            "SELECT 1 AS x FROM public.ai_email_optouts WHERE email = lower(btrim(%s))", email or "",
+        ))
+
     def notified_recently(self, title: str, hours: int = 20) -> bool:
         return bool(self.db.one(
             "SELECT 1 AS x FROM public.ai_notifications WHERE title = %s AND created_at > now() - make_interval(hours => %s) LIMIT 1",

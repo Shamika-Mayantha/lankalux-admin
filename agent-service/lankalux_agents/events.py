@@ -14,6 +14,7 @@ log = logging.getLogger(__name__)
 COLOMBO = ZoneInfo("Asia/Colombo")
 DAILY_SUMMARY_HOUR = 18  # 6pm Sri Lanka time
 LEAD_SEARCH_HOURS = (9, 17)  # the Lead Scout searches at 9am and 5pm Sri Lanka time
+WIN_BACK_HOUR = 10  # the Win-back agent drafts on Mondays from 10am Sri Lanka time
 
 
 def pump_events(db: Database, queue: TaskQueue, limit: int = 50) -> int:
@@ -47,6 +48,9 @@ def schedule(queue: TaskQueue, now: datetime | None = None, done: set[str] | Non
     for hour in LEAD_SEARCH_HOURS:
         if local.hour >= hour:
             jobs.append(("scout", "scan_for_leads", {}, f"leads:{local.date().isoformat()}:{hour}", 140))
+    if local.weekday() == 0 and local.hour >= WIN_BACK_HOUR:
+        year, week, _ = local.isocalendar()
+        jobs.append(("winback", "scan_win_backs", {}, f"winback:{year}-W{week:02d}", 150))
     for agent, task_type, payload, key, priority in jobs:
         if done is not None and key in done:
             continue

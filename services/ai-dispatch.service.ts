@@ -5,6 +5,7 @@ import { generateOneItinerary } from '@/services/ai.service'
 import { getRequest } from '@/services/request.service'
 import { deliverMail, MAIN_ADDRESS, requireMailer, senderFor } from '@/services/mailer'
 import { styleFromNumber, type ItineraryStyle } from '@/config/status'
+import { isUnsubscribed, unsubscribeUrlFor } from '@/services/unsubscribe.service'
 
 /**
  * Runs AI work that the database says may go ahead. Called by the database itself
@@ -51,7 +52,11 @@ async function notify(kind: string, title: string, body: string, requestId: stri
   if (error) console.error('[ai-dispatch] notification failed', error.message)
 }
 
-/** Approved follow-up emails, sent from hello@ on the request's email thread. */
+/** AI emails about a request, sent from hello@ on the request's email thread. Win-backs are marketing: they carry an unsubscribe link. */
+export const REQUEST_EMAIL_ACTIONS = ['message.follow_up', 'message.win_back']
+const MARKETING_ACTIONS = new Set(['message.win_back'])
+
+/** Approved follow-up and win-back emails. */
 export async function runEmailFollowUps() {
   const db = getServiceClient()
   const { data, error } = await db
@@ -59,7 +64,7 @@ export async function runEmailFollowUps() {
     .select('action_id, ai_actions!inner(id, agent_key, action_type, request_id, payload, status)')
     .eq('decision', 'approve')
     .eq('ai_actions.status', 'proposed')
-    .eq('ai_actions.action_type', 'message.follow_up')
+    .in('ai_actions.action_type', REQUEST_EMAIL_ACTIONS)
     .limit(10)
   if (error) throw new Error(`Could not read approved follow-ups: ${error.message}`)
   const seen = new Set<string>()
@@ -74,11 +79,15 @@ export async function runEmailFollowUps() {
       continue
     }
     try {
+      // The gate already refused unsubscribed addresses; check the address the email will actually go to as well.
+      const to = (await getRequest(a.request_id)).email || ''
+      if (await isUnsubscribed(to)) throw new Error('This person unsubscribed, so it was not sent.')
       const sent = await sendReplyEmail({
         requestId: a.request_id,
         subject: String(a.payload.subject || '') || undefined,
         body: await approvedText(a.id, String(a.payload.body || '')),
         sender: { email: MAIN_ADDRESS, name: 'LankaLux' },
+        unsubscribeUrl: MARKETING_ACTIONS.has(a.action_type) ? await unsubscribeUrlFor(to, a.id) : null,
       })
       await finish(a.id, true, { to: sent.to, subject: sent.subject }, null)
       out.sent++

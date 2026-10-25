@@ -28,6 +28,9 @@ worker (this service, Oracle VM)
   (needs `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET`) and RSS feeds the owner lists in
   `ai_agents.config` for `scout`, where robots.txt allows. It never posts or emails; the owner
   replies from the LankaLux account. Leads are in `ai_leads`.
+* The Win-back agent (`agents/winback.py`) drafts, on Mondays, up to 10 emails a week to past
+  enquiries that never booked (Level 3: the owner approves each). The dispatcher adds an
+  unsubscribe link; `ai_email_optouts` is enforced by `ai_begin_action()` for every AI email.
 * Everything starts switched off: `ai_settings.system_paused = true` and
   `customer_messaging_enabled = false`.
 

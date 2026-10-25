@@ -124,9 +124,14 @@ export async function deliverMail(opts: {
   html: string
   attachments?: MailAttachment[]
   inReplyTo?: string | null
+  /** Extra headers, e.g. List-Unsubscribe on marketing emails. */
+  headers?: Record<string, string> | null
 }): Promise<{ messageId: string }> {
   const replyTo = opts.replyTo && opts.replyTo.length ? opts.replyTo : opts.from.address
-  const threading = opts.inReplyTo ? { 'In-Reply-To': opts.inReplyTo, References: opts.inReplyTo } : undefined
+  const threading =
+    opts.inReplyTo || opts.headers
+      ? { ...(opts.headers || {}), ...(opts.inReplyTo ? { 'In-Reply-To': opts.inReplyTo, References: opts.inReplyTo } : {}) }
+      : undefined
 
   // Through the sender's own Zoho mailbox when admin has its login, so Zoho keeps it in Sent.
   const login = zohoLogin(opts.from.address)

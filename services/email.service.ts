@@ -32,6 +32,7 @@ async function sendLankaLuxMail(opts: {
   shareToken?: string | null
   sender?: MailSender | null
   inReplyTo?: string | null
+  headers?: Record<string, string> | null
 }): Promise<{ messageId: string }> {
   const from = senderFor(opts.sender)
   // A client's Reply goes to the sender's own Zoho inbox (where the team replies) and to the
@@ -60,6 +61,7 @@ async function sendLankaLuxMail(opts: {
       html: opts.html,
       attachments: opts.attachments,
       inReplyTo: opts.inReplyTo,
+      headers: opts.headers,
     })
     messageId = result.messageId
   } catch (err) {
@@ -422,6 +424,8 @@ export async function sendReplyEmail(opts: {
   sender: MailSender
   /** A prepared draft (e.g. from Bellion) that this send replaces; it is removed once the email is delivered. */
   draftId?: string | null
+  /** Marketing emails (win-backs): adds an unsubscribe line and the one-click List-Unsubscribe headers. */
+  unsubscribeUrl?: string | null
 }) {
   requireMailer()
   const bodyText = normalizeEditableBody(opts.body || '').trim()
@@ -444,20 +448,27 @@ export async function sendReplyEmail(opts: {
     opts.subject?.trim() ||
     (lastSubject ? (/^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}`) : 'A note from LankaLux')
 
+  const unsub = opts.unsubscribeUrl || null
   const compiled = renderFollowUpEmail({
     clientName: request.client_name || 'Valued Client',
     bodyText,
     logoUrl: `${appUrl()}${BRAND.logoEmailHeaderSrc}`,
     ctas: [],
+    extraHtml: unsub
+      ? `<p style="margin:16px auto 32px;max-width:600px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#8a8a84;">Would rather not hear from us? <a href="${unsub}" style="color:#8a8a84;">Unsubscribe</a> and we will not email you again.</p>`
+      : undefined,
   })
   const { messageId } = await sendLankaLuxMail({
     to,
     subject,
-    text: compiled.text,
+    text: unsub ? `${compiled.text}
+
+Would rather not hear from us? Unsubscribe here and we will not email you again: ${unsub}` : compiled.text,
     html: compiled.html,
     requestId: opts.requestId,
     sender: opts.sender,
     inReplyTo: (lastIn?.message_id as string | null) || null,
+    headers: unsub ? { 'List-Unsubscribe': `<${unsub}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } : null,
   })
   await logActivity({
     request_id: opts.requestId,

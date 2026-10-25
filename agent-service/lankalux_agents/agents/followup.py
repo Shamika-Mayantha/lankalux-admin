@@ -87,4 +87,6 @@ class FollowUpAgent(Agent):
             return "followed up recently"
         if ctx.crm.follow_ups_sent(rid) >= MAX_FOLLOW_UPS:
             return "already followed up twice"
+        if ctx.crm.unsubscribed(req["email"]):
+            return "unsubscribed"
         return None

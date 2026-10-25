@@ -19,7 +19,7 @@ MIGRATIONS = [ROOT.parent / "supabase" / "migrations" / name
               for name in ("20261016000000_ai_agent_system.sql", "20261016100000_ai_whatsapp_replies.sql",
                            "20261016200000_ai_autonomy.sql", "20261016220000_ai_playbook.sql",
                            "20261017200000_ai_trip_sheet.sql",
-                           "20261025000000_ai_lead_scout.sql")]
+                           "20261025000000_ai_lead_scout.sql", "20261026000000_ai_win_back.sql")]
 STUB = ROOT / "tests" / "sql" / "supabase_stub.sql"
 
 

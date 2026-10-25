@@ -340,7 +340,7 @@ export async function decideAiAction(staff: Staff, id: string, decision: unknown
   await logOwner(staff, decision === 'approve' ? 'action.approved' : 'action.rejected', { action_type: action.action_type, edited: !!edited }, { action_id: id, request_id: action.request_id })
   // The owner has dealt with it, so its pings are done too.
   await db.from('ai_notifications').update({ read_at: new Date().toISOString() }).eq('action_id', id).is('read_at', null)
-  if (decision === 'approve' && action.action_type === 'message.follow_up') {
+  if (decision === 'approve' && (action.payload as { channel?: unknown } | null)?.channel === 'email') {
     const { runEmailFollowUps } = await import('@/services/ai-dispatch.service')
     return { ...(await runEmailFollowUps()), channel: 'email' as const }
   }

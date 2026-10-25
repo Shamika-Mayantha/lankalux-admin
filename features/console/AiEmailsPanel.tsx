@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useConsoleGet } from '@/lib/console-api'
+import { consoleFetch, useConsoleGet } from '@/lib/console-api'
 import { formatAgo } from '@/lib/format'
 import type { AiEmail } from '@/services/ai-leads.service'
 import type { AiAgent } from '@/services/ai-console.service'
+import type { OptOut } from '@/services/unsubscribe.service'
 
 type Filter = 'all' | 'waiting' | 'sent' | 'stopped'
 
@@ -33,6 +34,66 @@ function decidedLine(e: AiEmail) {
   return `Approved by ${who}${e.edited ? ' (you edited it)' : ''}`
 }
 
+/** People the AI never emails again: they clicked Unsubscribe, or the owner added them. */
+function DoNotEmail() {
+  const { data, error, reload } = useConsoleGet<{ optouts?: OptOut[] }>('/api/v2/ai/optouts')
+  const [email, setEmail] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const list = data?.optouts || []
+
+  async function save(address: string, on: boolean) {
+    setBusy(true)
+    setSaveError(null)
+    try {
+      await consoleFetch('/api/v2/ai/optouts', { method: 'POST', body: JSON.stringify({ email: address, on }) })
+      if (on) setEmail('')
+      await reload()
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Could not save.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <details className="ll-card" style={{ marginBottom: 16 }}>
+      <summary>
+        <strong>Do not email</strong> <span className="ll-muted ll-small">({list.length})</span>
+      </summary>
+      <p className="ll-muted ll-small">
+        The AI never emails these addresses again; the system refuses it even if an email is approved. Win-back emails carry an unsubscribe link that adds people here. Add anyone who asks by reply or phone.
+      </p>
+      {(error || saveError) && <div className="ll-error">{error || saveError}</div>}
+      <form
+        className="ll-row"
+        style={{ gap: 8, flexWrap: 'wrap', margin: '8px 0' }}
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (email.trim()) save(email.trim(), true)
+        }}
+      >
+        <input type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email address to stop emailing" />
+        <button type="submit" className="ll-btn small" disabled={busy || !email.trim()}>
+          Add
+        </button>
+      </form>
+      {list.length > 0 && (
+        <ul className="ll-small" style={{ margin: 0, paddingLeft: 18 }}>
+          {list.map((o) => (
+            <li key={o.email}>
+              {o.email} <span className="ll-muted">· {o.source === 'link' ? 'unsubscribed' : 'added by you'} {formatAgo(o.created_at)}</span>{' '}
+              <button type="button" className="ll-btn small secondary" disabled={busy} onClick={() => save(o.email, false)}>
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </details>
+  )
+}
+
 /** Every email the AI wrote, in full, whether it went out, is waiting, or was stopped. */
 export function AiEmailsPanel({ agents }: { agents: AiAgent[] }) {
   const { data, error, loading } = useConsoleGet<{ emails?: AiEmail[] }>('/api/v2/ai/emails')
@@ -44,7 +105,7 @@ export function AiEmailsPanel({ agents }: { agents: AiAgent[] }) {
     <section>
       <div className="ll-row" style={{ justifyContent: 'space-between', gap: 12, margin: '0 0 12px', flexWrap: 'wrap' }}>
         <p className="ll-muted ll-small" style={{ margin: 0 }}>
-          Every email the agents wrote, exactly as written. The email template adds “Dear name,” above and the LankaLux sign-off below. Waiting ones are approved on the Approvals tab.
+          Every email the agents wrote, exactly as written. The email template adds “Dear name,” above and the LankaLux sign-off below, and an unsubscribe link on win-back emails. Waiting ones are approved on the Approvals tab.
         </p>
         <div className="ll-seg ll-seg-sm" role="group" aria-label="Which emails">
           {(['all', 'waiting', 'sent', 'stopped'] as Filter[]).map((f) => (
@@ -54,6 +115,7 @@ export function AiEmailsPanel({ agents }: { agents: AiAgent[] }) {
           ))}
         </div>
       </div>
+      <DoNotEmail />
       {error && <div className="ll-error">{error}</div>}
       {loading && !data ? (
         <p className="ll-muted">Loading…</p>

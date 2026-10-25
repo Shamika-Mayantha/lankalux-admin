@@ -7,9 +7,11 @@ from .pricing import PricingAgent
 from .quality import QualityAgent
 from .sales import SalesAgent
 from .scout import ScoutAgent
+from .winback import WinBackAgent
 
 ALL_AGENTS: list[type[Agent]] = [
     ManagerAgent, SalesAgent, PlannerAgent, PricingAgent, FollowUpAgent, OperationsAgent, QualityAgent, ScoutAgent,
+    WinBackAgent,
 ]
 
 __all__ = ["ALL_AGENTS", "Agent", "Context", "Outcome"]

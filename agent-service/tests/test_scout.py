@@ -294,9 +294,10 @@ def test_agent_role_cannot_handle_leads_itself(test_db):
             c.execute("DELETE FROM public.ai_leads")
 
 
-def test_migration_can_run_twice(test_db):
+def test_migrations_can_run_twice(test_db):
     from conftest import ROOT
-    sql = (ROOT.parent / "supabase" / "migrations" / "20261025000000_ai_lead_scout.sql").read_text()
+    folder = ROOT.parent / "supabase" / "migrations"
     with psycopg.connect(test_db["admin"], autocommit=True) as c:
-        c.execute(sql)
-        assert c.execute("SELECT count(*) FROM public.ai_agents WHERE key = 'scout'").fetchone()[0] == 1
+        # Each migration resets the agent list to include every agent so far, so the latest one is what re-runs.
+        c.execute((folder / "20261026000000_ai_win_back.sql").read_text())
+        assert c.execute("SELECT count(*) FROM public.ai_agents WHERE key IN ('scout', 'winback')").fetchone()[0] == 2
