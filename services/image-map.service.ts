@@ -91,6 +91,20 @@ const MAPPINGS: Mapping[] = [
 
 const FALLBACK = ['/images/colombo.jpg', '/images/kandy.jpg', '/images/galle.jpg']
 
+/** LankaLux HQ photos (2200px), offered first in the photo picker; the generator's pools above are unchanged. */
+const PICKER_PHOTOS = [
+  '/images/picker/sigiriya-rock-fortress.jpg',
+  '/images/picker/polonnaruwa.jpg',
+  '/images/picker/kandy-temple-of-the-tooth.jpg',
+  '/images/picker/nine-arch-bridge-blue-train.jpg',
+  '/images/picker/nine-arch-bridge-track-level.jpg',
+  '/images/picker/ella-little-adams-peak.jpg',
+  '/images/picker/leopard-in-the-wild.jpg',
+  '/images/picker/elephants-in-the-wild.jpg',
+  '/images/picker/galle-fort.jpg',
+  '/images/picker/coast-palm-bay.jpg',
+]
+
 function norm(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 }
@@ -140,6 +154,10 @@ export function assignDayImages(
 export function allLibraryImages(): string[] {
   const seen = new Set<string>()
   const out: string[] = []
+  for (const src of PICKER_PHOTOS) {
+    seen.add(src)
+    out.push(src)
+  }
   for (const m of MAPPINGS) {
     for (const src of m.images) {
       if (!seen.has(src)) {
