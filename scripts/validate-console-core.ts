@@ -24,6 +24,8 @@ import {
   trustpilotAfsSnippet,
 } from '../lib/email-templates'
 import { placesForJourney, ensureMinimumDayActivities } from '../config/sri-lanka-places'
+import { checkRoute, fixDayOrder } from '../lib/route-order'
+import { untime } from '../lib/untimed'
 import { buildItineraryPrompt, enRouteDesignRules } from '../services/itinerary-prompt'
 import { applyHotelsToDays, hotelsPromptSection } from '../services/hotel-match.service'
 import { driverPackFilenames, sanitizeFilename, splitGuestNames } from '../lib/driver-pack/filenameHelpers'
@@ -324,8 +326,13 @@ assert(prompt.includes('Do not copy competitor wording'), 'prompt forbids copyin
 assert(!prompt.toLowerCase().includes('olanka'), 'generated prompt must not name the competitor')
 assert(prompt.includes('at least 4'), 'prompt requires at least four activities per day')
 assert(prompt.includes('HARD MINIMUM'), 'prompt states a hard activity minimum')
-assert(enRouteDesignRules('relaxed').includes('at least 4 timed, named activities'), 'relaxed days still need four activities')
-assert(enRouteDesignRules('experience').includes('at least 4 timed, named activities'), 'experience days still need four activities')
+assert(enRouteDesignRules('relaxed').includes('at least 4 named activities'), 'relaxed days still need four activities')
+assert(enRouteDesignRules('experience').includes('at least 4 named activities'), 'experience days still need four activities')
+assert(prompt.includes('NO CLOCK TIMES'), 'prompt forbids clock times')
+assert(!/\d{1,2}:\d{2}\s*(AM|PM)\s*-/.test(prompt), 'prompt examples carry no timestamps')
+assert(prompt.includes('never drives back the way it came'), 'prompt states the one-way sweep')
+assert(prompt.includes('SEASON (travel month: September)'), 'prompt carries season notes for the travel month')
+assert(prompt.includes('Youngest child is 8'), 'prompt adapts to young children')
 assert(prompt.includes('Stays are optional'), 'prompt keeps hotels optional when none are attached')
 assert(hotelsPromptSection([]).includes('Do not invent hotel names'), 'empty hotel section forbids invented names')
 
@@ -380,6 +387,53 @@ assert(
   filledDays[1].activities.some((line) => /lake|udawattakele|market|bahirawakanda|embakke|gadaladeniya/i.test(line)),
   'Kandy day is filled with nearby Kandy places'
 )
+assert(
+  filledDays.every((day) => day.activities.slice(1).every((line) => /^\d{1,2}:\d{2} [AP]M - /.test(line))),
+  'padding keeps the clock format on older timed days'
+)
+const untimedFilled = ensureMinimumDayActivities(sampleDays.map((d) => ({ ...d, activities: d.activities.map(untime) })))
+assert(
+  untimedFilled.every((day) => day.activities.every((line) => !/\d{1,2}:\d{2}/.test(line))),
+  'padding adds no clock times to untimed days'
+)
+
+// Clock times are stripped from generated text.
+assert(untime('09:00 AM - Visit the Temple of the Tooth') === 'Visit the Temple of the Tooth', 'leading 12-hour time removed')
+assert(untime('14:30 - Galle Fort ramparts') === 'Galle Fort ramparts', 'leading 24-hour time removed')
+assert(untime('Drive 2.5 hours to Ella') === 'Drive 2.5 hours to Ella', 'durations are not clock times')
+assert(untime('Arrive in Ampara') === 'Arrive in Ampara', 'place names starting with Am are kept')
+
+// Route order: classic sweeps pass, doubling back is caught.
+const route = (towns: string[]) => towns.map((t, i) => ({ day: i + 1, location: t, overnight_location: t, activities: [] as string[] }))
+for (const towns of [
+  ['Negombo', 'Sigiriya', 'Sigiriya', 'Kandy', 'Nuwara Eliya', 'Ella', 'Ella', 'Tissamaharama', 'Mirissa', 'Mirissa', 'Bentota', 'Colombo'],
+  ['Colombo', 'Galle', 'Mirissa', 'Yala', 'Ella', 'Nuwara Eliya', 'Kandy', 'Negombo'],
+  ['Negombo', 'Kandy', 'Ella', 'Mirissa', 'Galle', 'Colombo'],
+  ['Negombo', 'Wilpattu', 'Anuradhapura', 'Trincomalee', 'Trincomalee', 'Sigiriya', 'Kandy', 'Colombo'],
+]) {
+  const r = checkRoute(route(towns))
+  assert(r.ok, `classic sweep should pass: ${towns.join(' > ')} (${r.issues.map((i) => i.message).join(' ')})`)
+}
+const revisit = checkRoute(route(['Negombo', 'Sigiriya', 'Kandy', 'Sigiriya', 'Galle', 'Colombo']))
+assert(revisit.issues.some((i) => i.kind === 'revisit'), 'returning to Sigiriya after Kandy is a revisit')
+const zigzag = checkRoute(route(['Colombo', 'Ella', 'Sigiriya', 'Galle', 'Kandy', 'Yala', 'Colombo']))
+assert(zigzag.issues.some((i) => i.kind === 'zigzag') && zigzag.suggestedOrder?.join(',') === 'Colombo,Sigiriya,Kandy,Ella,Yala,Galle,Colombo', 'zigzag gets a one-way order')
+
+// Real generated days from before this check: stops behind the car.
+const before = [
+  { day: 1, location: 'Negombo', overnight_location: 'Negombo', travel: { from: 'CMB Airport', to: 'Negombo' }, activities: ['Negombo Fish Market', 'Negombo Beach', 'Dutch Canal', 'St Mary\'s Church'] },
+  { day: 2, location: 'Ella', overnight_location: 'Ella', activities: ['Nine Arches Bridge', "Little Adam's Peak", 'Ella Gap', 'Ravana Falls'] },
+  { day: 3, location: 'Mirissa', overnight_location: 'Mirissa', activities: ['Early safari at Udawalawe National Park', 'En route: Diyaluma Falls', 'Arrive in Mirissa for the beach', 'Coconut Tree Hill'] },
+  { day: 4, location: 'Galle', overnight_location: 'Galle', activities: ['En route: Mulkirigala Rock Temple', 'Galle Fort ramparts', 'Lunch in the fort', 'Unawatuna'] },
+]
+const beforeReport = checkRoute(before)
+assert(beforeReport.issues.some((i) => i.day === 3 && i.kind === 'out-of-order'), 'Diyaluma after Udawalawe is out of driving order')
+assert(beforeReport.issues.some((i) => i.day === 4 && i.kind === 'off-route'), 'Mulkirigala on the Mirissa to Galle day is behind the car')
+const fixed = fixDayOrder(before)
+assert(fixed[2].activities[0] === 'En route: Diyaluma Falls', 'Diyaluma moves ahead of Udawalawe')
+assert(!fixed[3].activities.some((a) => /mulkirigala/i.test(a)), 'Mulkirigala is dropped from the Mirissa to Galle day')
+assert(checkRoute(fixed).ok, 'fixed days pass the route check')
+
 const untouched = applyHotelsToDays(sampleDays, [])
 assert(untouched.matchCount === 0, 'no hotels means no matches')
 assert(untouched.days[0].hotel_id == null, 'days stay hotel-free when none attached')

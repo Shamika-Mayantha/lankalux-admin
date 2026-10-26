@@ -1,11 +1,11 @@
 /**
  * Long dashes (— and –) read as machine-written, so LankaLux text never uses them.
  * The prompts ask the models not to; this cleans whatever slips through. The plain
- * "10:30 AM - " separator in activities is the itinerary format and stays as it is.
+ * "10:30 AM - " separator in older, timed activities stays as it is.
  */
 
 export const NO_DASHES_RULE =
-  'Never use em dashes (—) or en dashes (–) anywhere in the text. Use a comma, a full stop or the word "to" instead. Keep the plain "10:30 AM - " time format for activities.'
+  'Never use em dashes (—) or en dashes (–) anywhere in the text. Use a comma, a full stop or the word "to" instead.'
 
 const TIME = String.raw`\d{1,2}[:.]\d{2}(?:\s*[AP]M)?`
 

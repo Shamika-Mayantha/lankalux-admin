@@ -6,6 +6,8 @@ import { join } from 'path'
 import { enRouteDesignRules, placesPromptSection } from '@/services/itinerary-prompt'
 import { rejectNonAdmin } from '@/app/api/v2/_guard'
 import { NO_DASHES_RULE, undashDeep } from '@/lib/no-dashes'
+import { fixDayOrder } from '@/lib/route-order'
+import { untimeDays } from '@/lib/untimed'
 
 function cleanGeneratedDayTitle(rawTitle: unknown, dayNumber: number, location?: string) {
   const title = typeof rawTitle === 'string' ? rawTitle.trim() : ''
@@ -335,7 +337,7 @@ ${dayDatesBlock}
 - Plan locations naturally based on the route - use appropriate location names that fit the geographic flow
 - Activities must be an array of strings (include 6-8 named highlights per stay day; transfer days must include 2-3 "En route:" stops)
 ${alongTheWayBlock}
-- CRITICAL: Each activity MUST include a timestamp in the format "HH:MM - Activity description"
+- NO CLOCK TIMES: each activity is a plain sentence naming the place or experience (e.g. "Guided walk through Galle Fort's ramparts at sunset"), listed in the order the car reaches it. Never start with "09:00 -" or any time.
 - Each day MUST include:
   * "image": MANDATORY - Select the most appropriate UNIQUE image path based on the day's MAIN HIGHLIGHT (the primary experience/attraction). Each day must have a DIFFERENT photo - NO REPEATS. Match the photo to what makes this day special (the highlight from the day title), not just the location.
   * "what_to_expect": Write a warm, engaging paragraph (3-4 sentences)
@@ -355,7 +357,7 @@ Return ONLY valid JSON in this format. Calculate the number of days from ${start
       "title": "${hasDayDates ? dayDateLabels[0] + ': Arrival in Colombo' : 'Day title for ' + startDateFormatted}",
       "location": "Location name",
       "image": "/images/location.jpg",
-      "activities": ["09:00 - Activity with timestamp"],
+      "activities": ["Named highlight for the day", "En route: named stop on the day's road"],
       "what_to_expect": "Description paragraph",
       "optional_activities": ["Optional activity"]
     },
@@ -364,7 +366,7 @@ Return ONLY valid JSON in this format. Calculate the number of days from ${start
       "title": "${hasDayDates && dayDateLabels[1] ? dayDateLabels[1] + ': Day theme' : 'Day title'}",
       "location": "Location name",
       "image": "/images/location.jpg",
-      "activities": ["09:00 - Activity with timestamp"],
+      "activities": ["Named highlight for the day", "En route: named stop on the day's road"],
       "what_to_expect": "Description paragraph",
       "optional_activities": ["Optional activity"]
     }
@@ -636,7 +638,7 @@ CRITICAL RETRY INSTRUCTION: You previously generated the wrong number of days. Y
     
     // Update or add the option to the existing options array
     const updatedOptions = [...existingOptions]
-    updatedOptions[optionIndex] = undashDeep(newOption)
+    updatedOptions[optionIndex] = undashDeep({ ...newOption, days: Array.isArray(newOption.days) ? fixDayOrder(untimeDays<any>(newOption.days)) : newOption.days })
     
     // Ensure array has 3 slots
     while (updatedOptions.length < 3) {
