@@ -9,6 +9,7 @@ import { downloadJourneyPdf } from '@/lib/print-journey'
 import { STYLE_META, STATUS_LABEL, REQUEST_STATUSES, normalizeStatus, type ItineraryStyle } from '@/config/status'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { clampEndOnOrAfterStart } from '@/lib/dates'
+import { copyText } from '@/lib/copy-text'
 import { BRAND } from '@/config/brand'
 import { allLibraryImages } from '@/services/image-map.service'
 import { formatKilometers, totalKilometersFor } from '@/services/kilometers.service'
@@ -713,10 +714,13 @@ export function RequestWorkspace() {
       })
       const url = String(json.url || '')
       if (!url) throw new Error('No itinerary link returned.')
-      await navigator.clipboard.writeText(url)
-      setLinkCopied(true)
-      setNotice('Itinerary link copied.')
-      window.setTimeout(() => setLinkCopied(false), 2500)
+      if (await copyText(url)) {
+        setLinkCopied(true)
+        setNotice('Itinerary link copied.')
+        window.setTimeout(() => setLinkCopied(false), 2500)
+      } else {
+        setNotice(`Your browser blocked copying. Here is the link: ${url}`)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not copy link')
     } finally {
