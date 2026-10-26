@@ -757,6 +757,41 @@ button.ll-card,
   display: block;
 }
 
+.ll-photo-cell {
+  position: relative;
+}
+.ll-photo-cell > .ll-photo-tile {
+  width: 100%;
+}
+.ll-photo-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(26 42 29 / 0.78);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease), background 0.2s var(--ease);
+}
+.ll-photo-cell:hover .ll-photo-remove,
+.ll-photo-remove:focus-visible {
+  opacity: 1;
+}
+.ll-photo-remove:hover {
+  background: #a33a2b;
+}
+@media (hover: none) {
+  .ll-photo-remove { opacity: 0.85; }
+}
+
 .ll-photo-tile.is-on {
   border-color: var(--gold);
   box-shadow: 0 0 0 3px var(--gold-soft);

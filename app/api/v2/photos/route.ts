@@ -2,7 +2,9 @@ import { mkdir, writeFile } from 'fs/promises'
 import fs from 'fs'
 import path from 'path'
 import { randomUUID } from 'crypto'
-import { jsonErr, jsonOk, requireStaff } from '@/app/api/v2/_guard'
+import { jsonErr, jsonOk, readJson, requireAdmin, requireStaff } from '@/app/api/v2/_guard'
+import { hiddenPhotos, removePhoto } from '@/services/photo-library.service'
+import { isSupervisor } from '@/services/staff.service'
 import { AppError, getServiceClient } from '@/services/supabase.server'
 import { isImageFilename } from '@/lib/managed-image'
 
@@ -79,8 +81,9 @@ async function saveToStorage(buf: Buffer, originalName: string, mime: string): P
 
 export async function GET(request: Request) {
   try {
-    await requireStaff(request)
-    const uploaded = [...(await listStorageUploads()), ...localUploadPaths()]
+    const staff = await requireStaff(request)
+    const [stored, hidden] = await Promise.all([listStorageUploads(), hiddenPhotos()])
+    const uploaded = [...stored, ...localUploadPaths()]
     const seen = new Set<string>()
     const paths: string[] = []
     for (const src of uploaded) {
@@ -88,9 +91,22 @@ export async function GET(request: Request) {
       seen.add(src)
       paths.push(src)
     }
-    return jsonOk({ paths })
+    return jsonOk({ paths: paths.filter((src) => !hidden.includes(src)), hidden, canDelete: isSupervisor(staff) })
   } catch (err) {
     return jsonErr(err, 'Could not load uploaded photos.')
+  }
+}
+
+/** Supervisors only: take a photo out of the picker (uploads are deleted, built-in photos hidden). */
+export async function DELETE(request: Request) {
+  try {
+    await requireAdmin(request)
+    const { src } = await readJson<{ src?: string }>(request)
+    if (!src || typeof src !== 'string') throw new AppError('Choose a photo to remove.', 400)
+    const result = await removePhoto(src)
+    return jsonOk({ result })
+  } catch (err) {
+    return jsonErr(err, 'Could not remove the photo.')
   }
 }
 

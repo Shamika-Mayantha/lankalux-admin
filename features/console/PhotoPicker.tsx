@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { consoleFetch } from '@/lib/console-api'
+import { thumbFor } from '@/services/image-map.service'
 
 export function PhotoPicker({
   value,
@@ -14,6 +15,8 @@ export function PhotoPicker({
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploaded, setUploaded] = useState<string[]>([])
+  const [hidden, setHidden] = useState<string[]>([])
+  const [canDelete, setCanDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
@@ -24,6 +27,8 @@ export function PhotoPicker({
       .then((json) => {
         if (cancelled) return
         setUploaded(Array.isArray(json.paths) ? json.paths.filter((src: unknown) => typeof src === 'string') : [])
+        setHidden(Array.isArray(json.hidden) ? json.hidden : [])
+        setCanDelete(json.canDelete === true)
       })
       .catch(() => {
         if (!cancelled) setUploaded([])
@@ -37,12 +42,25 @@ export function PhotoPicker({
     const seen = new Set<string>()
     const out: string[] = []
     for (const src of [...uploaded, ...images, value]) {
-      if (!src || seen.has(src)) continue
+      if (!src || seen.has(src) || (hidden.includes(src) && src !== value)) continue
       seen.add(src)
       out.push(src)
     }
     return out
-  }, [uploaded, images, value])
+  }, [uploaded, images, value, hidden])
+
+  async function removePhoto(src: string) {
+    if (!window.confirm('Remove this photo from the picker for everyone? Days already using it keep it.')) return
+    setError(null)
+    try {
+      await consoleFetch('/api/v2/photos', { method: 'DELETE', body: JSON.stringify({ src }), headers: { 'Content-Type': 'application/json' } })
+      setUploaded((prev) => prev.filter((item) => item !== src))
+      setHidden((prev) => [...prev, src])
+      if (value === src) onChange('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not remove the photo.')
+    }
+  }
 
   async function uploadFiles(files: FileList | File[]) {
     const list = Array.from(files).filter((file) => file.type.startsWith('image/'))
@@ -118,15 +136,21 @@ export function PhotoPicker({
           aria-label="No photograph"
         />
         {allImages.map((src) => (
-          <button
-            key={src}
-            type="button"
-            className={`ll-photo-tile ${value === src ? 'is-on' : ''}`}
-            onClick={() => onChange(src)}
-            aria-pressed={value === src}
-          >
-            <img src={src} alt="" />
-          </button>
+          <div key={src} className="ll-photo-cell">
+            <button
+              type="button"
+              className={`ll-photo-tile ${value === src ? 'is-on' : ''}`}
+              onClick={() => onChange(src)}
+              aria-pressed={value === src}
+            >
+              <img src={thumbFor(src)} alt="" loading="lazy" decoding="async" onError={(e) => e.currentTarget.closest<HTMLElement>('.ll-photo-cell')?.setAttribute('hidden', '')} />
+            </button>
+            {canDelete ? (
+              <button type="button" className="ll-photo-remove" onClick={() => void removePhoto(src)} aria-label="Remove this photo from the picker" title="Remove from picker">
+                ×
+              </button>
+            ) : null}
+          </div>
         ))}
       </div>
     </div>

@@ -616,6 +616,75 @@ export async function getPublishedItinerary(requestId: string): Promise<Canonica
   return toCanonical(request, selected)
 }
 
+/** A journey link closes after this long without being opened, unless its trip was sold. */
+const LINK_IDLE_DAYS = 30
+export const EXPIRED_JOURNEY_MESSAGE = 'This journey plan has expired. Message us and we will send you an updated plan with current prices and availability.'
+
+/** Last time the link was opened (or created, if never), and whether its request is sold. */
+async function linkIsIdle(row: { token: string; request_id?: string | null; created_at?: string | null }): Promise<boolean> {
+  const supabase = getServiceClient()
+  const requestId = row.request_id ? String(row.request_id) : ''
+  if (requestId) {
+    const { data: req } = await supabase.from('Client Requests').select('status').eq('id', requestId).maybeSingle()
+    if ((req as { status?: string | null } | null)?.status === 'sold') return false
+  }
+  let last = row.created_at ? Date.parse(row.created_at) : NaN
+  if (requestId) {
+    const { data: opened } = await supabase
+      .from('activity_logs')
+      .select('created_at')
+      .eq('request_id', requestId)
+      .eq('event_type', 'itinerary_link_opened')
+      .eq('detail->>shareToken', row.token)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const at = Date.parse((opened as { created_at?: string } | null)?.created_at || '')
+    if (!Number.isNaN(at) && (Number.isNaN(last) || at > last)) last = at
+  }
+  if (Number.isNaN(last)) return false
+  return Date.now() - last > LINK_IDLE_DAYS * 24 * 60 * 60 * 1000
+}
+
+/** Expired links are deleted for good once they have been expired this long (about six months). */
+const LINK_PURGE_DAYS = LINK_IDLE_DAYS + 182
+
+/**
+ * Daily cleanup (cron): permanently deletes journey links of unsold trips that nobody has opened
+ * for LINK_PURGE_DAYS. Links of sold trips are never touched.
+ */
+export async function purgeExpiredJourneyLinks(): Promise<{ checked: number; deleted: number }> {
+  const supabase = getServiceClient()
+  const { data: links, error } = await supabase.from('share_links').select('token, request_id, created_at')
+  if (error) throw new AppError(error.message, 500)
+  const rows = (links || []) as { token: string; request_id: string | null; created_at: string | null }[]
+  const requestIds = Array.from(new Set(rows.map((r) => r.request_id).filter(Boolean).map(String)))
+  const [{ data: reqs }, { data: opens }] = await Promise.all([
+    requestIds.length ? supabase.from('Client Requests').select('id, status').in('id', requestIds) : Promise.resolve({ data: [] }),
+    requestIds.length
+      ? supabase.from('activity_logs').select('detail, created_at').eq('event_type', 'itinerary_link_opened').in('request_id', requestIds)
+      : Promise.resolve({ data: [] }),
+  ])
+  const sold = new Set(((reqs || []) as { id: string; status: string | null }[]).filter((r) => r.status === 'sold').map((r) => String(r.id)))
+  const lastOpen = new Map<string, number>()
+  for (const o of (opens || []) as { detail: { shareToken?: string } | null; created_at: string }[]) {
+    const token = o.detail?.shareToken
+    const at = Date.parse(o.created_at)
+    if (token && !Number.isNaN(at) && at > (lastOpen.get(token) ?? 0)) lastOpen.set(token, at)
+  }
+  const cutoff = Date.now() - LINK_PURGE_DAYS * 24 * 60 * 60 * 1000
+  const stale = rows.filter((r) => {
+    if (r.request_id && sold.has(String(r.request_id))) return false
+    const last = Math.max(Date.parse(r.created_at || '') || 0, lastOpen.get(r.token) ?? 0)
+    return last > 0 && last < cutoff
+  })
+  if (stale.length) {
+    const { error: delError } = await supabase.from('share_links').delete().in('token', stale.map((r) => r.token))
+    if (delError) throw new AppError(delError.message, 500)
+  }
+  return { checked: rows.length, deleted: stale.length }
+}
+
 export async function getClientItinerary(
   shareToken: string,
   opts?: { trackOpen?: boolean }
@@ -630,6 +699,9 @@ export async function getClientItinerary(
 
   if (data && !error) {
     const snapshot = data.itinerary_snapshot as CanonicalJourney
+    if (snapshot?.days && opts?.trackOpen && (await linkIsIdle(data))) {
+      throw new AppError(EXPIRED_JOURNEY_MESSAGE, 410)
+    }
     if (snapshot?.days) {
       if (opts?.trackOpen && data.request_id) {
         await logActivity({
