@@ -2,7 +2,7 @@ import '@/features/journey/journey.css'
 import { BRAND } from '@/config/brand'
 import { appUrl, publicJourneyUrl } from '@/config/env'
 import { JourneyStory } from '@/features/journey/JourneyStory'
-import { getClientItinerary } from '@/services/itinerary.service'
+import { EXPIRED_JOURNEY_MESSAGE, getClientItinerary } from '@/services/itinerary.service'
 import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
@@ -81,8 +81,16 @@ export default async function PublicJourneyPage({ params, searchParams }: Props)
       <div className="journey-root">
         <header className="journey-hero">
           <img src={BRAND.logoSrc} alt="LankaLux" className="journey-logo" />
-          <h1 className="journey-title">Journey unavailable</h1>
+          <h1 className="journey-title">{message === EXPIRED_JOURNEY_MESSAGE ? 'This journey has expired' : 'Journey unavailable'}</h1>
           <p className="journey-summary">{message}</p>
+          {message === EXPIRED_JOURNEY_MESSAGE ? (
+            <p className="journey-summary" style={{ marginTop: '1.5rem' }}>
+              <a className="journey-cta" href="https://wa.me/94763261788?text=Hi%20LankaLux%2C%20my%20journey%20plan%20has%20expired.%20Could%20you%20send%20me%20an%20updated%20one%3F">
+                Message us on WhatsApp
+              </a>
+              {' '}or email <a href="mailto:hello@lankalux.com">hello@lankalux.com</a>
+            </p>
+          ) : null}
         </header>
       </div>
     )

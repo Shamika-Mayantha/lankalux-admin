@@ -58,6 +58,15 @@ html:has(.journey-root) body {
   display: block;
 }
 
+.journey-cta {
+  display: inline-block;
+  padding: 12px 22px;
+  background: var(--forest);
+  color: var(--ivory);
+  text-decoration: none;
+  font-weight: 500;
+}
+
 .journey-brand {
   margin: 18px 0 0;
   letter-spacing: 0.18em;

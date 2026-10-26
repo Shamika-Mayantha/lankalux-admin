@@ -616,6 +616,36 @@ export async function getPublishedItinerary(requestId: string): Promise<Canonica
   return toCanonical(request, selected)
 }
 
+/** A journey link closes after this long without being opened, unless its trip was sold. */
+const LINK_IDLE_DAYS = 30
+export const EXPIRED_JOURNEY_MESSAGE = 'This journey plan has expired. Message us and we will send you an updated plan with current prices and availability.'
+
+/** Last time the link was opened (or created, if never), and whether its request is sold. */
+async function linkIsIdle(row: { token: string; request_id?: string | null; created_at?: string | null }): Promise<boolean> {
+  const supabase = getServiceClient()
+  const requestId = row.request_id ? String(row.request_id) : ''
+  if (requestId) {
+    const { data: req } = await supabase.from('Client Requests').select('status').eq('id', requestId).maybeSingle()
+    if ((req as { status?: string | null } | null)?.status === 'sold') return false
+  }
+  let last = row.created_at ? Date.parse(row.created_at) : NaN
+  if (requestId) {
+    const { data: opened } = await supabase
+      .from('activity_logs')
+      .select('created_at')
+      .eq('request_id', requestId)
+      .eq('event_type', 'itinerary_link_opened')
+      .eq('detail->>shareToken', row.token)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const at = Date.parse((opened as { created_at?: string } | null)?.created_at || '')
+    if (!Number.isNaN(at) && (Number.isNaN(last) || at > last)) last = at
+  }
+  if (Number.isNaN(last)) return false
+  return Date.now() - last > LINK_IDLE_DAYS * 24 * 60 * 60 * 1000
+}
+
 export async function getClientItinerary(
   shareToken: string,
   opts?: { trackOpen?: boolean }
@@ -630,6 +660,9 @@ export async function getClientItinerary(
 
   if (data && !error) {
     const snapshot = data.itinerary_snapshot as CanonicalJourney
+    if (snapshot?.days && opts?.trackOpen && (await linkIsIdle(data))) {
+      throw new AppError(EXPIRED_JOURNEY_MESSAGE, 410)
+    }
     if (snapshot?.days) {
       if (opts?.trackOpen && data.request_id) {
         await logActivity({
