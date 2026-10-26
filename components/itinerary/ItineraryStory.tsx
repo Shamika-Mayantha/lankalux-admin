@@ -262,7 +262,7 @@ export function ItineraryStory({
       </section>
 
       {/* The journey in a few lines */}
-      <section className="ls-wrap" style={{ paddingBlock: 'clamp(5rem, 13vw, 11rem)' }}>
+      <section className="ls-wrap ls-summary" style={{ paddingBlock: 'clamp(5rem, 13vw, 11rem)' }}>
         <div style={{ maxWidth: '62rem', marginInline: 'auto' }}>
           <p data-reveal style={{ color: 'var(--forest-700)', fontSize: '0.95rem', fontWeight: 500 }}>Your journey</p>
           <p data-split className="ls-display" style={{ marginTop: '1rem', fontSize: 'clamp(1.6rem, 2.9vw, 2.6rem)', lineHeight: 1.22, letterSpacing: '-0.015em' }}>
@@ -367,7 +367,7 @@ export function ItineraryStory({
       </section>
 
       {vehicle ? (
-        <section style={{ background: 'var(--forest-900)', color: 'var(--ivory)' }}>
+        <section className="ls-dark" style={{ background: 'var(--forest-900)', color: 'var(--ivory)' }}>
           <div className="ls-wrap grid gap-10 lg:grid-cols-12 lg:items-center" style={{ paddingBlock: 'clamp(5rem, 11vw, 9rem)' }}>
             <div className="lg:col-span-5">
               <p data-reveal style={{ color: 'var(--gold-bright)', fontSize: '0.95rem' }}>Your vehicle</p>
@@ -388,7 +388,7 @@ export function ItineraryStory({
       ) : null}
 
       {/* Sign-off */}
-      <section style={{ background: 'var(--forest-950)', color: 'var(--ivory)', textAlign: 'center' }}>
+      <section className="ls-dark ls-signoff" style={{ background: 'var(--forest-950)', color: 'var(--ivory)', textAlign: 'center' }}>
         <div className="ls-wrap" style={{ paddingBlock: 'clamp(5rem, 12vw, 10rem)', display: 'grid', justifyItems: 'center', gap: '1.5rem' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img data-reveal src={BRAND.logoMarkSrc} alt="" width={56} height={56} style={{ width: 56, height: 56 }} />
@@ -398,6 +398,9 @@ export function ItineraryStory({
           <a data-reveal href={BRAND.websiteUrl} style={{ color: 'var(--gold-bright)', fontSize: '0.95rem', textDecoration: 'none', borderBottom: '1px solid rgb(212 184 120 / 0.5)', paddingBottom: '0.15rem' }}>
             lankalux.com
           </a>
+          <button type="button" className="ls-print" onClick={() => window.print()}>
+            Print or save as PDF
+          </button>
         </div>
       </section>
     </div>
