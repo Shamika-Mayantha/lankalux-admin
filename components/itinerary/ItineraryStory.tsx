@@ -8,7 +8,7 @@ import { SplitText } from 'gsap/SplitText'
 import { CustomEase } from 'gsap/CustomEase'
 import { useGSAP } from '@gsap/react'
 import { BRAND } from '@/config/brand'
-import { MAP_OUTLINE, MAP_VIEWBOX } from '@/lib/itinerary-places'
+import { coverFor, MAP_OUTLINE, MAP_VIEWBOX } from '@/lib/itinerary-places'
 import { elegantTitle, type RenderItinerary, type RenderVehicle } from './ItineraryRender'
 import { JourneyDays } from './JourneyDays'
 import { buildRoute, dayHeading, fmt, localDate, StoryPhoto } from './story-shared'
@@ -51,9 +51,21 @@ export function ItineraryStory({
   const root = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
   const days = useMemo(() => itinerary.days || [], [itinerary.days])
-  const heroSrc = days.find((d) => d.image)?.image || ''
-
   const route = useMemo(() => buildRoute(days), [days])
+  // A full-resolution LankaLux photograph of the first destination opens the journey.
+  const heroSrc = coverFor(route.stays.find(Boolean))
+  // The nights, grouped by place, for the printed overview: "Days 1 to 3, Sigiriya".
+  const nights = useMemo(() => {
+    const out: { from: number; to: number; name: string }[] = []
+    days.forEach((d, i) => {
+      const name = route.stays[i]?.name || d.location || ''
+      const n = dayHeading(d).day
+      const last = out[out.length - 1]
+      if (last && last.name === name) last.to = n
+      else if (name) out.push({ from: n, to: n, name })
+    })
+    return out
+  }, [days, route])
   const hasMap = route.stops.length >= 2
   const journey = variant === 'journey' && hasMap
   const activeStay = route.stays[active]
@@ -155,6 +167,7 @@ export function ItineraryStory({
     <svg viewBox={MAP_VIEWBOX} className={className} fill="none" aria-hidden="true">
       <path d={MAP_OUTLINE} fill="var(--ivory)" fillOpacity={0.06} stroke="var(--ivory)" strokeOpacity={0.5} strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
       {/* The whole route, faint, so the shape of the journey is visible from the start. */}
+      {route.returnPath ? <path d={route.returnPath} stroke="var(--ivory)" strokeOpacity={0.22} strokeWidth={1.4} strokeDasharray="3 5" vectorEffect="non-scaling-stroke" /> : null}
       {route.paths.map((d, i) =>
         d ? <path key={'ghost' + i} d={d} stroke="var(--ivory)" strokeOpacity={0.22} strokeWidth={1.4} strokeDasharray="3 5" vectorEffect="non-scaling-stroke" /> : null,
       )}
@@ -196,10 +209,17 @@ export function ItineraryStory({
         ) : null}
         <div className="ls-scrim" />
 
-        <div className="ls-wrap" style={{ position: 'relative', paddingTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div className="ls-wrap ls-hero-brand" style={{ position: 'relative', paddingTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={BRAND.logoMarkSrc} alt="" width={36} height={36} style={{ width: 36, height: 36 }} />
-          <span className="ls-display" style={{ fontSize: '1.3rem', textTransform: 'uppercase', letterSpacing: '0.12em', lineHeight: 1 }}>LankaLux</span>
+          <img className="ls-hero-mark" src="/brand/lankalux-mark-hd.png" alt="" width={44} height={44} />
+          <span className="ls-display ls-hero-word">LankaLux</span>
+        </div>
+        {/* Paper only: the cover's centred crest. */}
+        <div className="ls-cover-crest" aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/lankalux-mark-hd.png" alt="" width={120} height={120} />
+          <p className="ls-display">LankaLux</p>
+          <p>Private journeys, exceptional care</p>
         </div>
 
         <div className="ls-hero-copy ls-wrap" style={{ position: 'relative', paddingBottom: 'clamp(2.5rem, 8vh, 5.5rem)', paddingTop: '6rem' }}>
@@ -237,6 +257,44 @@ export function ItineraryStory({
             <div data-reveal style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid rgb(194 162 102 / 0.55)', display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.5rem 2rem' }}>
               <span style={{ color: 'var(--ink-soft)', fontSize: '0.95rem' }}>Journey price</span>
               <span className="ls-display" style={{ color: '#a08045', fontSize: 'clamp(1.6rem, 2.6vw, 2.4rem)' }}>{price}</span>
+            </div>
+          ) : null}
+          {hasMap ? (
+            <div className="ls-print-route" aria-hidden="true">
+              <h2 className="ls-display">Your route</h2>
+              <svg viewBox={MAP_VIEWBOX} fill="none">
+                <path d={MAP_OUTLINE} fill="#e9e2d0" stroke="#1d3a2a" strokeOpacity={0.35} strokeWidth={1.2} />
+                {route.paths.map((d, i) => (d ? <path key={i} d={d} stroke="#a08045" strokeWidth={3} strokeLinecap="round" /> : null))}
+                {route.returnPath ? <path d={route.returnPath} stroke="#a08045" strokeWidth={3} strokeLinecap="round" strokeDasharray="2 7" /> : null}
+                {route.stops.map((p) => (
+                  <g key={p.name}>
+                    <circle cx={p.at[0]} cy={p.at[1]} r={5} fill="#1d3a2a" />
+                    <text x={p.at[0] > 260 ? p.at[0] - 10 : p.at[0] + 10} y={p.at[1] + 6} textAnchor={p.at[0] > 260 ? 'end' : 'start'} fill="#1d3a2a" fontSize={15} fontFamily="var(--sans)" stroke="#e9e2d0" strokeWidth={4} paintOrder="stroke">
+                      {p.name}
+                    </text>
+                  </g>
+                ))}
+              </svg>
+              <ol>
+                {route.origin ? (
+                  <li>
+                    <span>Arrival</span>
+                    {route.origin.name}
+                  </li>
+                ) : null}
+                {nights.map((n) => (
+                  <li key={`${n.from}-${n.name}`}>
+                    <span>{n.from === n.to ? `Day ${n.from}` : `Days ${n.from} to ${n.to}`}</span>
+                    {n.name}
+                  </li>
+                ))}
+                {route.departure ? (
+                  <li>
+                    <span>Departure</span>
+                    {route.departure.name}
+                  </li>
+                ) : null}
+              </ol>
             </div>
           ) : null}
         </div>

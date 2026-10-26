@@ -73,6 +73,10 @@ html:has(.lux-story) {
   background: var(--forest-950);
   color: var(--ivory);
 }
+.ls-hero-mark { width: 44px; height: 44px; }
+.ls-hero-word { font-size: 1.3rem; text-transform: uppercase; letter-spacing: 0.12em; line-height: 1; }
+.ls-cover-crest, .ls-print-route { display: none; }
+.lj-stay .lj-scene { padding-top: 45svh; }
 .ls-hero-photo {
   position: absolute;
   inset: -4% 0;
@@ -369,10 +373,26 @@ html:has(.lux-story) {
   .ls-progress, .ls-cue, .ls-map-bar, .ls-print { display: none !important; }
   .lux-story { background: var(--paper); font-size: 11pt; }
   .lux-story * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .ls-hero { min-height: 0; height: 135mm; break-after: avoid; }
-  .ls-hero-photo { inset: 0; transform: none !important; }
-  .ls-hero-copy { padding-top: 3rem !important; padding-bottom: 2rem !important; opacity: 1 !important; visibility: visible !important; transform: none !important; }
-  .ls-summary { padding-block: 2.5rem 1rem !important; }
+  /* Page 1, the cover: the photo fills the sheet, the crest at the top, the journey at the foot. */
+  .ls-hero { min-height: 0; height: 100vh; break-after: page; justify-content: flex-end; }
+  .ls-hero-brand { display: none !important; }
+  .ls-hero-photo, .ls-hero-photo img { inset: 0; transform: none !important; }
+  .ls-hero .ls-scrim { background: linear-gradient(180deg, rgb(10 25 18 / 0.62) 0%, rgb(10 25 18 / 0.08) 34%, rgb(10 25 18 / 0.1) 55%, rgb(10 25 18 / 0.78) 100%) !important; }
+  .ls-cover-crest { display: flex; position: absolute; top: 16mm; left: 0; right: 0; flex-direction: column; align-items: center; text-align: center; color: var(--ivory); }
+  .ls-cover-crest img { width: 30mm; height: 30mm; }
+  .ls-cover-crest .ls-display { margin-top: 5mm; font-size: 20pt; letter-spacing: 0.24em; text-transform: uppercase; line-height: 1; }
+  .ls-cover-crest p + p { margin-top: 2.5mm; font-size: 8.5pt; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold-bright); }
+  .ls-hero-copy { padding-top: 0 !important; padding-bottom: 18mm !important; opacity: 1 !important; visibility: visible !important; transform: none !important; }
+  .ls-hero-copy h1 { font-size: 40pt !important; }
+  /* Page 2: the journey in a few lines, the price and the route. */
+  .ls-summary { padding-block: 16mm 10mm !important; break-after: page; }
+  .ls-summary .ls-display { font-size: 17pt !important; }
+  .ls-print-route { display: grid; grid-template-columns: 100mm 1fr; gap: 12mm; align-items: center; margin-top: 10mm; padding-top: 10mm; border-top: 1px solid rgb(194 162 102 / 0.55); }
+  .ls-print-route svg { width: 100mm; height: auto; }
+  .ls-print-route h2 { grid-column: 1 / -1; font-size: 20pt; line-height: 1; margin: 0 0 -4mm; }
+  .ls-print-route ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 5mm; font-size: 12pt; }
+  .ls-print-route li { display: grid; grid-template-columns: 32mm 1fr; color: var(--ink); padding-bottom: 5mm; border-bottom: 1px solid rgb(29 58 42 / 0.12); }
+  .ls-print-route li span { color: #a08045; }
   .ls-days { background: var(--paper); }
   .ls-days.has-map { display: block; }
   .lux-story li[data-day] { min-height: 0 !important; padding-block: 12mm 6mm !important; break-inside: avoid; }
@@ -398,6 +418,7 @@ html:has(.lux-story) {
   .lj-flow { margin-top: 0; }
   .lj-scene { padding: 12mm var(--gutter) 6mm; break-inside: avoid; }
   .lj-day + .lj-day .lj-scene { break-before: page; }
+  .lj-stay .lj-scene { padding-top: 12mm; }
   .lj-print-photo { display: block; margin-bottom: 1.5rem; }
   .lj-card { max-width: none; padding: 0; background: none !important; border: 0; backdrop-filter: none; margin: 0; }
   .lj-card-date { color: var(--forest-700); }
