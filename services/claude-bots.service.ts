@@ -6,7 +6,7 @@ import { getServiceClient } from '@/services/supabase.server'
  * AI page shows. Server-only: every caller is a supervisor route.
  */
 
-export type ClaudeBotKey = 'code_review' | 'seo_check' | 'instagram_check' | 'telegram_replies' | 'bellion'
+export type ClaudeBotKey = 'code_review' | 'seo_check' | 'instagram_check' | 'telegram_replies'
 
 export type ClaudeBotRun = {
   id: string
@@ -44,12 +44,6 @@ const BOTS: Omit<ClaudeBot, 'runs'>[] = [
     name: 'Social media manager: Telegram replies',
     schedule: 'Every day, 8:47am and 4:47pm Sri Lanka time',
     does: "Answers the reels creator's questions in the content team's Telegram group, using the Instagram plan. Anything about money, prices or guests comes to you.",
-  },
-  {
-    key: 'bellion',
-    name: 'Bellion',
-    schedule: 'Three times a day (Riga time 8:46am, 1:46pm, 7:46pm)',
-    does: 'Finds new enquiries, client replies and follow-ups that need you, and leaves ready-to-send email drafts on the requests. It never sends anything.',
   },
 ]
 

@@ -1,4 +1,4 @@
--- Claude bots: the Claude scheduled tasks (code review, SEO check, Instagram check, Telegram replies, Bellion) that run
+-- Claude bots: the Claude scheduled tasks (code review, SEO check, Instagram check, Telegram replies) that run
 -- on the owner's Claude subscription, outside the agent VM. Each run records what it did here, and the
 -- AI page shows them in a "Claude bots" tab. Only Claude's own session writes rows (as the database
 -- owner, through the Supabase connector); supervisors read them. The agent role has no access.
@@ -6,7 +6,7 @@
 
 CREATE TABLE IF NOT EXISTS public.claude_bot_runs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  bot text NOT NULL CHECK (bot IN ('code_review', 'seo_check', 'instagram_check', 'telegram_replies', 'bellion')),
+  bot text NOT NULL CHECK (bot IN ('code_review', 'seo_check', 'instagram_check', 'telegram_replies')),
   status text NOT NULL DEFAULT 'succeeded' CHECK (status IN ('running', 'succeeded', 'failed')),
   summary text NOT NULL DEFAULT '',
   links jsonb NOT NULL DEFAULT '[]'::jsonb,

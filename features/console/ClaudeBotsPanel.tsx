@@ -11,7 +11,7 @@ const STATUS = {
   failed: { label: 'Failed', pill: 'cancelled' },
 } as const
 
-/** Claude bots (code review, SEO, social media, Bellion), which run on the Claude subscription. */
+/** Claude bots (code review, SEO, social media), which run on the Claude subscription. */
 export function ClaudeBotsPanel() {
   const { data, error, loading } = useConsoleGet<{ bots?: ClaudeBot[] }>('/api/v2/ai/claude-bots')
   const bots = data?.bots || []
