@@ -25,6 +25,7 @@ import { formatAgo } from '@/lib/format'
 import { AiEmailsPanel } from '@/features/console/AiEmailsPanel'
 import { AiLeadsPanel } from '@/features/console/AiLeadsPanel'
 import { AiPartnersPanel } from '@/features/console/AiPartnersPanel'
+import { ClaudeBotsPanel } from '@/features/console/ClaudeBotsPanel'
 import type { AiActivity, AiAgent, AiConversation, AiOverview, AiPendingAction, AiPing, AiPlaybook, AiRunningTask } from '@/services/ai-console.service'
 
 /** How often the page refreshes itself while it is open and visible. */
@@ -553,7 +554,7 @@ function secondsSince(at: number | null) {
   return at ? Math.max(0, Math.round((Date.now() - at) / 1000)) : null
 }
 
-type Tab = 'live' | 'approvals' | 'leads' | 'partners' | 'emails' | 'whatsapp' | 'website' | 'playbook'
+type Tab = 'live' | 'approvals' | 'leads' | 'partners' | 'emails' | 'whatsapp' | 'website' | 'playbook' | 'claude'
 
 export default function AiPage() {
   const { data, error, loading, reload, refreshing } = useConsoleGet<{ overview?: AiOverview }>('/api/v2/ai')
@@ -745,6 +746,9 @@ export default function AiPage() {
         <button type="button" role="tab" aria-selected={tab === 'website'} className={tab === 'website' ? 'on' : ''} onClick={() => setTab('website')}>
           Website chat{o && o.websiteChats.length > 0 && <span className="ll-count">{o.websiteChats.length}</span>}
         </button>
+        <button type="button" role="tab" aria-selected={tab === 'claude'} className={tab === 'claude' ? 'on' : ''} onClick={() => setTab('claude')}>
+          Claude bots
+        </button>
       </div>
 
       {tab === 'live' && (
@@ -824,6 +828,8 @@ export default function AiPage() {
       {tab === 'leads' && <AiLeadsPanel />}
 
       {tab === 'partners' && <AiPartnersPanel />}
+
+      {tab === 'claude' && <ClaudeBotsPanel />}
 
       {tab === 'emails' && <AiEmailsPanel agents={o?.agents || []} />}
 
