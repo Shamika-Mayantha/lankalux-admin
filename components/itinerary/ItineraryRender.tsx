@@ -25,7 +25,7 @@ export type RenderVehicle = {
   images: string[]
 } | null
 
-function parseDayHeading(dayNumber: number, rawTitle: string) {
+export function parseDayHeading(dayNumber: number, rawTitle: string) {
   const title = rawTitle || ''
   const dayMatch = title.match(/^day\s*(\d+)/i)
   const parsedDay = dayMatch ? parseInt(dayMatch[1], 10) : dayNumber
@@ -45,7 +45,7 @@ function parseDayHeading(dayNumber: number, rawTitle: string) {
   }
 }
 
-function formatDayDate(startDate?: string | null, dayNumber?: number) {
+export function formatDayDate(startDate?: string | null, dayNumber?: number) {
   if (!startDate || !dayNumber) return null
   const date = new Date(startDate)
   if (Number.isNaN(date.getTime())) return null
@@ -58,7 +58,7 @@ function formatDayDate(startDate?: string | null, dayNumber?: number) {
   })
 }
 
-function elegantTitle(raw: string) {
+export function elegantTitle(raw: string) {
   const text = (raw || '').trim()
   if (!text) return 'Your Sri Lanka Journey'
   const noPrefix = text.replace(/^option\s*\d+\s*[:\-–]\s*/i, '').trim()

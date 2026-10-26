@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { getFleetVehicleById } from '@/lib/fleet'
-import { ItineraryRender } from '@/components/itinerary/ItineraryRender'
+import { ItineraryStory } from '@/components/itinerary/ItineraryStory'
 import { authedFetch } from '@/lib/authed-fetch'
 
 interface Day {
@@ -422,8 +422,7 @@ export default function PublicItineraryPage() {
             : sendOptions.vehicle_option)
         : null
     return (
-      <ItineraryRender
-        mode="link"
+      <ItineraryStory
         clientName={request.client_name || 'Valued Client'}
         startDate={request.start_date}
         endDate={request.end_date}
@@ -431,6 +430,7 @@ export default function PublicItineraryPage() {
         itinerary={selectedItinerary}
         vehicle={vehicle ? { name: vehicle.name, description: vehicle.description, images: vehicle.images || [] } : null}
         price={sendOptions?.include_price ? sendOptions?.price ?? null : null}
+        variant={searchParams?.get('view') === 'classic' ? 'story' : 'journey'}
       />
     )
   }
