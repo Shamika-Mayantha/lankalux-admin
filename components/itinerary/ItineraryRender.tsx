@@ -7,6 +7,10 @@ export type RenderDay = {
   day: number
   title: string
   location: string
+  /** Where the guest sleeps that night; on a travel day this is the destination, not `location`. */
+  overnight?: string
+  /** The raw itinerary field, for pages that pass saved days straight through. */
+  overnight_location?: string
   image?: string
   activities?: string[]
   optional_activities?: string[]

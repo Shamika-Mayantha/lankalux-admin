@@ -6,7 +6,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useGSAP } from '@gsap/react'
 import { MAP_OUTLINE, MAP_VIEWBOX } from '@/lib/itinerary-places'
 import type { RenderDay } from './ItineraryRender'
-import { dayHeading, fmt, localDate, StoryPhoto, type StoryRoute } from './story-shared'
+import { dayHeading, fmt, localDate, placeLabel, StoryPhoto, type StoryRoute } from './story-shared'
 
 const [, , MAP_W, MAP_H] = MAP_VIEWBOX.split(' ').map(Number)
 /** How much closer than the whole island the camera sits over a stop (less on tall phone screens). */
@@ -252,7 +252,7 @@ export function JourneyDays({ days, route, startDate }: { days: RenderDay[]; rou
                   </h2>
                   {day.location ? (
                     <p data-reveal className="lj-card-place">
-                      {day.location}
+                      {placeLabel(day)}
                     </p>
                   ) : null}
                   {day.what_to_expect ? (
