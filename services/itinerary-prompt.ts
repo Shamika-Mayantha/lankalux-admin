@@ -5,6 +5,7 @@ import {
 } from '@/config/sri-lanka-places'
 import type { ClientRequestRow } from '@/types/domain'
 import { hotelsPromptSection, type StayCandidate } from '@/services/hotel-match.service'
+import { optionBrief } from '@/lib/option-character'
 
 function parseChildrenAges(raw: string | null | undefined): number[] {
   if (!raw) return []
@@ -129,7 +130,8 @@ export function buildItineraryPrompt(
   style: ItineraryStyle,
   expectedDays: number,
   hotels: StayCandidate[] = [],
-  otherOptions: { label: string; title: string; route: string }[] = []
+  otherOptions: { label: string; title: string; route: string }[] = [],
+  fixedRoute = false
 ) {
   const ages = parseChildrenAges(request.children_ages)
   const childLine =
@@ -152,6 +154,8 @@ export function buildItineraryPrompt(
 
 Write ONE itinerary only, the ${meta.label}: ${meta.subtitle}.
 ${STYLE_INSTRUCTIONS[style]}
+
+${optionBrief(style, { fixedRoute })}
 
 CLIENT
 - Name: ${request.client_name || 'Guest'}

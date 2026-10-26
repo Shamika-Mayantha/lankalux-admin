@@ -189,7 +189,7 @@ type RouteDay = {
 
 export type RouteIssue = {
   day: number | null
-  kind: 'revisit' | 'zigzag' | 'off-route' | 'out-of-order' | 'far-day-trip' | 'too-many-bases' | 'generic'
+  kind: 'revisit' | 'zigzag' | 'off-route' | 'out-of-order' | 'far-day-trip' | 'too-many-bases' | 'generic' | 'samey'
   message: string
 }
 
@@ -456,5 +456,5 @@ const GENERIC = /\b(relax(?:ing)?|leisure|unwind|at (?:the|your) hotel|airport l
 export function routeFeedback(report: ReturnType<typeof checkRoute>): string {
   if (report.ok) return ''
   const lines = report.issues.slice(0, 10).map((issue) => `- ${issue.message}`)
-  return `ROUTE CHECK FAILED. LankaLux journeys never double back. Rewrite the whole itinerary as JSON, fixing these:\n${lines.join('\n')}\nKeep the same number of days, the same voice and everything else that was right.`
+  return `CHECK FAILED. Rewrite the whole itinerary as JSON, fixing these (LankaLux journeys never double back):\n${lines.join('\n')}\nKeep the same number of days, the same voice and everything else that was right.`
 }
