@@ -45,7 +45,7 @@ function formatActivityTime(line: string) {
   return `${toTwelveHour(hour24, minute)} - ${rest}`
 }
 
-function stripDistanceText(text: string) {
+export function stripDistanceText(text: string) {
   return text
     .replace(/\b\d+(?:\.\d+)?\s*(?:km|kms|kilomet(?:er|re)s?)\b/gi, '')
     .replace(/\b(?:distance|total distance)\s*[:\-]?\s*\d+(?:\.\d+)?\s*(?:km|kms|kilomet(?:er|re)s?)\b/gi, '')

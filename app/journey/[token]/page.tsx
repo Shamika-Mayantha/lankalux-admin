@@ -1,13 +1,13 @@
 import '@/features/journey/journey.css'
 import { BRAND } from '@/config/brand'
 import { appUrl, publicJourneyUrl } from '@/config/env'
-import { JourneyView } from '@/features/journey/JourneyView'
+import { JourneyStory } from '@/features/journey/JourneyStory'
 import { getClientItinerary } from '@/services/itinerary.service'
 import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
 
-type Props = { params: Promise<{ token: string }> }
+type Props = { params: Promise<{ token: string }>; searchParams?: Promise<{ view?: string }> }
 
 function shareImage() {
   return {
@@ -65,8 +65,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function PublicJourneyPage({ params }: Props) {
+export default async function PublicJourneyPage({ params, searchParams }: Props) {
   const { token } = await params
+  const view = (await searchParams)?.view
   let journey = null as Awaited<ReturnType<typeof getClientItinerary>> | null
   let message = ''
   try {
@@ -87,5 +88,5 @@ export default async function PublicJourneyPage({ params }: Props) {
     )
   }
 
-  return <JourneyView journey={journey} showDistance={false} />
+  return <JourneyStory journey={journey} view={view} />
 }
