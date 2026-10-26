@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { consoleFetch } from '@/lib/console-api'
+import { thumbFor } from '@/services/image-map.service'
 
 export function PhotoPicker({
   value,
@@ -125,7 +126,7 @@ export function PhotoPicker({
             onClick={() => onChange(src)}
             aria-pressed={value === src}
           >
-            <img src={src} alt="" />
+            <img src={thumbFor(src)} alt="" loading="lazy" decoding="async" />
           </button>
         ))}
       </div>
