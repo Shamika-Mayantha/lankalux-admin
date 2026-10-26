@@ -155,6 +155,195 @@ html:has(.lux-story) {
   .ls-cue-line { animation: none; }
 }
 
+/* ------------------------------------------------------------------ */
+/* Immersive journey: the map fills the screen and flies stop to stop  */
+/* ------------------------------------------------------------------ */
+.lj {
+  position: relative;
+  background: var(--forest-950);
+  color: var(--ivory);
+}
+.lj-stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 45%, #12291d 0%, var(--forest-950) 70%);
+}
+.lj-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.lj-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lj-pulse 2.2s ease-out infinite;
+}
+@keyframes lj-pulse {
+  0% { transform: scale(0.6); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.lj-photo {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  overflow: hidden;
+}
+.lj-photo img {
+  object-fit: cover;
+  will-change: transform;
+}
+.lj-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgb(10 25 18 / 0.5), rgb(10 25 18 / 0) 22%),
+    linear-gradient(to top, rgb(10 25 18 / 0.45), rgb(10 25 18 / 0) 35%);
+}
+.lj-hud {
+  position: absolute;
+  top: 1.1rem;
+  left: var(--gutter);
+  right: var(--gutter);
+  font-size: 0.9rem;
+  color: rgb(244 239 228 / 0.8);
+}
+.lj-hud { text-shadow: 0 1px 12px rgb(10 25 18 / 0.7); }
+@media (min-width: 1024px) {
+  .lj-hud { left: auto; text-align: right; }
+}
+.lj-hud span {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  color: var(--ivory);
+}
+.lj-flow {
+  position: relative;
+  z-index: 1;
+  margin-top: -100svh;
+}
+.lj-intro,
+.lj-finale {
+  min-height: 130svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0 var(--gutter) 12svh;
+}
+.lj-finale {
+  min-height: 170svh;
+  justify-content: flex-end;
+}
+.lj-kicker {
+  color: var(--gold-bright);
+  font-size: 0.95rem;
+}
+.lj-intro-title {
+  margin-top: 0.5rem;
+  max-width: 14ch;
+  font-size: clamp(2.4rem, 6vw, 5.5rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.lj-leg {
+  height: 120svh;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 var(--gutter) 14svh;
+}
+.lj-leg-caption {
+  opacity: 0;
+  visibility: hidden;
+  text-shadow: 0 2px 24px rgb(10 25 18 / 0.6);
+}
+.lj-leg-day {
+  font-size: clamp(3rem, 9vw, 7.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+.lj-leg-place {
+  margin-top: 0.4rem;
+  font-size: 1.05rem;
+  color: rgb(244 239 228 / 0.85);
+}
+.lj-scene {
+  padding: 70svh var(--gutter) 75svh;
+}
+.lj-print-photo {
+  display: none;
+}
+.lj-card {
+  max-width: 36rem;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  background: rgb(10 25 18 / 0.78);
+  border: 1px solid rgb(244 239 228 / 0.1);
+  border-radius: 4px;
+}
+@media (min-width: 1024px) {
+  .lj-card {
+    margin-left: clamp(0rem, 4vw, 4rem);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    background: rgb(10 25 18 / 0.66);
+  }
+}
+.lj-card-date {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--gold-bright);
+}
+.lj-card-date span {
+  font-weight: 400;
+  color: rgb(244 239 228 / 0.7);
+}
+.lj-card-title {
+  margin-top: 0.5rem;
+  font-size: clamp(2rem, 3.4vw, 3.1rem);
+  line-height: 1.04;
+}
+.lj-card-place {
+  margin-top: 0.8rem;
+  color: var(--gold);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.lj-card-text {
+  margin-top: 1.1rem;
+  color: rgb(244 239 228 / 0.86);
+}
+.lj-card-sub {
+  margin-top: 1.6rem;
+  font-size: 1.2rem;
+}
+.lj-card-list {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+  font-size: 1rem;
+}
+.lj-card-list li {
+  display: flex;
+  gap: 0.8rem;
+}
+
+/* Reduced motion: no flying camera; each day is its photo with the story beneath it. */
+@media (prefers-reduced-motion: reduce) {
+  .lj-stage { display: none; }
+  .lj-flow { margin-top: 0; }
+  .lj-intro, .lj-finale, .lj-leg { display: none; }
+  .lj-scene { padding: 3rem var(--gutter); max-width: 72rem; margin-inline: auto; }
+  .lj-print-photo { display: block; margin-bottom: 1.5rem; }
+  .lj-pulse { animation: none; }
+}
+
 .ls-print {
   margin-top: 0.5rem;
   padding: 0.7rem 1.4rem;
@@ -172,25 +361,27 @@ html:has(.lux-story) {
   color: var(--gold-bright);
 }
 
-/* Printing (or Save as PDF): everything shown at once on light paper, one day per page. */
+/* Printing (or Save as PDF): everything shown at once on the website's warm paper, one day per page. */
 @media print {
-  @page { margin: 12mm; }
-  html:has(.lux-story) { background: #fff; }
+  @page { margin: 0; }
+  html:has(.lux-story), html:has(.lux-story) body { background: var(--paper, #faf7f0) !important; }
+  html:has(.lux-story) { background: #faf7f0 !important; }
   .ls-progress, .ls-cue, .ls-map-bar, .ls-print { display: none !important; }
-  .lux-story { background: #fff; font-size: 11pt; }
+  .lux-story { background: var(--paper); font-size: 11pt; }
   .lux-story * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .ls-hero { min-height: 0; height: 125mm; border-radius: 4px; break-after: avoid; }
+  .ls-hero { min-height: 0; height: 135mm; break-after: avoid; }
   .ls-hero-photo { inset: 0; transform: none !important; }
   .ls-hero-copy { padding-top: 3rem !important; padding-bottom: 2rem !important; opacity: 1 !important; visibility: visible !important; transform: none !important; }
   .ls-summary { padding-block: 2.5rem 1rem !important; }
+  .ls-days { background: var(--paper); }
   .ls-days.has-map { display: block; }
-  .lux-story li[data-day] { min-height: 0 !important; padding-block: 1.5rem !important; break-inside: avoid; }
+  .lux-story li[data-day] { min-height: 0 !important; padding-block: 12mm 6mm !important; break-inside: avoid; }
   .lux-story li[data-day] + li[data-day] { break-before: page; }
-  .lux-story .ls-dark { background: #fff !important; color: var(--ink) !important; break-inside: avoid; }
+  .lux-story .ls-dark { background: var(--paper) !important; color: var(--ink) !important; break-inside: avoid; }
   .lux-story .ls-dark > div { padding-block: 2rem !important; }
   .lux-story .ls-dark p, .lux-story .ls-dark a { color: var(--ink-soft) !important; }
   .lux-story .ls-signoff .ls-display { color: var(--ink) !important; font-size: 2rem !important; }
-  .lux-story [data-reveal], .lux-story [data-reveal-group] > *, .lux-story [data-split], .lux-story .split-line {
+  .lux-story [data-reveal], .lux-story [data-reveal-group] > *, .lux-story [data-split], .lux-story .split-line, .lj-leg-caption {
     opacity: 1 !important;
     visibility: visible !important;
     transform: none !important;
@@ -198,7 +389,18 @@ html:has(.lux-story) {
   /* Headings were split into lines for the screen width; let them flow again on paper. */
   .lux-story .split-line, .lux-story .split-line-mask { display: inline !important; }
   .lux-story .split-line::after { content: ' '; }
-  .ls-days { background: #fff; }
   .lux-story .ls-frame { clip-path: none !important; break-inside: avoid; }
   .lux-story .ls-frame-inner { transform: none !important; inset: 0; }
+
+  /* The immersive version prints the same way: photo, then the day's story. */
+  .lj { background: var(--paper); color: var(--ink); }
+  .lj-stage, .lj-intro, .lj-leg, .lj-finale { display: none !important; }
+  .lj-flow { margin-top: 0; }
+  .lj-scene { padding: 12mm var(--gutter) 6mm; break-inside: avoid; }
+  .lj-day + .lj-day .lj-scene { break-before: page; }
+  .lj-print-photo { display: block; margin-bottom: 1.5rem; }
+  .lj-card { max-width: none; padding: 0; background: none !important; border: 0; backdrop-filter: none; margin: 0; }
+  .lj-card-date { color: var(--forest-700); }
+  .lj-card-date span, .lj-card-text { color: var(--ink-soft); }
+  .lj-card-place { color: #a08045; }
 }

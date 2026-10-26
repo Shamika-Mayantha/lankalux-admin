@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import Lenis from 'lenis'
 import { useMemo, useRef, useState } from 'react'
 import { gsap } from 'gsap'
@@ -9,47 +8,16 @@ import { SplitText } from 'gsap/SplitText'
 import { CustomEase } from 'gsap/CustomEase'
 import { useGSAP } from '@gsap/react'
 import { BRAND } from '@/config/brand'
-import { MAP_OUTLINE, MAP_VIEWBOX, placeForLocation, routePath, type StoryPlace } from '@/lib/itinerary-places'
-import { elegantTitle, parseDayHeading, type RenderDay, type RenderItinerary, type RenderVehicle } from './ItineraryRender'
+import { MAP_OUTLINE, MAP_VIEWBOX } from '@/lib/itinerary-places'
+import { elegantTitle, type RenderItinerary, type RenderVehicle } from './ItineraryRender'
+import { JourneyDays } from './JourneyDays'
+import { buildRoute, dayHeading, fmt, localDate, StoryPhoto } from './story-shared'
 import './itinerary-story.css'
 
 gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase, useGSAP)
 // The lankalux.com curves: a long, heavy settle.
 CustomEase.create('lux', '0.16, 1, 0.3, 1')
 CustomEase.create('luxInOut', '0.7, 0, 0.2, 1')
-
-const OPTIMISED_REMOTE = /^https:\/\/evmsntnprujqfejkmipq\.supabase\.co\/storage\/v1\/object\/public\//
-
-/** Fills its frame. Our own and Supabase photos are resized for the screen; anything else loads as-is. */
-function StoryPhoto({ src, alt, sizes, priority = false }: { src: string; alt: string; sizes: string; priority?: boolean }) {
-  if (src.startsWith('/') || OPTIMISED_REMOTE.test(src)) {
-    return <Image src={src} alt={alt} fill sizes={sizes} priority={priority} />
-  }
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} loading={priority ? 'eager' : 'lazy'} decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-}
-
-/** "2026-11-03" as a local date (not UTC midnight, which shows the day before west of London). */
-function localDate(value?: string | null, addDays = 0) {
-  if (!value) return null
-  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(value)
-  if (Number.isNaN(d.getTime())) return null
-  d.setDate(d.getDate() + addDays)
-  return d
-}
-const fmt = (d: Date | null, opts: Intl.DateTimeFormatOptions) => (d ? d.toLocaleDateString('en-GB', opts) : null)
-
-function dayHeading(day: RenderDay) {
-  const heading = parseDayHeading(day.day, day.title)
-  const title =
-    heading.title && !/^day\s*\d+$/i.test(heading.title.trim())
-      ? heading.title
-      : day.location
-        ? `Arrival in ${day.location}`
-        : 'Journey Highlights'
-  return { day: heading.day, title }
-}
 
 /**
  * The client-facing itinerary as a scroll story, in the lankalux.com style: the opening photo
@@ -65,6 +33,7 @@ export function ItineraryStory({
   itinerary,
   vehicle,
   price,
+  variant = 'story',
 }: {
   clientName: string
   startDate?: string | null
@@ -73,24 +42,17 @@ export function ItineraryStory({
   itinerary: RenderItinerary
   vehicle?: RenderVehicle
   price?: string | null
+  /** 'journey' is the immersive version: a full-screen map that flies to each stop. */
+  variant?: 'story' | 'journey'
 }) {
   const root = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
   const days = useMemo(() => itinerary.days || [], [itinerary.days])
   const heroSrc = days.find((d) => d.image)?.image || ''
 
-  // Where each day ends, carrying the last known town forward when a location is not on the map.
-  const route = useMemo(() => {
-    const stays: (StoryPlace | null)[] = []
-    for (const d of days) stays.push(placeForLocation(d.location) ?? stays[stays.length - 1] ?? null)
-    const paths = stays.map((s, i) => {
-      const prev = i > 0 ? stays[i - 1] : null
-      return s && prev && prev.name !== s.name ? routePath([prev.at, s.at]) : ''
-    })
-    const stops = Array.from(new Map(stays.filter((s): s is StoryPlace => !!s).map((s) => [s.name, s])).values())
-    return { stays, paths, stops }
-  }, [days])
+  const route = useMemo(() => buildRoute(days), [days])
   const hasMap = route.stops.length >= 2
+  const journey = variant === 'journey' && hasMap
   const activeStay = route.stays[active]
 
   const start = localDate(startDate)
@@ -277,6 +239,10 @@ export function ItineraryStory({
         </div>
       </section>
 
+      {journey ? (
+        <JourneyDays days={days} route={route} startDate={startDate} />
+      ) : (
+        <>
       {/* Day by day, with the island beside the days */}
       <section className={`ls-days ${hasMap ? 'has-map' : ''}`}>
         {hasMap ? (
@@ -365,6 +331,8 @@ export function ItineraryStory({
           })}
         </ol>
       </section>
+        </>
+      )}
 
       {vehicle ? (
         <section className="ls-dark" style={{ background: 'var(--forest-900)', color: 'var(--ivory)' }}>

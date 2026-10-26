@@ -124,6 +124,7 @@ export default function PublicSharedItineraryPage() {
       itinerary={itinerary}
       vehicle={vehicle ? { name: vehicle.name, description: vehicle.description, images: vehicle.images || [] } : null}
       price={sendOptions?.include_price ? sendOptions?.price ?? null : null}
+      variant={searchParams?.get('view') === 'immersive' ? 'journey' : 'story'}
     />
   )
 }
