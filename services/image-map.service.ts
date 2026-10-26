@@ -54,7 +54,6 @@ const MAPPINGS: Mapping[] = [
       '/images/hq/hillcountry-hillcountryhp.jpg',
       '/images/Ella Rock.jpg',
       '/images/Train 1.jpg',
-      '/images/nine-arches-bridge-train-sri-lanka-53.jpg',
       '/images/damrotea.jpg',
     ],
   },
@@ -89,6 +88,9 @@ const MAPPINGS: Mapping[] = [
     images: ['/images/hq/bear.jpg', '/images/bear.jpg', '/images/elephant.jpg'],
   },
 ]
+
+// public/images/nine-arches-bridge-train-sri-lanka-53.jpg only exists for itineraries saved before
+// it was dropped from the library (it was missing, so those days showed a broken photo).
 
 /** Every lankalux.com photo, offered in the photo picker even where no destination uses it. */
 const WEBSITE_PHOTOS = [
