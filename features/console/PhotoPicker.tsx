@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { consoleFetch } from '@/lib/console-api'
+import { prepareForUpload } from '@/lib/prepare-upload'
 
 export function PhotoPicker({
   value,
@@ -73,7 +74,7 @@ export function PhotoPicker({
       let lastSrc = ''
       for (const file of list) {
         const fd = new FormData()
-        fd.append('file', file)
+        fd.append('file', await prepareForUpload(file))
         const json = await consoleFetch('/api/v2/photos', { method: 'POST', body: fd })
         const src = typeof json.src === 'string' ? json.src : ''
         if (!src) throw new Error('Upload did not return an image URL.')
