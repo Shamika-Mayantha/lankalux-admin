@@ -42,9 +42,15 @@ export function dayHeading(day: RenderDay) {
  * The route starts and ends at the airport unless the first or last night is already beside it
  * (Negombo, Colombo): guests are met on arrival and dropped back for their flight home.
  */
+/** "Colombo to Sigiriya" on a travel day, otherwise just the place. */
+export function placeLabel(day: RenderDay) {
+  const night = day.overnight || day.overnight_location
+  return night && day.location && night.trim().toLowerCase() !== day.location.trim().toLowerCase() ? `${day.location} to ${night}` : day.location || night || ''
+}
+
 export function buildRoute(days: RenderDay[]) {
   const stays: (StoryPlace | null)[] = []
-  for (const d of days) stays.push(placeForLocation(d.overnight) ?? placeForLocation(d.location) ?? stays[stays.length - 1] ?? null)
+  for (const d of days) stays.push(placeForLocation(d.overnight || d.overnight_location) ?? placeForLocation(d.location) ?? stays[stays.length - 1] ?? null)
   const first = stays.find((s): s is StoryPlace => !!s)
   const nearAirport = (p: StoryPlace) => Math.hypot(p.at[0] - ARRIVAL.at[0], p.at[1] - ARRIVAL.at[1]) < 40
   const origin = first && !nearAirport(first) ? ARRIVAL : null

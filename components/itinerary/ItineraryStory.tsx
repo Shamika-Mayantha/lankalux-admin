@@ -11,7 +11,7 @@ import { BRAND } from '@/config/brand'
 import { coverFor, MAP_OUTLINE, MAP_VIEWBOX } from '@/lib/itinerary-places'
 import { elegantTitle, type RenderItinerary, type RenderVehicle } from './ItineraryRender'
 import { JourneyDays } from './JourneyDays'
-import { buildRoute, dayHeading, fmt, localDate, StoryPhoto } from './story-shared'
+import { buildRoute, dayHeading, fmt, localDate, placeLabel, StoryPhoto } from './story-shared'
 import './itinerary-story.css'
 
 gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase, useGSAP)
@@ -364,7 +364,7 @@ export function ItineraryStory({
                     </h2>
                     {day.location ? (
                       <p data-reveal style={{ marginTop: '0.85rem', color: '#a08045', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-                        {day.location}
+                        {placeLabel(day)}
                       </p>
                     ) : null}
                     {day.what_to_expect ? (
