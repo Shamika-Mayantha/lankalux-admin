@@ -91,6 +91,25 @@ const MAPPINGS: Mapping[] = [
 
 const FALLBACK = ['/images/colombo.jpg', '/images/kandy.jpg', '/images/galle.jpg']
 
+/** Shamika's full-quality photos (public/images/library). Picker only, not used by the generator. */
+const LIBRARY_PHOTOS = [
+  'polonnaruwa',
+  'sigiriya-rock-fortress',
+  'kandy-temple-of-the-tooth',
+  'nine-arch-bridge-blue-train',
+  'nine-arch-bridge-track-level',
+  'ella-little-adams-peak',
+  'galle-fort',
+  'coast-palm-lined-bay',
+  'elephants-in-the-wild',
+  'leopard-in-the-wild',
+].map((name) => `/images/library/${name}.jpg`)
+
+/** Small preview for picker tiles, so the full-size originals only load where they are used. */
+export function thumbFor(src: string): string {
+  return src.startsWith('/images/library/') ? src.replace('/images/library/', '/images/library/thumbs/') : src
+}
+
 function norm(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 }
@@ -140,6 +159,10 @@ export function assignDayImages(
 export function allLibraryImages(): string[] {
   const seen = new Set<string>()
   const out: string[] = []
+  for (const src of LIBRARY_PHOTOS) {
+    seen.add(src)
+    out.push(src)
+  }
   for (const m of MAPPINGS) {
     for (const src of m.images) {
       if (!seen.has(src)) {
