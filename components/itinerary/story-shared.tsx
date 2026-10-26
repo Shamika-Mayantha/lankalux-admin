@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { placeForLocation, routePath, type StoryPlace } from '@/lib/itinerary-places'
+import { ARRIVAL, placeForLocation, routePath, type StoryPlace } from '@/lib/itinerary-places'
 import { parseDayHeading, type RenderDay } from './ItineraryRender'
 
 const OPTIMISED_REMOTE = /^https:\/\/evmsntnprujqfejkmipq\.supabase\.co\/storage\/v1\/object\/public\//
@@ -37,15 +37,22 @@ export function dayHeading(day: RenderDay) {
   return { day: heading.day, title }
 }
 
-/** Where each day ends, carrying the last known town forward when a location is not on the map. */
+/**
+ * Where each day ends, carrying the last known town forward when a location is not on the map.
+ * The route starts at the airport unless the first night is already beside it (Negombo, Colombo).
+ */
 export function buildRoute(days: RenderDay[]) {
   const stays: (StoryPlace | null)[] = []
   for (const d of days) stays.push(placeForLocation(d.location) ?? stays[stays.length - 1] ?? null)
+  const first = stays.find((s): s is StoryPlace => !!s)
+  const nearAirport = (p: StoryPlace) => Math.hypot(p.at[0] - ARRIVAL.at[0], p.at[1] - ARRIVAL.at[1]) < 40
+  const origin = first && !nearAirport(first) ? ARRIVAL : null
   const paths = stays.map((s, i) => {
-    const prev = i > 0 ? stays[i - 1] : null
+    const prev = i > 0 ? stays[i - 1] : origin
     return s && prev && prev.name !== s.name ? routePath([prev.at, s.at]) : ''
   })
-  const stops = Array.from(new Map(stays.filter((s): s is StoryPlace => !!s).map((s) => [s.name, s])).values())
-  return { stays, paths, stops }
+  const all = [origin, ...stays].filter((s): s is StoryPlace => !!s)
+  const stops = Array.from(new Map(all.map((s) => [s.name, s])).values())
+  return { origin, stays, paths, stops }
 }
 export type StoryRoute = ReturnType<typeof buildRoute>

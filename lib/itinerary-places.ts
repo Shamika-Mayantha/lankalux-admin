@@ -84,3 +84,26 @@ export function routePath(pts: [number, number][]): string {
   }
   return d
 }
+
+/** International arrivals land at Colombo Airport, so a journey's route starts there. */
+export const ARRIVAL: StoryPlace = { name: 'Colombo Airport', at: PLACES[0].at }
+
+/** Full-resolution LankaLux photographs for the opening page, by the first town of the journey. */
+const COVERS: [string[], string][] = [
+  [['Sigiriya', 'Dambulla', 'Habarana', 'Polonnaruwa', 'Matale'], 'sigiriya'],
+  [['Anuradhapura', 'Jaffna', 'Wilpattu', 'Kalpitiya'], 'anuradhapura'],
+  [['Kandy', 'Pinnawala', 'Kitulgala'], 'kandy'],
+  [['Nuwara Eliya', 'Hatton'], 'hill-country'],
+  [['Ella', 'Haputale'], 'ella'],
+  [['Yala', 'Udawalawe'], 'wildlife'],
+  [['Sinharaja', 'Ratnapura'], 'rainforest'],
+  [['Mirissa', 'Tangalle'], 'south-coast'],
+  [['Galle', 'Hikkaduwa'], 'galle'],
+  [['Bentota', 'Beruwala'], 'west-coast'],
+  [['Arugam Bay', 'Pasikudah', 'Batticaloa'], 'east-coast'],
+  [['Trincomalee'], 'bay'],
+]
+export function coverFor(place: StoryPlace | null | undefined): string {
+  const hit = place && COVERS.find(([names]) => names.includes(place.name))
+  return `/itinerary/covers/${hit ? hit[1] : 'tea'}.jpg`
+}

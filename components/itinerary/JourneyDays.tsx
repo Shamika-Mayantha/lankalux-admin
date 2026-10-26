@@ -16,6 +16,7 @@ const zoomFor = (aspect: number) => (aspect < 0.8 ? 1.9 : 2.6)
  * The immersive day by day: the island fills the screen and the camera flies along the road to
  * each stop, drawing it in gold. On arrival the day's photograph takes over the whole screen and
  * the day's story scrolls up over it; then the photo gives way to the map for the next leg.
+ * Extra nights in the same place have no leg: their day follows straight on, with no map in between.
  * Everything is scrubbed by the scroll, so it plays backwards as well.
  */
 export function JourneyDays({ days, route, startDate }: { days: RenderDay[]; route: StoryRoute; startDate?: string | null }) {
@@ -57,36 +58,41 @@ export function JourneyDays({ days, route, startDate }: { days: RenderDay[]; rou
         const leg = el.querySelector(`[data-leg="${i}"]`)
         const scene = el.querySelector(`[data-scene="${i}"]`)
         const photo = el.querySelector(`[data-photo="${i}"]`)
-        if (!leg || !scene) return
+        if (!scene) return
 
         // The flight: pull back a little mid-way, then settle over the next stop.
-        const prev = route.stays[i - 1]
+        const prev = i === 0 ? route.origin : route.stays[i - 1]
         const next = route.stays[i]
         const from = () => (i === 0 ? overview() : at(i - 1))
-        const tl = gsap.timeline({ scrollTrigger: { trigger: leg, start: 'top 75%', end: 'bottom 45%', scrub: 0.8, invalidateOnRefresh: true } })
-        if (prev && next && prev.name !== next.name) {
-          const mid = () => frame((prev.at[0] + next.at[0]) / 2, (prev.at[1] + next.at[1]) / 2, zoomFor(stageAspect()) * 0.7)
-          tl.fromTo(svg, { attr: { viewBox: from } }, { attr: { viewBox: mid }, ease: 'sine.out', duration: 0.5, immediateRender: false }, 0)
-          tl.to(svg, { attr: { viewBox: () => at(i) }, ease: 'sine.inOut', duration: 0.5 }, 0.5)
-        } else {
-          tl.fromTo(svg, { attr: { viewBox: from } }, { attr: { viewBox: () => at(i) }, ease: 'power1.inOut', duration: 1, immediateRender: false }, 0)
-        }
-        const seg = el.querySelectorAll(`[data-seg="${i}"]`)
-        if (seg.length) tl.fromTo(seg, { strokeDashoffset: 1 }, { strokeDashoffset: 0, ease: 'none', duration: 0.9, immediateRender: false }, 0.05)
-        tl.fromTo(el.querySelector(`[data-leg-caption="${i}"]`), { autoAlpha: 0, y: 30 }, { autoAlpha: 1, y: 0, duration: 0.35, immediateRender: false }, 0.55)
+        if (leg) {
+          const tl = gsap.timeline({ scrollTrigger: { trigger: leg, start: 'top 75%', end: 'bottom 45%', scrub: 0.8, invalidateOnRefresh: true } })
+          if (prev && next && prev.name !== next.name) {
+            const mid = () => frame((prev.at[0] + next.at[0]) / 2, (prev.at[1] + next.at[1]) / 2, zoomFor(stageAspect()) * 0.7)
+            tl.fromTo(svg, { attr: { viewBox: from } }, { attr: { viewBox: mid }, ease: 'sine.out', duration: 0.5, immediateRender: false }, 0)
+            tl.to(svg, { attr: { viewBox: () => at(i) }, ease: 'sine.inOut', duration: 0.5 }, 0.5)
+          } else {
+            tl.fromTo(svg, { attr: { viewBox: from } }, { attr: { viewBox: () => at(i) }, ease: 'power1.inOut', duration: 1, immediateRender: false }, 0)
+          }
+          const seg = el.querySelectorAll(`[data-seg="${i}"]`)
+          if (seg.length) tl.fromTo(seg, { strokeDashoffset: 1 }, { strokeDashoffset: 0, ease: 'none', duration: 0.9, immediateRender: false }, 0.05)
+          tl.fromTo(el.querySelector(`[data-leg-caption="${i}"]`), { autoAlpha: 0, y: 30 }, { autoAlpha: 1, y: 0, duration: 0.35, immediateRender: false }, 0.55)
 
-        const out = el.querySelector(`[data-leg-out="${i}"]`)
-        if (out) gsap.to(out, { autoAlpha: 0, ease: 'none', scrollTrigger: { trigger: out, start: 'top 30%', end: 'top 8%', scrub: true } })
+          const out = el.querySelector(`[data-leg-out="${i}"]`)
+          if (out) gsap.to(out, { autoAlpha: 0, ease: 'none', scrollTrigger: { trigger: out, start: 'top 30%', end: 'top 8%', scrub: true } })
+        }
 
         // Arrival: the day's photo takes the screen while its story is read, then lets the map back.
         if (photo) {
           const img = photo.querySelector('img')
-          gsap.fromTo(photo, { autoAlpha: 0 }, { autoAlpha: 1, ease: 'none', immediateRender: false, scrollTrigger: { trigger: scene, start: 'top 95%', end: 'top 40%', scrub: true } })
-          gsap.fromTo(photo, { autoAlpha: 1 }, { autoAlpha: 0, ease: 'none', immediateRender: false, scrollTrigger: { trigger: scene, start: 'bottom bottom', end: 'bottom 75%', scrub: true } })
+          // Another night in the same place: this photo dissolves over the last one, with no map between.
+          const stay = !leg && !!el.querySelector(`[data-photo="${i - 1}"]`)
+          const nextStays = !!el.querySelector(`[data-scene="${i + 1}"]`) && !el.querySelector(`[data-leg="${i + 1}"]`) && !!el.querySelector(`[data-photo="${i + 1}"]`)
+          gsap.fromTo(photo, { autoAlpha: 0 }, { autoAlpha: 1, ease: 'none', immediateRender: false, scrollTrigger: { trigger: scene, start: stay ? 'top bottom' : 'top 95%', end: stay ? 'top 70%' : 'top 40%', scrub: true } })
+          gsap.fromTo(photo, { autoAlpha: 1 }, { autoAlpha: 0, ease: 'none', immediateRender: false, scrollTrigger: { trigger: scene, start: nextStays ? 'bottom 70%' : 'bottom bottom', end: nextStays ? 'bottom 45%' : 'bottom 75%', scrub: true } })
           if (img) gsap.fromTo(img, { scale: 1.14 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: scene, start: 'top bottom', end: 'bottom top', scrub: true } })
         }
 
-        ScrollTrigger.create({ trigger: leg, endTrigger: scene, start: 'top 60%', end: 'bottom 60%', onToggle: (st) => st.isActive && setActive(i) })
+        ScrollTrigger.create({ trigger: leg ?? scene, endTrigger: scene, start: 'top 60%', end: 'bottom 60%', onToggle: (st) => st.isActive && setActive(i) })
       })
 
       // Journey's end: back out over the whole island with the full route drawn.
@@ -104,6 +110,7 @@ export function JourneyDays({ days, route, startDate }: { days: RenderDay[]; rou
   const activeStay = active >= 0 && active < days.length ? route.stays[active] : null
   // Stops already reached are shown in gold; the rest wait in ivory.
   const reached = new Set(route.stays.slice(0, done ? days.length : active + 1).map((s) => s?.name))
+  if (route.origin && active >= 0) reached.add(route.origin.name)
   // Towns too close to an earlier one (Negombo and the airport) are not labelled in the wide view.
   const labelled = new Set<string>()
   route.stops.forEach((p, i) => {
@@ -188,17 +195,20 @@ export function JourneyDays({ days, route, startDate }: { days: RenderDay[]; rou
           const h = dayHeading(day)
           const date = fmt(localDate(startDate, h.day - 1), { weekday: 'long', day: 'numeric', month: 'long' })
           const stay = route.stays[i]
-          const moved = i === 0 || (stay && route.stays[i - 1]?.name !== stay.name)
+          const moved = i === 0 || (!!stay && route.stays[i - 1]?.name !== stay.name)
+          const legPlace = !stay ? day.location : i === 0 ? (route.origin ? `From the airport to ${stay.name}` : stay.name) : `On to ${stay.name}`
           return (
-            <div key={`${day.day}-${i}`} className="lj-day">
-              <div data-leg={i} className="lj-leg">
-                <div data-leg-out={i}>
-                  <div data-leg-caption={i} className="lj-leg-caption">
-                    <p className="ls-display lj-leg-day">Day {h.day}</p>
-                    <p className="lj-leg-place">{stay ? (moved ? (i === 0 ? stay.name : `On to ${stay.name}`) : `Another day in ${stay.name}`) : day.location}</p>
+            <div key={`${day.day}-${i}`} className={`lj-day${moved ? '' : ' lj-stay'}`}>
+              {moved ? (
+                <div data-leg={i} className="lj-leg">
+                  <div data-leg-out={i}>
+                    <div data-leg-caption={i} className="lj-leg-caption">
+                      <p className="ls-display lj-leg-day">Day {h.day}</p>
+                      <p className="lj-leg-place">{legPlace}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : null}
 
               <article data-scene={i} className="lj-scene">
                 {day.image ? (
