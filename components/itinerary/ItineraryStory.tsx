@@ -1,7 +1,7 @@
 'use client'
 
 import Lenis from 'lenis'
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { SplitText } from 'gsap/SplitText'
@@ -34,6 +34,7 @@ export function ItineraryStory({
   vehicle,
   price,
   variant = 'story',
+  extras,
 }: {
   clientName: string
   startDate?: string | null
@@ -44,6 +45,8 @@ export function ItineraryStory({
   price?: string | null
   /** 'journey' is the immersive version: a full-screen map that flies to each stop. */
   variant?: 'story' | 'journey'
+  /** Extra sections (stays, what is included) shown after the vehicle, before the sign-off. */
+  extras?: ReactNode
 }) {
   const root = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
@@ -354,6 +357,8 @@ export function ItineraryStory({
           </div>
         </section>
       ) : null}
+
+      {extras}
 
       {/* Sign-off */}
       <section className="ls-dark ls-signoff" style={{ background: 'var(--forest-950)', color: 'var(--ivory)', textAlign: 'center' }}>
