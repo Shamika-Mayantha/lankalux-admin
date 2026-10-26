@@ -27,6 +27,8 @@ import { placesForJourney, ensureMinimumDayActivities } from '../config/sri-lank
 import { checkRoute, fixDayOrder } from '../lib/route-order'
 import { untime } from '../lib/untimed'
 import { plainVoice } from '../lib/plain-voice'
+import { checkCharacter, clientFixedRoute, optionBrief } from '../lib/option-character'
+import { townFor } from '../lib/route-order'
 import { buildItineraryPrompt, enRouteDesignRules } from '../services/itinerary-prompt'
 import { applyHotelsToDays, hotelsPromptSection } from '../services/hotel-match.service'
 import { driverPackFilenames, sanitizeFilename, splitGuestNames } from '../lib/driver-pack/filenameHelpers'
@@ -631,5 +633,24 @@ assert(
 )
 assert(describeTrafficSource({ landingPage: '/journeys', enquiryPage: '/journeys' }) === 'Direct or unknown · landed on /journeys', 'direct visit')
 assert(describeTrafficSource(null) === null && describeTrafficSource({ landingPage: 'javascript:x' }) === null, 'ignores junk')
+
+// The three options each get their own character; the Exploration option is checked in code.
+assert(clientFixedRoute('My plan is 2 nights Colombo, 3 nights Sigiriya, 1 night Kandy, 2 nights Nuwara Eliya'), 'night-by-night plan is a fixed route')
+assert(!clientFixedRoute('Culture, the hill-country train, leopards, beaches'), 'interests alone are not a fixed route')
+assert(/SIGNATURE/.test(optionBrief('balanced', { fixedRoute: false })) && /SLOW/.test(optionBrief('relaxed', { fixedRoute: false })) && /EXPLORATION/.test(optionBrief('experience', { fixedRoute: false })), 'each option has its own brief')
+assert(/Keep exactly those bases/.test(optionBrief('experience', { fixedRoute: true })), 'a fixed route is kept in every option')
+for (const n of ['Negombo', 'Sigiriya', 'Kandy', 'Nuwara Eliya', 'Ella', 'Tissamaharama', 'Mirissa', 'Galle', 'Bentota', 'Weligama', 'Unawatuna', 'Habarana', 'Dambulla', 'Yala']) {
+  assert(townFor(n), `classic base ${n} is on the map`)
+}
+const classicDays = route(['Negombo', 'Sigiriya', 'Sigiriya', 'Kandy', 'Nuwara Eliya', 'Ella', 'Ella', 'Tissamaharama', 'Mirissa', 'Colombo'])
+classicDays[1].activities = ['Sigiriya Rock Fortress', 'Dambulla Cave Temple', 'Polonnaruwa ruins by bicycle']
+assert(checkCharacter('experience', classicDays, { fixedRoute: false }).filter((i) => i.kind === 'samey').length === 2, 'classic copy is sent back as Exploration')
+assert(checkCharacter('balanced', classicDays, { fixedRoute: false }).length === 0, 'the Signature option may be classic')
+const exploreDays = route(['Negombo', 'Sigiriya', 'Sigiriya', 'Kandy', 'Haputale', 'Haputale', 'Udawalawe', 'Hiriketiya', 'Hiriketiya', 'Colombo'])
+exploreDays[1].activities = ['Pidurangala Rock at first light', 'Ritigala forest monastery']
+exploreDays[3].activities = ['Embekke Devalaya on the way into Kandy']
+const exploreIssues = checkCharacter('experience', exploreDays, { fixedRoute: false })
+assert(exploreIssues.length === 0, `an off the beaten track route passes (${exploreIssues.map((i) => i.message).join(' ')})`)
+assert(checkCharacter('experience', classicDays, { fixedRoute: true }).length === 1, 'a fixed route only asks for different days, not different bases')
 
 console.log('console core checks passed')

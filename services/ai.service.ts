@@ -12,6 +12,7 @@ import { NO_DASHES_RULE, undashDeep } from '@/lib/no-dashes'
 import { checkRoute, fixDayOrder, routeFeedback } from '@/lib/route-order'
 import { untimeDays } from '@/lib/untimed'
 import { plainVoiceDeep } from '@/lib/plain-voice'
+import { checkCharacter, clientFixedRoute } from '@/lib/option-character'
 
 /** A second attempt only fits if the first one came back quickly (the route allows 90 seconds). */
 const RETRY_BUDGET_MS = 40_000
@@ -24,17 +25,19 @@ function maxBasesFor(style: ItineraryStyle, days: number) {
 }
 
 /** Clock times and AI-sounding words out, stops in driving order. Works on the model's raw JSON before it is structured. */
-function prepareDays(json: unknown, maxBases: number) {
+function prepareDays(json: unknown, maxBases: number, style: ItineraryStyle, fixedRoute: boolean) {
   const obj = plainVoiceDeep((json && typeof json === 'object' ? json : {}) as { days?: unknown })
   if (!Array.isArray(obj.days)) return { json: obj, report: checkRoute([]) }
   const days = untimeDays(obj.days as Record<string, unknown>[]) as Parameters<typeof checkRoute>[0]
-  const report = checkRoute(days, { maxBases })
+  const route = checkRoute(days, { maxBases })
+  const issues = [...route.issues, ...checkCharacter(style, days, { fixedRoute })]
+  const report = { ...route, issues, ok: issues.length === 0 }
   return { json: { ...obj, days: fixDayOrder(days) }, report }
 }
 
 /** Problems code cannot repair on its own: the overnight plan itself is wrong, or days are filler. */
 const needsRewrite = (report: ReturnType<typeof checkRoute>) =>
-  report.issues.some((i) => i.kind === 'revisit' || i.kind === 'zigzag' || i.kind === 'too-many-bases') ||
+  report.issues.some((i) => i.kind === 'revisit' || i.kind === 'zigzag' || i.kind === 'too-many-bases' || i.kind === 'samey') ||
   report.issues.filter((i) => i.kind === 'off-route' || i.kind === 'far-day-trip' || i.kind === 'generic').length >= 2
 
 /** The other options' routes for this request, so this one reads as a real alternative. */
@@ -83,6 +86,9 @@ export async function generateOneItinerary(opts: {
     inclusiveDuration(opts.request.start_date, opts.request.end_date) || opts.request.duration || 7
   const hotels = await hotelsForRequest(opts.request.id)
   const others = await otherOptions(opts.request.id, opts.optionNumber)
+  const fixedRoute = clientFixedRoute(
+    [opts.request.requested_destinations, opts.request.interests, opts.request.additional_preferences, opts.request.special_requirements].join(' ')
+  )
   const openai = new OpenAI({ apiKey: key })
   let raw = ''
   const started = Date.now()
@@ -94,7 +100,7 @@ export async function generateOneItinerary(opts: {
         content:
           'You design LankaLux itineraries. Reply with a single valid JSON object matching the requested schema. Never wrap in markdown. Every day must include at least 4 named activities that match that day, including named en-route or nearby places, listed in the order the car reaches them, with no clock times. The route sweeps one way and never doubles back. Write in LankaLux voice, never copied from another operator. ' + NO_DASHES_RULE,
       },
-      { role: 'user', content: buildItineraryPrompt(opts.request, opts.style, expectedDays, hotels, others) },
+      { role: 'user', content: buildItineraryPrompt(opts.request, opts.style, expectedDays, hotels, others, fixedRoute) },
     ]
     const complete = async () => {
       const completion = await openai.chat.completions.create({
@@ -113,14 +119,15 @@ export async function generateOneItinerary(opts: {
     }
 
     raw = await complete()
-    const maxBases = maxBasesFor(opts.style, expectedDays)
-    let prepared = prepareDays(extractJsonObject(raw), maxBases)
+    // A night-by-night plan from the client is kept as it is, however many bases it has.
+    const maxBases = fixedRoute ? 0 : maxBasesFor(opts.style, expectedDays)
+    let prepared = prepareDays(extractJsonObject(raw), maxBases, opts.style, fixedRoute)
     if (needsRewrite(prepared.report) && Date.now() - started < RETRY_BUDGET_MS) {
       // One rewrite with the map check's notes. Keep whichever version doubles back less.
       messages.push({ role: 'assistant', content: raw }, { role: 'user', content: routeFeedback(prepared.report) })
       try {
         const retryRaw = await complete()
-        const retried = prepareDays(extractJsonObject(retryRaw), maxBases)
+        const retried = prepareDays(extractJsonObject(retryRaw), maxBases, opts.style, fixedRoute)
         const days = (p: typeof prepared) => ((p.json as { days?: unknown[] }).days || []).length
         if (retried.report.issues.length < prepared.report.issues.length && days(retried) === expectedDays) {
           prepared = retried
