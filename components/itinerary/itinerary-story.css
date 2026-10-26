@@ -361,26 +361,29 @@ html:has(.lux-story) {
   color: var(--gold-bright);
 }
 
-/* Printing (or Save as PDF): everything shown at once on the website's warm paper, one day per page. */
+/* Printing (or Save as PDF): everything shown at once in the website's forest green, one day per page. */
 @media print {
   @page { margin: 0; }
-  html:has(.lux-story), html:has(.lux-story) body { background: var(--paper, #faf7f0) !important; }
-  html:has(.lux-story) { background: #faf7f0 !important; }
+  html:has(.lux-story), html:has(.lux-story) body { background: #0e2219 !important; }
   .ls-progress, .ls-cue, .ls-map-bar, .ls-print { display: none !important; }
-  .lux-story { background: var(--paper); font-size: 11pt; }
+  .lux-story { background: var(--forest-900); color: var(--ivory); font-size: 11pt; }
   .lux-story * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .ls-hero { min-height: 0; height: 135mm; break-after: avoid; }
   .ls-hero-photo { inset: 0; transform: none !important; }
   .ls-hero-copy { padding-top: 3rem !important; padding-bottom: 2rem !important; opacity: 1 !important; visibility: visible !important; transform: none !important; }
   .ls-summary { padding-block: 2.5rem 1rem !important; }
-  .ls-days { background: var(--paper); }
+  .ls-summary p, .ls-days p, .ls-days li { color: rgb(244 239 228 / 0.86) !important; }
+  .ls-summary p:first-child, .ls-days li p:first-child { color: var(--gold-bright) !important; }
+  .ls-summary .ls-display, .ls-days h2 { color: var(--ivory) !important; }
+  .ls-summary span { color: rgb(244 239 228 / 0.7) !important; }
+  .ls-summary span.ls-display { color: var(--gold-bright) !important; }
+  .ls-days { background: var(--forest-900); }
   .ls-days.has-map { display: block; }
   .lux-story li[data-day] { min-height: 0 !important; padding-block: 12mm 6mm !important; break-inside: avoid; }
   .lux-story li[data-day] + li[data-day] { break-before: page; }
-  .lux-story .ls-dark { background: var(--paper) !important; color: var(--ink) !important; break-inside: avoid; }
-  .lux-story .ls-dark > div { padding-block: 2rem !important; }
-  .lux-story .ls-dark p, .lux-story .ls-dark a { color: var(--ink-soft) !important; }
-  .lux-story .ls-signoff .ls-display { color: var(--ink) !important; font-size: 2rem !important; }
+  .lux-story .ls-dark { background: var(--forest-900) !important; break-inside: avoid; }
+  .lux-story .ls-dark > div { padding-block: 2.5rem !important; }
+  .lux-story .ls-signoff .ls-display { font-size: 2rem !important; }
   .lux-story [data-reveal], .lux-story [data-reveal-group] > *, .lux-story [data-split], .lux-story .split-line, .lj-leg-caption {
     opacity: 1 !important;
     visibility: visible !important;
@@ -389,18 +392,15 @@ html:has(.lux-story) {
   /* Headings were split into lines for the screen width; let them flow again on paper. */
   .lux-story .split-line, .lux-story .split-line-mask { display: inline !important; }
   .lux-story .split-line::after { content: ' '; }
-  .lux-story .ls-frame { clip-path: none !important; break-inside: avoid; }
+  .lux-story .ls-frame { clip-path: none !important; break-inside: avoid; background: var(--forest-800); }
   .lux-story .ls-frame-inner { transform: none !important; inset: 0; }
 
   /* The immersive version prints the same way: photo, then the day's story. */
-  .lj { background: var(--paper); color: var(--ink); }
+  .lj { background: var(--forest-900); }
   .lj-stage, .lj-intro, .lj-leg, .lj-finale { display: none !important; }
   .lj-flow { margin-top: 0; }
   .lj-scene { padding: 12mm var(--gutter) 6mm; break-inside: avoid; }
   .lj-day + .lj-day .lj-scene { break-before: page; }
   .lj-print-photo { display: block; margin-bottom: 1.5rem; }
   .lj-card { max-width: none; padding: 0; background: none !important; border: 0; backdrop-filter: none; margin: 0; }
-  .lj-card-date { color: var(--forest-700); }
-  .lj-card-date span, .lj-card-text { color: var(--ink-soft); }
-  .lj-card-place { color: #a08045; }
 }
