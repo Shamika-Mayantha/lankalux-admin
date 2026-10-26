@@ -39,7 +39,8 @@ export function dayHeading(day: RenderDay) {
 
 /**
  * Where each day ends, carrying the last known town forward when a location is not on the map.
- * The route starts at the airport unless the first night is already beside it (Negombo, Colombo).
+ * The route starts and ends at the airport unless the first or last night is already beside it
+ * (Negombo, Colombo): guests are met on arrival and dropped back for their flight home.
  */
 export function buildRoute(days: RenderDay[]) {
   const stays: (StoryPlace | null)[] = []
@@ -47,12 +48,15 @@ export function buildRoute(days: RenderDay[]) {
   const first = stays.find((s): s is StoryPlace => !!s)
   const nearAirport = (p: StoryPlace) => Math.hypot(p.at[0] - ARRIVAL.at[0], p.at[1] - ARRIVAL.at[1]) < 40
   const origin = first && !nearAirport(first) ? ARRIVAL : null
+  const last = [...stays].reverse().find((s): s is StoryPlace => !!s)
+  const departure = last && !nearAirport(last) ? ARRIVAL : null
+  const returnPath = last && departure ? routePath([last.at, departure.at]) : ''
   const paths = stays.map((s, i) => {
     const prev = i > 0 ? stays[i - 1] : origin
     return s && prev && prev.name !== s.name ? routePath([prev.at, s.at]) : ''
   })
-  const all = [origin, ...stays].filter((s): s is StoryPlace => !!s)
+  const all = [origin, ...stays, departure].filter((s): s is StoryPlace => !!s)
   const stops = Array.from(new Map(all.map((s) => [s.name, s])).values())
-  return { origin, stays, paths, stops }
+  return { origin, departure, returnPath, stays, paths, stops }
 }
 export type StoryRoute = ReturnType<typeof buildRoute>

@@ -167,6 +167,7 @@ export function ItineraryStory({
     <svg viewBox={MAP_VIEWBOX} className={className} fill="none" aria-hidden="true">
       <path d={MAP_OUTLINE} fill="var(--ivory)" fillOpacity={0.06} stroke="var(--ivory)" strokeOpacity={0.5} strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
       {/* The whole route, faint, so the shape of the journey is visible from the start. */}
+      {route.returnPath ? <path d={route.returnPath} stroke="var(--ivory)" strokeOpacity={0.22} strokeWidth={1.4} strokeDasharray="3 5" vectorEffect="non-scaling-stroke" /> : null}
       {route.paths.map((d, i) =>
         d ? <path key={'ghost' + i} d={d} stroke="var(--ivory)" strokeOpacity={0.22} strokeWidth={1.4} strokeDasharray="3 5" vectorEffect="non-scaling-stroke" /> : null,
       )}
@@ -264,6 +265,7 @@ export function ItineraryStory({
               <svg viewBox={MAP_VIEWBOX} fill="none">
                 <path d={MAP_OUTLINE} fill="#e9e2d0" stroke="#1d3a2a" strokeOpacity={0.35} strokeWidth={1.2} />
                 {route.paths.map((d, i) => (d ? <path key={i} d={d} stroke="#a08045" strokeWidth={3} strokeLinecap="round" /> : null))}
+                {route.returnPath ? <path d={route.returnPath} stroke="#a08045" strokeWidth={3} strokeLinecap="round" strokeDasharray="2 7" /> : null}
                 {route.stops.map((p) => (
                   <g key={p.name}>
                     <circle cx={p.at[0]} cy={p.at[1]} r={5} fill="#1d3a2a" />
@@ -286,6 +288,12 @@ export function ItineraryStory({
                     {n.name}
                   </li>
                 ))}
+                {route.departure ? (
+                  <li>
+                    <span>Departure</span>
+                    {route.departure.name}
+                  </li>
+                ) : null}
               </ol>
             </div>
           ) : null}

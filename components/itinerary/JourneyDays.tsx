@@ -95,19 +95,37 @@ export function JourneyDays({ days, route, startDate }: { days: RenderDay[]; rou
         ScrollTrigger.create({ trigger: leg ?? scene, endTrigger: scene, start: 'top 60%', end: 'bottom 60%', onToggle: (st) => st.isActive && setActive(i) })
       })
 
+      // The drive back to the airport for the flight home.
+      const back = el.querySelector('[data-return]')
+      const home = route.departure
+      const lastStay = route.stays[days.length - 1]
+      if (back && home && lastStay) {
+        const tl = gsap.timeline({ scrollTrigger: { trigger: back, start: 'top 75%', end: 'bottom 45%', scrub: 0.8, invalidateOnRefresh: true } })
+        const mid = () => frame((lastStay.at[0] + home.at[0]) / 2, (lastStay.at[1] + home.at[1]) / 2, zoomFor(stageAspect()) * 0.7)
+        tl.fromTo(svg, { attr: { viewBox: () => at(days.length - 1) } }, { attr: { viewBox: mid }, ease: 'sine.out', duration: 0.5, immediateRender: false }, 0)
+        tl.to(svg, { attr: { viewBox: () => frame(home.at[0], home.at[1], zoomFor(stageAspect())) }, ease: 'sine.inOut', duration: 0.5 }, 0.5)
+        tl.fromTo(el.querySelectorAll('[data-seg="return"]'), { strokeDashoffset: 1 }, { strokeDashoffset: 0, ease: 'none', duration: 0.9, immediateRender: false }, 0.05)
+        tl.fromTo(el.querySelector('[data-leg-caption="return"]'), { autoAlpha: 0, y: 30 }, { autoAlpha: 1, y: 0, duration: 0.35, immediateRender: false }, 0.55)
+        const out = el.querySelector('[data-leg-out="return"]')
+        if (out) gsap.to(out, { autoAlpha: 0, ease: 'none', scrollTrigger: { trigger: out, start: 'top 30%', end: 'top 8%', scrub: true } })
+        ScrollTrigger.create({ trigger: back, start: 'top 60%', end: 'bottom 60%', onToggle: (st) => st.isActive && setActive(days.length) })
+      }
+
       // Journey's end: back out over the whole island with the full route drawn.
       const finale = el.querySelector('[data-finale]')
       if (finale) {
         const last = days.length - 1
-        gsap.fromTo(svg, { attr: { viewBox: () => at(last) } }, { attr: { viewBox: overview }, ease: 'power1.inOut', immediateRender: false, scrollTrigger: { trigger: finale, start: 'top 85%', end: 'bottom bottom', scrub: 0.8, invalidateOnRefresh: true } })
-        ScrollTrigger.create({ trigger: finale, start: 'top 60%', end: 'bottom top', onToggle: (st) => st.isActive && setActive(days.length) })
+        const end = () => (back && home ? frame(home.at[0], home.at[1], zoomFor(stageAspect())) : at(last))
+        gsap.fromTo(svg, { attr: { viewBox: end } }, { attr: { viewBox: overview }, ease: 'power1.inOut', immediateRender: false, scrollTrigger: { trigger: finale, start: 'top 85%', end: 'bottom bottom', scrub: 0.8, invalidateOnRefresh: true } })
+        ScrollTrigger.create({ trigger: finale, start: 'top 60%', end: 'bottom top', onToggle: (st) => st.isActive && setActive(days.length + 1) })
       }
     },
     { scope: root, dependencies: [days.length] },
   )
 
   const done = active >= days.length
-  const activeStay = active >= 0 && active < days.length ? route.stays[active] : null
+  const homeward = active === days.length && !!route.departure
+  const activeStay = homeward ? route.departure : active >= 0 && active < days.length ? route.stays[active] : null
   // Stops already reached are shown in gold; the rest wait in ivory.
   const reached = new Set(route.stays.slice(0, done ? days.length : active + 1).map((s) => s?.name))
   if (route.origin && active >= 0) reached.add(route.origin.name)
@@ -123,6 +141,8 @@ export function JourneyDays({ days, route, startDate }: { days: RenderDay[]; rou
       <div className="lj-stage" aria-hidden="true">
         <svg className="lj-map" viewBox={MAP_VIEWBOX} preserveAspectRatio="xMidYMid meet" fill="none">
           <path d={MAP_OUTLINE} fill="#14301f" stroke="var(--ivory)" strokeOpacity={0.45} strokeWidth={1.1} vectorEffect="non-scaling-stroke" />
+          {route.returnPath ? <path d={route.returnPath} stroke="var(--ivory)" strokeOpacity={0.25} strokeWidth={1.3} strokeDasharray="3 6" vectorEffect="non-scaling-stroke" /> : null}
+          {route.returnPath ? <path data-seg="return" d={route.returnPath} stroke="var(--gold)" strokeWidth={1} strokeLinecap="round" pathLength={1} strokeDasharray="1" strokeDashoffset={1} /> : null}
           {route.paths.map((d, i) =>
             d ? <path key={'ghost' + i} d={d} stroke="var(--ivory)" strokeOpacity={0.25} strokeWidth={1.3} strokeDasharray="3 6" vectorEffect="non-scaling-stroke" /> : null,
           )}
@@ -168,7 +188,11 @@ export function JourneyDays({ days, route, startDate }: { days: RenderDay[]; rou
         <div className="lj-shade" />
 
         <p className="lj-hud">
-          {done ? (
+          {homeward ? (
+            <>
+              <span>Homeward</span> · {route.departure?.name}
+            </>
+          ) : done ? (
             <>
               <span>{days.length} days</span> · {route.stops.length} stops
             </>
@@ -254,6 +278,17 @@ export function JourneyDays({ days, route, startDate }: { days: RenderDay[]; rou
             </div>
           )
         })}
+
+        {route.departure ? (
+          <div data-return className="lj-leg">
+            <div data-leg-out="return">
+              <div data-leg-caption="return" className="lj-leg-caption">
+                <p className="ls-display lj-leg-day">Homeward</p>
+                <p className="lj-leg-place">Back to {route.departure.name} for your flight</p>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div data-finale className="lj-finale">
           <p data-reveal className="lj-kicker">{route.stops.length} stops, one journey</p>
