@@ -10,6 +10,7 @@ import { normalizeManagedImages } from '@/lib/managed-image'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { authedFetch } from '@/lib/authed-fetch'
+import type { HotelFromLink } from '@/services/hotel-link.service'
 
 const STARS: StarRating[] = ['3', '4', '5', 'Boutique']
 const ROOM_PRESETS = ['Deluxe', 'Suite', 'Family', 'Executive', 'Villa', 'Presidential']
@@ -38,6 +39,7 @@ export function HotelModal({
   const [images, setImages] = useState<ManagedImageItem[]>([])
   const [bookingUrl, setBookingUrl] = useState('')
   const [extractingBooking, setExtractingBooking] = useState(false)
+  const [autofillNote, setAutofillNote] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -52,6 +54,7 @@ export function HotelModal({
       setDescription(initial.description)
       setImages(normalizeManagedImages(initial.images))
       setBookingUrl('')
+      setAutofillNote(null)
     } else {
       const e = emptyHotel()
       setName(e.name)
@@ -64,6 +67,7 @@ export function HotelModal({
       setDescription(e.description)
       setImages([] as ManagedImageItem[])
       setBookingUrl('')
+      setAutofillNote(null)
     }
   }, [open, initial])
 
@@ -90,52 +94,59 @@ export function HotelModal({
     onClose()
   }
 
-  const autofillFromBooking = async () => {
+  const autofillFromLink = async () => {
     const url = bookingUrl.trim()
     if (!url) {
-      alert('Please paste a Booking.com URL first.')
+      setAutofillNote('Paste a hotel link first.')
       return
     }
     setExtractingBooking(true)
+    setAutofillNote(null)
     try {
-      const res = await authedFetch('/api/extract-booking-hotel', {
+      const res = await authedFetch('/api/v2/hotel-from-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       })
       const data = await res.json()
       if (!res.ok || !data?.hotel) {
-        alert(data?.error || 'Could not extract hotel details from this link.')
+        setAutofillNote(data?.error || 'Could not read that link. Please fill the details by hand.')
         return
       }
-
-      const extracted = data.hotel as {
-        name?: string
-        address?: string
-        price?: string
-        images?: string[]
-        sourceUrl?: string
+      const found = data.hotel as HotelFromLink
+      const filled: string[] = []
+      // Only empty fields are filled, so nothing typed by hand is lost.
+      const fill = (label: string, current: string, value: string | undefined, set: (v: string) => void) => {
+        if (value && !current.trim()) {
+          set(value)
+          filled.push(label)
+        }
       }
-
-      if (extracted.name) setName(extracted.name)
-      if (extracted.address) {
-        setLocation((prev) => prev || extracted.address || '')
+      fill('name', name, found.name, setName)
+      fill('location', location, found.destination, setLocation)
+      fill('map link', mapsUrl, found.mapsUrl, setMapsUrl)
+      fill('description', description, found.description, setDescription)
+      if (found.roomCategory && (!roomType.trim() || (!initial && roomType === 'Deluxe'))) {
+        setRoomType(found.roomCategory)
+        filled.push('room type')
       }
-      if (extracted.sourceUrl) {
-        setMapsUrl((prev) => prev || extracted.sourceUrl || '')
+      if (found.starCategory && !initial) {
+        setStarRating(found.starCategory)
+        filled.push('stars')
       }
-      if (extracted.price) {
-        setShowPrice(true)
-        setPricePerNight((prev) => prev || extracted.price || '')
+      if (found.price && !pricePerNight.trim()) {
+        setPricePerNight(found.price)
+        filled.push('price (hidden until you tick Show price)')
       }
-      if (Array.isArray(extracted.images) && extracted.images.length > 0) {
-        const current = normalizeManagedImages(images)
-        const incoming: ManagedImageItem[] = extracted.images.slice(0, 4).map((src) => ({ src, type: 'default' }))
-        setImages(current.length > 0 ? current : incoming)
+      if (found.images.length > 0 && normalizeManagedImages(images).length === 0) {
+        setImages(found.images.slice(0, 4).map((src) => ({ src, type: 'default' }) as ManagedImageItem))
+        filled.push(`${Math.min(found.images.length, 4)} photos`)
       }
+      const head = filled.length ? `Filled ${filled.join(', ')}. Please check them before saving.` : 'Nothing new to fill, every field already has a value.'
+      setAutofillNote(found.blocked ? `${head} The site blocked a full read, so only the basics came through. The hotel's own website usually gives more.` : head)
     } catch (e) {
       console.error(e)
-      alert('Could not extract details. Please try again.')
+      setAutofillNote('Could not read that link. Please try again.')
     } finally {
       setExtractingBooking(false)
     }
@@ -185,17 +196,17 @@ export function HotelModal({
             />
           </div>
           <div className="rounded-xl border border-zinc-700 bg-zinc-900/50 p-4 space-y-3">
-            <label className="text-xs text-zinc-500 uppercase tracking-wide">Booking.com URL (auto-fill)</label>
+            <label className="text-xs text-zinc-500 uppercase tracking-wide">Hotel link (auto-fill)</label>
             <div className="flex gap-2">
               <input
                 value={bookingUrl}
                 onChange={(e) => setBookingUrl(e.target.value)}
                 className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 focus:ring-2 focus:ring-[#d4af37]/50 text-sm"
-                placeholder="https://www.booking.com/hotel/..."
+                placeholder="Booking.com, Agoda, TripAdvisor, Google Maps or hotel website"
               />
               <Button
                 type="button"
-                onClick={() => void autofillFromBooking()}
+                onClick={() => void autofillFromLink()}
                 disabled={extractingBooking}
                 className="shrink-0"
               >
@@ -203,7 +214,7 @@ export function HotelModal({
               </Button>
             </div>
             <p className="text-[11px] text-zinc-500">
-              We will try to fetch hotel name, address, visible price, and 3-4 photos from the link.
+              {autofillNote || 'Fills the empty fields: name, location, map link, stars, room type, description and photos.'}
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { consoleFetch, useConsoleGet } from '@/lib/console-api'
 import { allLibraryImages } from '@/services/image-map.service'
 import type { HotelRecord } from '@/types/domain'
+import type { HotelFromLink } from '@/services/hotel-link.service'
 
 const blank: Partial<HotelRecord> & { name: string } = {
   name: '',
@@ -27,6 +28,9 @@ export default function HotelsPage() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [link, setLink] = useState('')
+  const [reading, setReading] = useState(false)
+  const [linkNote, setLinkNote] = useState<string | null>(null)
   const formRef = useRef<HTMLDivElement>(null)
   const library = allLibraryImages()
   const editing = Boolean(form.id)
@@ -35,6 +39,52 @@ export default function HotelsPage() {
     setForm(h)
     setNotice(null)
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  async function autofill() {
+    if (!link.trim()) {
+      setLinkNote('Paste a hotel link first.')
+      return
+    }
+    setReading(true)
+    setLinkNote(null)
+    try {
+      const { hotel: found } = (await consoleFetch('/api/v2/hotel-from-link', {
+        method: 'POST',
+        body: JSON.stringify({ url: link.trim() }),
+      })) as { hotel: HotelFromLink }
+      const next = { ...form }
+      const filled: string[] = []
+      // Only empty fields are filled, so nothing typed by hand is lost.
+      const fill = (key: 'name' | 'destination' | 'room_category' | 'meal_plan' | 'website' | 'contact' | 'description', label: string, value?: string) => {
+        if (value && !String(next[key] || '').trim()) {
+          next[key] = value
+          filled.push(label)
+        }
+      }
+      fill('name', 'name', found.name)
+      fill('destination', 'destination', found.destination)
+      fill('room_category', 'room category', found.roomCategory)
+      fill('meal_plan', 'meal plan', found.mealPlan)
+      fill('website', 'website', found.website)
+      fill('contact', 'contact', found.contact)
+      fill('description', 'description', found.description)
+      if (found.starCategory && !editing) {
+        next.star_category = found.starCategory
+        filled.push('category')
+      }
+      if (found.images.length > 0 && !(next.images || []).length) {
+        next.images = found.images.slice(0, 4)
+        filled.push('photo')
+      }
+      setForm(next)
+      const head = filled.length ? `Filled ${filled.join(', ')}. Please check them before saving.` : 'Nothing new to fill, every field already has a value.'
+      setLinkNote(found.blocked ? `${head} The site blocked a full read, so only the basics came through. The hotel's own website usually gives more.` : head)
+    } catch (e) {
+      setLinkNote(e instanceof Error ? e.message : 'Could not read that link.')
+    } finally {
+      setReading(false)
+    }
   }
 
   async function save() {
@@ -49,6 +99,8 @@ export default function HotelsPage() {
       await consoleFetch('/api/v2/hotels', { method: 'POST', body: JSON.stringify(form) })
       setNotice(`${form.name} ${editing ? 'updated' : 'saved'}.`)
       setForm(blank)
+      setLink('')
+      setLinkNote(null)
       await reload()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed')
@@ -65,6 +117,24 @@ export default function HotelsPage() {
       {notice && <div className="ll-ok">{notice}</div>}
       <div className="ll-form" style={{ marginBottom: 28, scrollMarginTop: 90 }} ref={formRef}>
         {editing ? <p className="ll-muted">Editing {form.name || 'hotel'}</p> : null}
+        <div style={{ display: 'grid', gap: 8, fontSize: 13, fontWeight: 600, letterSpacing: '0.04em', color: 'var(--forest)' }}>
+          <span>Hotel link (auto-fill)</span>
+          <div className="ll-row">
+            <input
+              aria-label="Hotel link"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder="Booking.com, Agoda, TripAdvisor, Google Maps or hotel website"
+              style={{ flex: 1, minWidth: 0 }}
+            />
+            <button type="button" className="ll-btn secondary" disabled={reading} onClick={autofill}>
+              {reading ? 'Reading…' : 'Auto-fill'}
+            </button>
+          </div>
+          <span className="ll-muted" style={{ fontSize: 12 }}>
+            {linkNote || 'Fills the empty fields below from the hotel page.'}
+          </span>
+        </div>
         <label>Hotel name<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
         <label>Destination<input value={form.destination || ''} onChange={(e) => setForm({ ...form, destination: e.target.value })} /></label>
         <label>
@@ -89,6 +159,9 @@ export default function HotelsPage() {
             onChange={(e) => setForm({ ...form, images: e.target.value ? [e.target.value] : [] })}
           >
             <option value="">None</option>
+            {form.images?.[0] && !library.includes(form.images[0]) ? (
+              <option value={form.images[0]}>Photo from hotel link</option>
+            ) : null}
             {library.map((src) => (
               <option key={src} value={src}>
                 {src}
