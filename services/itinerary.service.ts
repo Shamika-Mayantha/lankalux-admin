@@ -646,6 +646,45 @@ async function linkIsIdle(row: { token: string; request_id?: string | null; crea
   return Date.now() - last > LINK_IDLE_DAYS * 24 * 60 * 60 * 1000
 }
 
+/** Expired links are deleted for good once they have been expired this long (about six months). */
+const LINK_PURGE_DAYS = LINK_IDLE_DAYS + 182
+
+/**
+ * Daily cleanup (cron): permanently deletes journey links of unsold trips that nobody has opened
+ * for LINK_PURGE_DAYS. Links of sold trips are never touched.
+ */
+export async function purgeExpiredJourneyLinks(): Promise<{ checked: number; deleted: number }> {
+  const supabase = getServiceClient()
+  const { data: links, error } = await supabase.from('share_links').select('token, request_id, created_at')
+  if (error) throw new AppError(error.message, 500)
+  const rows = (links || []) as { token: string; request_id: string | null; created_at: string | null }[]
+  const requestIds = Array.from(new Set(rows.map((r) => r.request_id).filter(Boolean).map(String)))
+  const [{ data: reqs }, { data: opens }] = await Promise.all([
+    requestIds.length ? supabase.from('Client Requests').select('id, status').in('id', requestIds) : Promise.resolve({ data: [] }),
+    requestIds.length
+      ? supabase.from('activity_logs').select('detail, created_at').eq('event_type', 'itinerary_link_opened').in('request_id', requestIds)
+      : Promise.resolve({ data: [] }),
+  ])
+  const sold = new Set(((reqs || []) as { id: string; status: string | null }[]).filter((r) => r.status === 'sold').map((r) => String(r.id)))
+  const lastOpen = new Map<string, number>()
+  for (const o of (opens || []) as { detail: { shareToken?: string } | null; created_at: string }[]) {
+    const token = o.detail?.shareToken
+    const at = Date.parse(o.created_at)
+    if (token && !Number.isNaN(at) && at > (lastOpen.get(token) ?? 0)) lastOpen.set(token, at)
+  }
+  const cutoff = Date.now() - LINK_PURGE_DAYS * 24 * 60 * 60 * 1000
+  const stale = rows.filter((r) => {
+    if (r.request_id && sold.has(String(r.request_id))) return false
+    const last = Math.max(Date.parse(r.created_at || '') || 0, lastOpen.get(r.token) ?? 0)
+    return last > 0 && last < cutoff
+  })
+  if (stale.length) {
+    const { error: delError } = await supabase.from('share_links').delete().in('token', stale.map((r) => r.token))
+    if (delError) throw new AppError(delError.message, 500)
+  }
+  return { checked: rows.length, deleted: stale.length }
+}
+
 export async function getClientItinerary(
   shareToken: string,
   opts?: { trackOpen?: boolean }

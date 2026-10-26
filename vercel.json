@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/cron/follow-ups", "schedule": "30 3 * * *" },
-    { "path": "/api/cron/trip-reminders", "schedule": "30 13 * * *" }
+    { "path": "/api/cron/trip-reminders", "schedule": "30 13 * * *" },
+    { "path": "/api/cron/journey-cleanup", "schedule": "15 22 * * *" }
   ]
 }
