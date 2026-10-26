@@ -22,6 +22,7 @@ export function JourneyStory({ journey, view }: { journey: CanonicalJourney; vie
           day: d.day,
           title: d.title,
           location: d.location,
+          overnight: d.overnight_location || d.travel?.to || undefined,
           image: d.recommended_images[0],
           activities: d.activities,
           optional_activities: d.optional_activities,
