@@ -206,7 +206,28 @@ function esc(s: string) {
   return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string)
 }
 
-/** Emails new pings to hello@ (one email per run, listing them all). */
+/** A customer is waiting on WhatsApp right now: these can't wait for the evening summary. */
+function isUrgent(r: { kind: string; title: string }) {
+  return r.kind === 'attention' && /please take over|needs a person/i.test(r.title)
+}
+
+type Ping = { id: string; kind: string; title: string; body: string | null; request_id: string | null; created_at: string }
+
+function pingHtml(r: Ping) {
+  return `<p style="margin:0 0 18px"><strong>${esc(r.title)}</strong><br/>${esc(r.body || '').replace(/\n/g, '<br/>')}${
+    r.request_id ? `<br/><a href="${ADMIN_URL}/console/requests/${encodeURIComponent(r.request_id)}">Open the request</a>` : ''
+  }</p>`
+}
+
+function pingText(r: Ping) {
+  return [r.title, r.body || '', r.request_id ? `${ADMIN_URL}/console/requests/${r.request_id}` : '', '']
+}
+
+/**
+ * Emails the owner at most once a day: everything the agents flagged (approvals waiting,
+ * win-backs, leads, errors) goes into the daily summary email. Only a live WhatsApp
+ * take-over is emailed straight away, because a customer is waiting for a reply.
+ */
 async function emailPings() {
   const db = getServiceClient()
   const { data, error } = await db
@@ -214,12 +235,14 @@ async function emailPings() {
     .select('id, kind, title, body, request_id, created_at')
     .is('emailed_at', null)
     .in('kind', PING_KINDS)
-    .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString())
+    .gte('created_at', new Date(Date.now() - 26 * 3600 * 1000).toISOString())
     .order('created_at', { ascending: true })
-    .limit(20)
+    .limit(200)
   if (error) throw new Error(`Could not read pings: ${error.message}`)
-  const rows = data || []
-  if (!rows.length) return { emailed: 0 }
+  const pending = (data || []) as Ping[]
+  const summary = pending.find((r) => r.kind === 'summary')
+  const rows = summary ? pending : pending.filter(isUrgent)
+  if (!rows.length) return { emailed: 0, held: pending.length }
   requireMailer()
   // Claim them first, so two overlapping runs never email the same ping twice.
   const { data: claimed } = await db
@@ -232,25 +255,30 @@ async function emailPings() {
   const list = rows.filter((r) => ids.has(r.id))
   if (!list.length) return { emailed: 0 }
 
-  const needYou = list.filter((r) => r.kind !== 'summary')
-  const subject =
-    needYou.length === 0
-      ? list[0].title
-      : needYou.length === 1
-        ? `AI: ${needYou[0].title}`
-        : `AI: ${needYou.length} things need you`
   const link = `${ADMIN_URL}/console/ai`
+  const daily = list.find((r) => r.kind === 'summary')
+  const rest = list.filter((r) => r.kind !== 'summary')
+  const waiting = rest.filter((r) => r.kind === 'approval_needed')
+  const other = rest.filter((r) => r.kind !== 'approval_needed')
+  const subject = daily
+    ? `${daily.title}${waiting.length ? `: ${waiting.length} waiting for you` : ''}`
+    : rest.length === 1
+      ? `AI: ${rest[0].title}`
+      : `AI: ${rest.length} customers waiting on WhatsApp`
+  const sections: [string, Ping[]][] = [
+    [`Waiting for you (${waiting.length})`, waiting],
+    [`Other updates (${other.length})`, other],
+  ]
   const text = [
-    ...list.flatMap((r) => [r.title, r.body || '', r.request_id ? `${ADMIN_URL}/console/requests/${r.request_id}` : '', '']),
+    ...(daily ? [daily.body || '', ''] : []),
+    ...sections.filter(([, rs]) => rs.length).flatMap(([h, rs]) => [h.toUpperCase(), '', ...rs.flatMap(pingText)]),
     `Open the AI control room: ${link}`,
   ].join('\n')
-  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#252523">${list
-    .map(
-      (r) =>
-        `<p style="margin:0 0 18px"><strong>${esc(r.title)}</strong><br/>${esc(r.body || '').replace(/\n/g, '<br/>')}${
-          r.request_id ? `<br/><a href="${ADMIN_URL}/console/requests/${encodeURIComponent(r.request_id)}">Open the request</a>` : ''
-        }</p>`
-    )
+  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#252523">${
+    daily ? `<p style="margin:0 0 22px">${esc(daily.body || '').replace(/\n/g, '<br/>')}</p>` : ''
+  }${sections
+    .filter(([, rs]) => rs.length)
+    .map(([h, rs]) => `<h3 style="margin:24px 0 12px;font-size:16px">${esc(h)}</h3>${rs.map(pingHtml).join('')}`)
     .join('')}<p><a href="${link}" style="color:#B18544">Open the AI control room</a></p></div>`
   await deliverMail({ from: senderFor(null), to: MAIN_ADDRESS, subject, text, html })
   return { emailed: list.length }
