@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Copy, ExternalLink, UserPlus } from 'lucide-react'
 import { consoleFetch, useConsoleGet } from '@/lib/console-api'
 import { formatAgo } from '@/lib/format'
+import { copyText } from '@/lib/copy-text'
 import type { AiLead, AiLeadList, AiLeadScan } from '@/services/ai-leads.service'
 
 type View = 'open' | 'all'
@@ -64,11 +65,10 @@ function LeadCard({ lead, busy, onStatus, onConvert }: {
   const open = lead.status === 'new'
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(reply)
+    if (await copyText(reply)) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch {
+    } else {
       setCopied(false)
     }
   }

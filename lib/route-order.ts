@@ -187,7 +187,11 @@ type RouteDay = {
   travel?: { from?: string; to?: string }
 }
 
-export type RouteIssue = { day: number | null; kind: 'revisit' | 'zigzag' | 'off-route' | 'out-of-order' | 'far-day-trip'; message: string }
+export type RouteIssue = {
+  day: number | null
+  kind: 'revisit' | 'zigzag' | 'off-route' | 'out-of-order' | 'far-day-trip' | 'too-many-bases' | 'generic'
+  message: string
+}
 
 /** Where each day starts and ends, carrying the last known town forward. */
 export function dayLegs(days: RouteDay[]) {
@@ -247,7 +251,7 @@ function checkStops(lines: string[], leg: { from: GeoPoint; to: GeoPoint }) {
 
 /** True when a transfer day's stops go backwards along the road (by more than a few minutes of driving). */
 function outOfOrder(checked: ReturnType<typeof checkStops>, legKm: number) {
-  const slack = Math.max(0.15, 12 / Math.max(1, legKm))
+  const slack = Math.max(0.08, 8 / Math.max(1, legKm))
   const ts = checked.filter((c) => c.t != null && !c.off).map((c) => c.t as number)
   return ts.some((t, j) => j > 0 && t < Math.max(...ts.slice(0, j)) - slack)
 }
@@ -303,9 +307,22 @@ function basesOf(days: RouteDay[]) {
  * Everything that makes the journey double back: returning to a base already left, an overnight
  * order much longer than the obvious sweep, stops behind the car or far off the day's road.
  */
-export function checkRoute(days: RouteDay[]): { ok: boolean; issues: RouteIssue[]; suggestedOrder: string[] | null } {
+export function checkRoute(
+  days: RouteDay[],
+  opts: { maxBases?: number } = {}
+): { ok: boolean; issues: RouteIssue[]; suggestedOrder: string[] | null } {
   const issues: RouteIssue[] = []
   const bases = basesOf(days)
+
+  // The departure day's airport or Colombo stop is not a hotel base.
+  const hotelBases = bases.length - (bases.length > 1 && isAirportBelt(bases[bases.length - 1].place) ? 1 : 0)
+  if (opts.maxBases && hotelBases > opts.maxBases) {
+    issues.push({
+      day: null,
+      kind: 'too-many-bases',
+      message: `${hotelBases} overnight bases in ${days.length} days is too rushed. Use at most ${opts.maxBases} overnight bases and give the best places two nights.`,
+    })
+  }
 
   bases.forEach((base, i) => {
     const earlier = bases.slice(0, i).find((b) => km(b.place, base.place) < SAME_BASE_KM)
@@ -355,6 +372,17 @@ export function checkRoute(days: RouteDay[]): { ok: boolean; issues: RouteIssue[
         day: i + 1,
         kind: 'out-of-order',
         message: `Day ${i + 1} (${leg.from.name} to ${leg.to.name}) lists stops out of driving order. List them in the order the car reaches them.`,
+      })
+    }
+  })
+
+  days.forEach((d, i) => {
+    const filler = (d.activities || []).filter((line) => !placesIn(line).length && GENERIC.test(line))
+    if (filler.length >= 2) {
+      issues.push({
+        day: i + 1,
+        kind: 'generic',
+        message: `Day ${i + 1} has filler instead of named places (${filler.map((f) => `"${f}"`).join(', ')}). Name real places near ${legs[i].to.name}.`,
       })
     }
   })
@@ -420,6 +448,9 @@ export function stopFitsDay(name: string, day: RouteDay, prevTown?: GeoPoint | n
   const [c] = checkStops([name], { from, to })
   return !c.off
 }
+
+/** Activities that name no place and only describe leisure. */
+const GENERIC = /\b(relax(?:ing)?|leisure|unwind|at (?:the|your) hotel|airport lounge|caf[eé]s?\b|souvenirs?|shops|explor(?:e|ing) the (?:local |coastal )?(?:town|city|area)|city sights|local life|free time|soak(?:ing)? (?:up|in))/i
 
 /** Short plain-language notes for a retry prompt. */
 export function routeFeedback(report: ReturnType<typeof checkRoute>): string {

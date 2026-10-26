@@ -26,6 +26,7 @@ import {
 import { placesForJourney, ensureMinimumDayActivities } from '../config/sri-lanka-places'
 import { checkRoute, fixDayOrder } from '../lib/route-order'
 import { untime } from '../lib/untimed'
+import { plainVoice } from '../lib/plain-voice'
 import { buildItineraryPrompt, enRouteDesignRules } from '../services/itinerary-prompt'
 import { applyHotelsToDays, hotelsPromptSection } from '../services/hotel-match.service'
 import { driverPackFilenames, sanitizeFilename, splitGuestNames } from '../lib/driver-pack/filenameHelpers'
@@ -433,6 +434,11 @@ const fixed = fixDayOrder(before)
 assert(fixed[2].activities[0] === 'En route: Diyaluma Falls', 'Diyaluma moves ahead of Udawalawe')
 assert(!fixed[3].activities.some((a) => /mulkirigala/i.test(a)), 'Mulkirigala is dropped from the Mirissa to Galle day')
 assert(checkRoute(fixed).ok, 'fixed days pass the route check')
+
+const everyNight = checkRoute(route(['Sigiriya', 'Kandy', 'Nuwara Eliya', 'Ella', 'Tissamaharama', 'Mirissa', 'Galle', 'Colombo']), { maxBases: 5 })
+assert(everyNight.issues.some((i) => i.kind === 'too-many-bases'), 'a new hotel every night of an 8 day trip is too rushed')
+assert(plainVoice('Rock carvings nestled in the forest, a UNESCO site') === 'Rock carvings set in the forest', 'AI-sounding words are swapped')
+assert(plainVoice('If time allows, visit the vibrant market') === 'Visit the lively market', 'filler phrases are dropped')
 
 const untouched = applyHotelsToDays(sampleDays, [])
 assert(untouched.matchCount === 0, 'no hotels means no matches')
