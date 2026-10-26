@@ -6,6 +6,8 @@ import { join } from 'path'
 import { enRouteDesignRules, placesPromptSection } from '@/services/itinerary-prompt'
 import { rejectNonAdmin } from '@/app/api/v2/_guard'
 import { NO_DASHES_RULE, undashDeep } from '@/lib/no-dashes'
+import { fixDayOrder } from '@/lib/route-order'
+import { untimeDays } from '@/lib/untimed'
 
 function cleanGeneratedDayTitle(rawTitle: unknown, dayNumber: number, location?: string) {
   const title = typeof rawTitle === 'string' ? rawTitle.trim() : ''
@@ -270,7 +272,7 @@ ${requestData.additional_preferences && requestData.additional_preferences.trim(
 2. **PROPER PACING.**
    - No rushing through destinations.
    - No more than 1 major location transfer per day.
-   - Include rest time between activities and travel.
+   - Leave breathing room between activities and travel.
    - Avoid 1-night stays in far destinations unless it's an airport transit day.
    - Safari destinations should not exceed 1 night unless absolutely necessary for the itinerary.
 
@@ -286,17 +288,11 @@ ${requestData.additional_preferences && requestData.additional_preferences.trim(
 - Include clear location field for each day
 - Activities must be an array of strings (include 6-8 named highlights per stay day; transfer days must include 2-3 "En route:" stops)
 ${alongTheWayBlock}
-- CRITICAL: Each activity MUST include a timestamp in the format "HH:MM - Activity description" (e.g., "09:00 - Morning breakfast at hotel", "14:30 - Guided tour of ancient temple")
-- Create a proper, professional itinerary plan with realistic timing:
-  * Morning activities: 08:00-12:00
-  * Afternoon activities: 12:00-17:00
-  * Evening activities: 17:00-21:00
-  * Include travel times between locations when applicable
-  * Ensure logical flow and realistic scheduling
+- NO CLOCK TIMES: each activity is a plain sentence naming the place or experience (e.g. "Guided walk through Galle Fort's ramparts at sunset"), listed in the order the car reaches it. Never start with "09:00 -" or any time.
 - Each day MUST include (ALL ARE REQUIRED - NO EXCEPTIONS):
   * "image": MANDATORY - Every day must have an image that showcases the day's highlight. Analyze the day's title, location, and activities to identify the PRIMARY experience. Select the image that best visually represents what the client will see and experience on that day. Choose from location photos (primary or alternatives) or activity-specific photos. The image should make the client excited about that day. This field is REQUIRED for every single day - no exceptions.
   * "what_to_expect": Write a warm, engaging paragraph (3-4 sentences) that describes what the client will experience, see, and feel on this day. Write it as if you're personally sharing insights about the day ahead. Include cultural context, highlights, and what makes this day special. Be descriptive and inviting, helping them visualize the experience.
-  * "optional_activities": An array of 2-4 optional activities that can be done if time allows (e.g., spa treatments, additional tours, special dining experiences, adventure activities). Format as "HH:MM - Activity description" or just "Activity description" if time-flexible. Write these naturally and conversationally, as friendly suggestions for enhancing their experience. Do not mention any charges or costs - simply present them as wonderful opportunities if they have extra time.
+  * "optional_activities": An array of 2-4 optional activities that can be done if time allows (e.g., spa treatments, additional tours, special dining experiences, adventure activities). Write each as a plain sentence with no clock time. Write these naturally and conversationally, as friendly suggestions for enhancing their experience. Do not mention any charges or costs - simply present them as wonderful opportunities if they have extra time.
 - Keep tone warm, elegant, premium, and human - write as if you're personally guiding them through their journey
 - Ensure logical travel flow between destinations
 - Make activities detailed, specific, and realistic (not generic)
@@ -335,17 +331,17 @@ Format your response as a valid JSON object with this exact structure:
           "location": "Colombo",
           "image": "/images/colombo.jpg",
           "activities": [
-            "14:00 - Airport meet and greet with private chauffeur",
-            "14:30 - Private transfer to luxury hotel in Colombo",
-            "15:30 - Hotel check-in and welcome refreshments",
-            "16:00 - Relax and unwind at hotel facilities",
-            "19:00 - Welcome dinner at hotel restaurant"
+            "Airport meet and greet with private chauffeur",
+            "Private transfer to luxury hotel in Colombo",
+            "Hotel check-in and welcome refreshments",
+            "Relax and unwind at hotel facilities",
+            "Welcome dinner at hotel restaurant"
           ],
           "what_to_expect": "A warm welcome upon arrival with personalized service. Your private chauffeur will assist with luggage and provide insights about your journey ahead. Settle into your luxury accommodation and prepare for an extraordinary experience.",
           "optional_activities": [
-            "18:00 - Sunset cruise in Colombo harbor (if time allows)",
-            "20:00 - Evening spa treatment at hotel (if time allows)",
-            "19:30 - Dinner at a fine dining restaurant (if time allows)"
+            "Sunset cruise in Colombo harbor",
+            "Evening spa treatment at hotel",
+            "Dinner at a fine dining restaurant"
           ]
         },
         {
@@ -354,18 +350,18 @@ Format your response as a valid JSON object with this exact structure:
           "location": "Colombo",
           "image": "/images/colombo-city.jpg",
           "activities": [
-            "09:00 - Breakfast at hotel",
-            "10:00 - Guided city tour of Colombo's historic districts",
-            "12:30 - Lunch at a local restaurant",
-            "14:00 - Visit Pettah local markets for authentic shopping",
-            "16:00 - Return to hotel for rest",
-            "19:00 - Evening at leisure (dinner recommendations provided)"
+            "Breakfast at hotel",
+            "Guided city tour of Colombo's historic districts",
+            "Lunch at a local restaurant",
+            "Visit Pettah local markets for authentic shopping",
+            "Return to hotel for rest",
+            "Evening at leisure (dinner recommendations provided)"
           ],
           "what_to_expect": "Discover the vibrant capital city with its blend of colonial architecture and modern developments. Experience the local culture, cuisine, and shopping opportunities.",
           "optional_activities": [
-            "15:00 - Visit Gangaramaya Temple (if time allows)",
-            "17:00 - Shopping at Odel or Barefoot (if time allows)",
-            "16:00 - Cooking class experience (if time allows)"
+            "Visit Gangaramaya Temple",
+            "Shopping at Odel or Barefoot",
+            "Cooking class experience"
           ]
         }
       ]
@@ -380,13 +376,13 @@ Format your response as a valid JSON object with this exact structure:
           "location": "Colombo",
           "image": "/images/colombo.jpg",
           "activities": [
-            "09:00 - Activity 1 with timestamp",
-            "14:00 - Activity 2 with timestamp"
+            "Named highlight for the day",
+            "En route: named stop on the day's road"
           ],
           "what_to_expect": "Professional description of what to expect on this day (3-4 sentences with cultural context)",
           "optional_activities": [
-            "16:00 - Optional activity 1 (if time allows)",
-            "18:00 - Optional activity 2 (if time allows)"
+            "Optional activity 1",
+            "Optional activity 2"
           ]
         }
       ]
@@ -401,13 +397,13 @@ Format your response as a valid JSON object with this exact structure:
           "location": "Colombo",
           "image": "/images/colombo.jpg",
           "activities": [
-            "09:00 - Activity 1 with timestamp",
-            "14:00 - Activity 2 with timestamp"
+            "Named highlight for the day",
+            "En route: named stop on the day's road"
           ],
           "what_to_expect": "Professional description of what to expect on this day (3-4 sentences with cultural context)",
           "optional_activities": [
-            "16:00 - Optional activity 1 (if time allows)",
-            "18:00 - Optional activity 2 (if time allows)"
+            "Optional activity 1",
+            "Optional activity 2"
           ]
         }
       ],
@@ -597,7 +593,7 @@ Return JSON in this format: { "title": "...", "summary": "...", "total_kilometer
         console.log(`Generating option ${i + 1} of ${numOptions}...`)
         
         const option = await generateSingleOption(i + 1, itineraryOptions.options)
-        itineraryOptions.options.push(undashDeep(option))
+        itineraryOptions.options.push(undashDeep({ ...option, days: fixDayOrder(untimeDays<any>(option.days)) }))
         
         // Save incrementally after each option is generated
         const partialOptionsString = JSON.stringify(itineraryOptions)
