@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { getFleetVehicleById } from '@/lib/fleet'
-import { ItineraryRender } from '@/components/itinerary/ItineraryRender'
+import { ItineraryStory } from '@/components/itinerary/ItineraryStory'
 
 type Day = {
   day: number
@@ -116,8 +116,7 @@ export default function PublicSharedItineraryPage() {
   }
 
   return (
-    <ItineraryRender
-      mode="link"
+    <ItineraryStory
       clientName={request.client_name || 'Valued Client'}
       startDate={request.start_date}
       endDate={request.end_date}

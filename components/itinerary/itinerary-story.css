@@ -1,0 +1,170 @@
+/* The shared itinerary, styled like lankalux.com. Tokens copied from the website's globals.css. */
+.lux-story {
+  --forest-950: #0a1912;
+  --forest-900: #0e2219;
+  --forest-800: #14301f;
+  --forest-700: #1e4030;
+  --ivory: #f4efe4;
+  --paper: #faf7f0;
+  --sand: #e9e1cf;
+  --ink: #13261c;
+  --ink-soft: #46574c;
+  --mist: #b9c4b7;
+  --gold: #c2a266;
+  --gold-bright: #d4b878;
+  --display: var(--font-gambetta), 'Times New Roman', serif;
+  --sans: var(--font-switzer), ui-sans-serif, system-ui, sans-serif;
+  --gutter: clamp(1.25rem, 3.2vw, 3rem);
+
+  font-family: var(--sans);
+  font-size: clamp(1.0625rem, 0.35vw + 0.98rem, 1.1875rem);
+  line-height: 1.58;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+.lux-story h1,
+.lux-story h2,
+.lux-story h3,
+.lux-story .ls-display {
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.lux-story .ls-wrap {
+  width: 100%;
+  max-width: 90rem;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+.lux-story .split-line {
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+
+/* The admin console is drawn at 85%; a client's itinerary is drawn at full size. */
+html:has(.lux-story) {
+  zoom: 1;
+  background: #0a1912;
+}
+
+/* Scroll progress along the top edge. */
+.ls-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 2px;
+  z-index: 40;
+  background: var(--gold);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  pointer-events: none;
+}
+
+/* Opening screen */
+.ls-hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  background: var(--forest-950);
+  color: var(--ivory);
+}
+.ls-hero-photo {
+  position: absolute;
+  inset: -4% 0;
+  will-change: transform;
+}
+.ls-hero-photo img {
+  object-fit: cover;
+}
+.ls-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, rgb(10 25 18 / 0.55), rgb(10 25 18 / 0) 30%),
+    linear-gradient(to top, rgb(10 25 18 / 0.85), rgb(10 25 18 / 0.1) 65%);
+}
+.ls-cue-line {
+  display: block;
+  width: 1px;
+  height: 3rem;
+  background: linear-gradient(to bottom, var(--gold), transparent);
+  transform-origin: top;
+  animation: ls-cue 2.4s cubic-bezier(0.7, 0, 0.2, 1) infinite;
+}
+@keyframes ls-cue {
+  0% { transform: scaleY(0); opacity: 1; }
+  60% { transform: scaleY(1); opacity: 1; }
+  100% { transform: scaleY(1); opacity: 0; }
+}
+
+/* Day photos open from the bottom (clip) while the photo drifts (parallax). */
+.ls-frame {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  background: var(--sand);
+}
+.ls-frame-inner {
+  position: absolute;
+  inset: -8% 0;
+  will-change: transform;
+}
+.ls-frame-inner img {
+  object-fit: cover;
+}
+
+.ls-dot {
+  display: block;
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  margin-top: 0.62em;
+  border-radius: 999px;
+  background: var(--gold);
+}
+
+/* Days column with the pinned island map beside it */
+.ls-days {
+  position: relative;
+  background: var(--paper);
+}
+.ls-map-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--forest-900);
+  color: var(--ivory);
+}
+@media (min-width: 1024px) {
+  .ls-days.has-map {
+    display: grid;
+    grid-template-columns: 5fr 7fr;
+  }
+  .ls-map-bar {
+    height: 100svh;
+    align-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ls-cue-line { animation: none; }
+}
+
+@media print {
+  .ls-progress, .ls-cue, .ls-map-bar { display: none !important; }
+  .lux-story { background: #fff; }
+  .ls-hero { min-height: 60vh; }
+  .ls-days.has-map { display: block; }
+  .lux-story [data-reveal], .lux-story [data-reveal-group] > *, .lux-story [data-split], .lux-story .split-line > * {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+  }
+  .lux-story .ls-frame { clip-path: none !important; break-inside: avoid; }
+  .lux-story li[data-day] { break-inside: avoid; }
+}
