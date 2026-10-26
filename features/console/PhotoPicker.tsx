@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { consoleFetch } from '@/lib/console-api'
-import { thumbFor } from '@/services/image-map.service'
 
 export function PhotoPicker({
   value,
@@ -143,7 +142,7 @@ export function PhotoPicker({
               onClick={() => onChange(src)}
               aria-pressed={value === src}
             >
-              <img src={thumbFor(src)} alt="" loading="lazy" decoding="async" onError={(e) => e.currentTarget.closest<HTMLElement>('.ll-photo-cell')?.setAttribute('hidden', '')} />
+              <img src={src} alt="" loading="lazy" decoding="async" onError={(e) => e.currentTarget.closest<HTMLElement>('.ll-photo-cell')?.setAttribute('hidden', '')} />
             </button>
             {canDelete ? (
               <button type="button" className="ll-photo-remove" onClick={() => void removePhoto(src)} aria-label="Remove this photo from the picker" title="Remove from picker">
