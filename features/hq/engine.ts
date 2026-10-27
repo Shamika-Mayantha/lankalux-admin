@@ -422,7 +422,7 @@ export type AgentState = 'offline' | 'paused' | 'idle' | 'thinking' | 'working' 
 export const STATE_LABEL: Record<AgentState, string> = {
   offline: 'Offline',
   paused: 'Paused',
-  idle: 'Idle',
+  idle: 'On duty',
   thinking: 'Thinking',
   working: 'Working',
   communicating: 'Talking',

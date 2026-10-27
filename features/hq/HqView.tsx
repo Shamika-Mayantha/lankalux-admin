@@ -13,7 +13,6 @@ import {
   eventsBetween,
   LIVE_LAG_MS,
   mergeSnapshot,
-  nextActivityAfter,
   nextSince,
   nodeName,
   shortName,
@@ -31,7 +30,7 @@ import type { Pulse } from '@/features/hq/world/Pulses'
 import type { Quality, WorldHandle } from '@/features/hq/world/World'
 import type { HqSnapshot } from '@/services/ai-hq.service'
 import '@/features/hq/hq.css'
-import { ago, clock, PULSE_MS, REPLAY_SPEEDS, type HqMode } from '@/features/hq/format'
+import { ago, PULSE_MS } from '@/features/hq/format'
 
 // three.js only loads on this view, so the rest of admin stays as light as before.
 const World = dynamic(() => import('@/features/hq/world/World').then((m) => m.World), {
@@ -44,8 +43,6 @@ const POLL_MS = 4000
 const POLL_HIDDEN_MS = 30000
 /** How often robot states are recomputed (the 3D scene animates every frame in between). */
 const TICK_MS = 250
-/** Live view counts as quiet when nothing has happened for this long. */
-const QUIET_AFTER_MS = 10 * 60 * 1000
 
 const PULSE_COLOR: Record<HqEvent['kind'], string> = {
   inbound: '#4ea8ff',
@@ -97,8 +94,6 @@ export function HqView({ onClassic }: { onClassic: (reason?: string) => void }) 
   const reducedMotion = useSyncExternalStore(reducedSubscribe, () => window.matchMedia(REDUCED).matches, () => false)
   const [degraded, setDegraded] = useState(false)
   const [force3d, setForce3d] = useState(false)
-  const [mode, setMode] = useState<HqMode>({ kind: 'live' })
-  const modeRef = useRef(mode)
   const [views, setViews] = useState<Map<NodeKey, AgentView>>(new Map())
   const [playhead, setPlayhead] = useState(0)
   const [pulses, setPulses] = useState<Pulse[]>([])
@@ -108,13 +103,10 @@ export function HqView({ onClassic }: { onClassic: (reason?: string) => void }) 
   const [notice, setNotice] = useState<string | null>(null)
   const world = useRef<WorldHandle>(null)
 
-  // The ticker below reads the latest store and mode through refs.
+  // The ticker below reads the latest store through a ref.
   useEffect(() => {
     storeRef.current = store
   }, [store])
-  useEffect(() => {
-    modeRef.current = mode
-  }, [mode])
 
   // --- Data: the last day once, then only changes ------------------------------------------
   const load = useCallback(async (full = false) => {
@@ -153,47 +145,18 @@ export function HqView({ onClassic }: { onClassic: (reason?: string) => void }) 
   const agentKeys = useMemo(() => (agentList ? agentList.split(',') : []), [agentList])
   const botKeys = useMemo(() => (botList ? botList.split(',') : []), [botList])
 
-  // --- The playhead: a few seconds behind the clock live, or anywhere in the day in Replay ---------
+  // --- The playhead: always live, a few seconds behind the server clock ---------------------------
   const lastT = useRef(0)
-  const lastReal = useRef(0)
   useEffect(() => {
     const id = setInterval(() => {
       const s = storeRef.current
       const tl = timelineRef.current
       if (!s.lastServerNow) return
       const nowServer = Date.now() + s.clockOffset
-      const m = modeRef.current
-      const real = performance.now()
-      const realDt = lastReal.current ? real - lastReal.current : TICK_MS
-      lastReal.current = real
-      let T: number
-      let scale = 1
-      if (m.kind === 'live') {
-        T = nowServer - LIVE_LAG_MS
-      } else {
-        scale = m.speed
-        T = m.playing ? m.at + realDt * m.speed : m.at
-        // Skip quiet stretches so Replay keeps moving; nothing is shown that did not happen.
-        if (m.playing) {
-          const busyNow = [...(tl.byNode.values())].some((spans) => spans.some((sp) => sp.start <= T && (sp.end ?? Infinity) >= T))
-          const next = nextActivityAfter(tl, T)
-          if (!busyNow && next !== null && next - T > 4000 * m.speed) T = next - 1500 * m.speed
-          else if (!busyNow && next === null) T = nowServer
-        }
-        // Caught up with the present: carry on live.
-        if (T >= nowServer - LIVE_LAG_MS) {
-          T = nowServer - LIVE_LAG_MS
-          scale = 1
-          modeRef.current = { kind: 'live' }
-          setMode(modeRef.current)
-        } else if (m.playing) {
-          modeRef.current = { ...m, at: T }
-          setMode(modeRef.current)
-        }
-      }
+      const T = nowServer - LIVE_LAG_MS
       // Pulses for the hand-offs the playhead just passed (not a backlog after a jump).
       const from = lastT.current
-      if (from && T > from && T - from < 20_000 * scale) {
+      if (from && T > from && T - from < 20_000) {
         const fresh = eventsBetween(tl, from, T).filter((e) => e.to && e.to !== e.actor)
         if (fresh.length) {
           const born = performance.now()
@@ -214,7 +177,7 @@ export function HqView({ onClassic }: { onClassic: (reason?: string) => void }) 
       setPulses((p) => (p.length && p.some((x) => performance.now() - x.born >= PULSE_MS) ? p.filter((x) => performance.now() - x.born < PULSE_MS) : p))
       lastT.current = T
       setPlayhead(T)
-      setViews(agentStatesAt(s, tl, T, { live: m.kind === 'live', now: nowServer, scale }))
+      setViews(agentStatesAt(s, tl, T, { live: true, now: nowServer, scale: 1 }))
     }, TICK_MS)
     return () => clearInterval(id)
   }, [])
@@ -253,7 +216,6 @@ export function HqView({ onClassic }: { onClassic: (reason?: string) => void }) 
   }, [select])
 
   // --- Derived for the HUD ---------------------------------------------------------------------------
-  const live = mode.kind === 'live'
   const names = useMemo(() => {
     const out: Record<NodeKey, string> = {}
     // Short names on the tags ("Sales", "AI Manager"); the panel shows the full one.
@@ -266,7 +228,7 @@ export function HqView({ onClassic }: { onClassic: (reason?: string) => void }) 
     for (const [node, v] of views) {
       if (v.state === 'idle') {
         const last = [...timeline.events].reverse().find((e) => e.actor === node && e.t <= playhead && (e.kind === 'finish' || e.kind === 'report' || e.kind === 'outbound'))
-        out[node] = last ? `Idle · last done ${ago(playhead - last.t)} ago` : 'Idle · nothing yet today'
+        out[node] = last ? `On duty · last job ${ago(playhead - last.t)} ago` : 'On duty · ready for the next job'
       } else out[node] = describeView(v)
     }
     return out
@@ -276,20 +238,6 @@ export function HqView({ onClassic }: { onClassic: (reason?: string) => void }) 
   const workerSeen = store.agents.reduce<number>((t, a) => (a.key !== 'concierge' && a.last_heartbeat_at ? Math.max(t, Date.parse(a.last_heartbeat_at)) : t), 0)
   // In live view the playhead runs LIVE_LAG_MS behind the server clock.
   const serverOnline = workerSeen > 0 && playhead + LIVE_LAG_MS - workerSeen < 3 * 60 * 1000
-  const lastAny = timeline.events.length ? timeline.events[timeline.events.length - 1].t : 0
-  const quiet = live && !working && playhead - lastAny > QUIET_AFTER_MS
-
-  function startReplay(at?: number) {
-    const start = at ?? store.windowStart
-    lastT.current = 0
-    setPulses([])
-    setMode({ kind: 'replay', at: start, speed: REPLAY_SPEEDS[0], playing: true })
-  }
-  function goLive() {
-    lastT.current = 0
-    setPulses([])
-    setMode({ kind: 'live' })
-  }
 
   if (support && !support.ok && !force3d) {
     return (
@@ -335,13 +283,11 @@ export function HqView({ onClassic }: { onClassic: (reason?: string) => void }) 
         {/* Top bar */}
         <div className="hq-top">
           <div className="hq-glass hq-status">
-            <span className={`hq-live ${live ? (serverOnline && !store.settings?.system_paused ? 'on' : 'off') : 'replay'}`}>
-              {live ? (store.settings?.system_paused ? 'Paused' : serverOnline ? 'Live' : 'Agent server offline') : 'Replay'}
+            <span className={`hq-live ${serverOnline && !store.settings?.system_paused ? 'on' : 'off'}`}>
+              {store.settings?.system_paused ? 'Paused' : serverOnline ? 'Live' : 'Agent server offline'}
             </span>
             <span className="hq-muted">
-              {live
-                ? `${working ? `${working} working` : 'Nobody working'} · ${pending.length ? `${pending.length} need${pending.length === 1 ? 's' : ''} you` : 'nothing waiting for you'}`
-                : `${clock(playhead)} · real events from the last ${store.lastServerNow ? 24 : 0} hours`}
+              {`${working ? `${working} on a job` : 'All on duty'} · ${pending.length ? `${pending.length} need${pending.length === 1 ? 's' : ''} you` : 'nothing waiting for you'}`}
             </span>
           </div>
           <div className="hq-top-right">
@@ -368,29 +314,12 @@ export function HqView({ onClassic }: { onClassic: (reason?: string) => void }) 
             {notice}
           </button>
         )}
-        {quiet && !selected && (
-          <div className="hq-glass hq-quiet">
-            <strong>All quiet right now.</strong>
-            <span>
-              The agents last did something {ago(playhead - lastAny)} ago. They run on a schedule and take a few minutes per reply, so most of the day looks like this.
-            </span>
-            <button type="button" className="ll-btn small" onClick={() => startReplay()}>
-              Replay the last 24 hours
-            </button>
-          </div>
-        )}
-
         {feedOpen && <Feed timeline={timeline} playhead={playhead} onSelect={select} onClose={() => setFeedOpen(false)} />}
 
         <TimelineStrip
           store={store}
           timeline={timeline}
           playhead={playhead}
-          mode={mode}
-          onSeek={(t) => startReplay(t)}
-          onLive={goLive}
-          onReplay={() => startReplay()}
-          onMode={setMode}
         />
       </div>
 
@@ -403,7 +332,6 @@ export function HqView({ onClassic }: { onClassic: (reason?: string) => void }) 
           timeline={timeline}
           view={views.get(selected)}
           playhead={playhead}
-          live={live}
           busy={busy}
           pending={selected === OWNER ? pending : pending.filter((a) => a.agent_key === selected)}
           onDecide={decide}

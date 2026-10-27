@@ -25,7 +25,6 @@ type Props = {
   timeline: Timeline
   view: AgentView | undefined
   playhead: number
-  live: boolean
   busy: boolean
   pending: HqAction[]
   onDecide: (id: string, d: 'approve' | 'reject', text?: string) => void
@@ -81,12 +80,11 @@ export function HqPanel(p: Props) {
           {node !== OWNER && node !== GATEWAY && (
             <span className={`hq-state s-${state}`}>
               <i aria-hidden /> {STATE_LABEL[state]}
-              {!p.live && <em> · in replay at {clock(playhead)}</em>}
             </span>
           )}
         </div>
         <div className="hq-panel-actions">
-          {agent && p.live && (
+          {agent && (
             <button
               type="button"
               className="hq-x"
@@ -134,7 +132,7 @@ export function HqPanel(p: Props) {
         )}
 
         {/* Approvals */}
-        {p.live && (node === OWNER || p.pending.length > 0) && (
+        {(node === OWNER || p.pending.length > 0) && (
           <section>
             <h3>
               Needs you {p.pending.length > 0 && <b className="hq-count">{p.pending.length}</b>}
@@ -338,7 +336,7 @@ function nowLine(state: AgentView['state'], heartbeat: string | null): string {
     case 'error':
       return 'Its last task ran into a problem (see below).'
     default:
-      return 'Idle. It works when an event, a schedule or another agent gives it something to do.'
+      return 'On duty and ready. It starts a job as soon as a message, a schedule or another agent gives it one. Until then it keeps tidy at its station (that movement is not a job).'
   }
 }
 

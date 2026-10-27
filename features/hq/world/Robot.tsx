@@ -41,6 +41,20 @@ const EYE_COLOR: Partial<Record<AgentState, string>> = { error: ACCENT.red, wait
 
 const damp = THREE.MathUtils.damp
 
+/**
+ * On duty: with no job in the tables a robot still keeps busy at its station, in a slow loop of
+ * tinkering at its console, looking around, a short stroll and checking its screen. It is
+ * deliberately calmer than a real job (fast typing, bright glow, pulses), so the two never mix.
+ */
+const DUTY_LOOP = 24
+type Duty = 'tinker' | 'look' | 'stroll' | 'check'
+function dutyAt(phase: number): Duty {
+  if (phase < 8) return 'tinker'
+  if (phase < 11) return 'look'
+  if (phase < 19) return 'stroll'
+  return 'check'
+}
+
 function RobotImpl({ look, state, position, facing, workTurn = 0.55, selected, reducedMotion, onSelect, onHover }: Props) {
   const size = SIZES[look.body]
   const scale = look.scale ?? 1
@@ -76,26 +90,53 @@ function RobotImpl({ look, state, position, facing, workTurn = 0.55, selected, r
     if (!r) return
     const d = Math.min(dt, 0.1)
 
+    const dutyPhase = (t + seed * 3) % DUTY_LOOP
+    const duty: Duty | null = state === 'idle' ? dutyAt(dutyPhase) : null
+
     // Float and lift.
     const hop = state === 'completed' ? Math.abs(Math.sin(t * 6)) * 0.22 : 0
     const sink = asleep ? -0.12 : state === 'waiting' ? 0.12 : 0
     const bob = Math.sin(t * (asleep ? 0.8 : 1.6)) * (asleep ? 0.015 : 0.05) * calm
     r.position.y = damp(r.position.y, position[1] + 0.12 + sink + bob + hop * calm, 8, d)
     const shake = state === 'error' ? Math.sin(t * 38) * 0.035 * calm : 0
-    r.position.x = position[0] + shake
+    // A short loop behind the console: out to one side, round the back, over to the other side and home.
+    let ox = 0
+    let oz = 0
+    let heading: number | null = null
+    if (duty === 'stroll' && !reducedMotion) {
+      const a = ((dutyPhase - 11) / 8) * Math.PI * 2
+      const side = Math.sin(a) * 0.85
+      const back = -Math.pow(Math.sin(a / 2), 2) * 0.7
+      const dSide = Math.cos(a) * 0.85
+      const dBack = -Math.sin(a / 2) * Math.cos(a / 2) * 0.7
+      // Sideways is across the robot's view, back is away from the camera (both relative to its facing).
+      const sx = Math.cos(facing), sz = -Math.sin(facing)
+      const bx = -Math.sin(facing), bz = -Math.cos(facing)
+      ox = side * sx + back * bx
+      oz = side * sz + back * bz
+      const vx = dSide * sx + dBack * bx
+      const vz = dSide * sz + dBack * bz
+      heading = Math.atan2(vx, vz) - facing
+      heading = Math.atan2(Math.sin(heading), Math.cos(heading))
+    }
+    const px = damp(r.position.x - shake, position[0] + ox, 3, d)
+    r.position.x = px + shake
+    r.position.z = damp(r.position.z, position[2] + oz, 3, d)
 
     // Turn towards the screen while working; face you otherwise.
     if (turn.current) {
-      const working = state === 'working' || state === 'thinking'
-      turn.current.rotation.y = damp(turn.current.rotation.y, working ? workTurn : 0, 4, d)
+      const working = state === 'working' || state === 'thinking' || duty === 'tinker'
+      // Face the way it is gliding while strolling.
+      const aim = heading ?? (working ? workTurn : duty === 'check' ? -workTurn * 0.8 : 0)
+      turn.current.rotation.y = damp(turn.current.rotation.y, aim, 4, d)
       turn.current.rotation.z = damp(turn.current.rotation.z, state === 'offline' ? 0.18 : 0, 3, d)
     }
 
     // Head.
     if (head.current) {
-      const look = state === 'idle' ? Math.sin(t * 0.45) * 0.35 * calm : state === 'communicating' ? Math.sin(t * 2.2) * 0.15 : 0
+      const look = duty === 'look' ? Math.sin(t * 1.1) * 0.6 * calm : state === 'communicating' ? Math.sin(t * 2.2) * 0.15 : 0
       head.current.rotation.y = damp(head.current.rotation.y, look, 3, d)
-      const tilt = state === 'thinking' ? -0.22 : state === 'working' ? 0.18 : asleep ? 0.3 : state === 'completed' ? -0.12 : 0
+      const tilt = state === 'thinking' ? -0.22 : state === 'working' || duty === 'tinker' ? 0.18 : duty === 'check' ? -0.15 : asleep ? 0.3 : state === 'completed' ? -0.12 : 0
       head.current.rotation.x = damp(head.current.rotation.x, tilt, 4, d)
       head.current.rotation.z = damp(head.current.rotation.z, state === 'thinking' ? 0.12 : 0, 3, d)
     }
@@ -106,7 +147,17 @@ function RobotImpl({ look, state, position, facing, workTurn = 0.55, selected, r
     if (L && R) {
       // Arms hang along -y; +z on the right arm (and -z on the left) lifts them outwards.
       let lx = 0.1, rx = 0.1, lz = -0.12, rz = 0.12
-      if (state === 'working') {
+      if (duty === 'tinker') {
+        // Unhurried tinkering, slower and smaller than a real job.
+        lx = -0.9 + Math.sin(t * 5) * 0.12 * calm
+        rx = -0.9 + Math.sin(t * 5 + 2) * 0.12 * calm
+      } else if (duty === 'check') {
+        rx = -1.6 + Math.sin(t * 2) * 0.08 * calm
+        rz = 0.3
+      } else if (duty === 'look') {
+        lz = -0.5
+        lx = -0.3
+      } else if (state === 'working') {
         lx = -1.1 + Math.sin(t * 16) * 0.22 * calm
         rx = -1.1 + Math.sin(t * 16 + Math.PI) * 0.22 * calm
       } else if (state === 'thinking') {

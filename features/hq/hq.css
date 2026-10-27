@@ -116,10 +116,6 @@
   background: var(--hq-red);
 }
 
-.hq-live.replay::before {
-  background: #8a7cff;
-}
-
 @keyframes hq-ping {
   0% { box-shadow: 0 0 0 0 rgba(34, 201, 138, 0.55); }
   70% { box-shadow: 0 0 0 8px rgba(34, 201, 138, 0); }
@@ -282,31 +278,7 @@
 
 .hq-feed .t-bad > button { color: #9b1c2a; }
 
-/* --- Quiet note and toasts ------------------------------------------------------------- */
-
-.hq-quiet {
-  position: absolute;
-  left: 50%;
-  bottom: 112px;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px 10px 16px;
-  font-size: 13px;
-  width: min(720px, calc(100% - 28px));
-  z-index: 30;
-}
-
-.hq-quiet strong {
-  font-family: var(--font-display);
-  white-space: nowrap;
-}
-
-.hq-quiet span {
-  color: var(--hq-muted);
-  flex: 1;
-}
+/* --- Toasts ------------------------------------------------------------- */
 
 .hq-toast {
   position: absolute;
@@ -338,58 +310,20 @@
   z-index: 30;
 }
 
-.hq-strip-controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.hq-strip-label {
   flex: none;
-}
-
-.hq-chip {
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(15, 39, 64, 0.08);
-  padding: 7px 11px;
-}
-
-.hq-chip.live {
-  color: #0b7a55;
-}
-
-.hq-speeds {
-  display: inline-flex;
-  background: rgba(15, 39, 64, 0.06);
-  border-radius: 10px;
-  padding: 2px;
-}
-
-.hq-speeds button {
-  border: 0;
-  background: transparent;
-  padding: 6px 8px;
-  border-radius: 8px;
   font: 600 12px/1 var(--font-display);
   color: var(--hq-muted);
-  cursor: pointer;
-}
-
-.hq-speeds button.on {
-  background: #ffffff;
-  color: var(--hq-ink);
-  box-shadow: 0 1px 3px rgba(15, 39, 64, 0.15);
+  white-space: nowrap;
 }
 
 .hq-track {
   position: relative;
   flex: 1;
   height: 44px;
-  cursor: pointer;
   border-radius: 10px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(214, 238, 252, 0.55));
   outline: none;
-}
-
-.hq-track:focus-visible {
-  box-shadow: 0 0 0 2px var(--hq-cyan);
 }
 
 .hq-span {
@@ -433,11 +367,6 @@
   background: var(--hq-green);
   box-shadow: 0 0 0 3px rgba(34, 201, 138, 0.2);
   transition: left 0.25s linear;
-}
-
-.hq-head.replay {
-  background: #8a7cff;
-  box-shadow: 0 0 0 3px rgba(138, 124, 255, 0.22);
 }
 
 /* --- Labels over the 3D world ----------------------------------------------------------- */
@@ -885,10 +814,6 @@
   .hq-feed {
     top: 110px;
     bottom: 120px;
-  }
-  .hq-quiet {
-    flex-wrap: wrap;
-    bottom: 132px;
   }
   .hq-tag small {
     display: none;
