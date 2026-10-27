@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Bell, Pause, Play, Radio, X } from 'lucide-react'
+import { Bell, X } from 'lucide-react'
 import { formatAgo } from '@/lib/format'
 import { OWNER, shortName, type HqEvent, type HqStore, type NodeKey, type Timeline } from '@/features/hq/engine'
-import { clock, REPLAY_SPEEDS, type HqMode } from '@/features/hq/format'
+import { clock } from '@/features/hq/format'
 import type { HqAction } from '@/services/ai-hq.service'
 
 /** The bell: real approvals waiting for you, and the AI Manager's unread pings. */
@@ -121,26 +121,8 @@ export function Feed({ timeline, playhead, onSelect, onClose }: { timeline: Time
   )
 }
 
-/** The day at the bottom: every real event as a tick, the playhead, and the Live / Replay controls. */
-export function TimelineStrip({
-  store,
-  timeline,
-  playhead,
-  mode,
-  onSeek,
-  onLive,
-  onReplay,
-  onMode,
-}: {
-  store: HqStore
-  timeline: Timeline
-  playhead: number
-  mode: HqMode
-  onSeek: (t: number) => void
-  onLive: () => void
-  onReplay: () => void
-  onMode: (m: HqMode) => void
-}) {
+/** The day at the bottom: every real job and hand-off of the last 24 hours, and where now is. */
+export function TimelineStrip({ store, timeline, playhead }: { store: HqStore; timeline: Timeline; playhead: number }) {
   const start = store.windowStart
   const end = store.lastServerNow ? Date.parse(store.lastServerNow) : start + 1
   const span = Math.max(1, end - start)
@@ -157,46 +139,11 @@ export function TimelineStrip({
 
   return (
     <div className="hq-glass hq-strip">
-      <div className="hq-strip-controls">
-        {mode.kind === 'live' ? (
-          <button type="button" className="hq-btn hq-chip" onClick={onReplay} title="Play back the real events of the last 24 hours">
-            <Play size={14} aria-hidden /> Replay 24h
-          </button>
-        ) : (
-          <>
-            <button type="button" className="hq-btn hq-chip" onClick={() => onMode({ ...mode, playing: !mode.playing })} aria-label={mode.playing ? 'Pause replay' : 'Play replay'}>
-              {mode.playing ? <Pause size={14} aria-hidden /> : <Play size={14} aria-hidden />}
-            </button>
-            <div className="hq-speeds" role="group" aria-label="Replay speed">
-              {REPLAY_SPEEDS.map((s) => (
-                <button key={s} type="button" className={mode.speed === s ? 'on' : ''} onClick={() => onMode({ ...mode, speed: s })}>
-                  {s}×
-                </button>
-              ))}
-            </div>
-            <button type="button" className="hq-btn hq-chip live" onClick={onLive}>
-              <Radio size={14} aria-hidden /> Back to live
-            </button>
-          </>
-        )}
-      </div>
+      <span className="hq-strip-label">Last 24 hours</span>
       <div
         className="hq-track"
-        role="slider"
-        tabIndex={0}
-        aria-label="Timeline of the last 24 hours"
-        aria-valuemin={start}
-        aria-valuemax={end}
-        aria-valuenow={playhead}
-        aria-valuetext={clock(playhead)}
-        onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect()
-          onSeek(start + ((e.clientX - r.left) / r.width) * span)
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowLeft') onSeek(Math.max(start, playhead - 15 * 60_000))
-          if (e.key === 'ArrowRight') onSeek(Math.min(end, playhead + 15 * 60_000))
-        }}
+        role="img"
+        aria-label={`Timeline of the last 24 hours: ${ticks.length} events`}
       >
         {work.map((s) => (
           <span key={s.id} className="hq-span" style={{ left: pos(s.start), width: `max(2px, ${(((s.end ?? end) - s.start) / span) * 100}%)` }} />
@@ -209,7 +156,7 @@ export function TimelineStrip({
             {clock(t)}
           </span>
         ))}
-        <span className={`hq-head ${mode.kind}`} style={{ left: pos(playhead) }} />
+        <span className="hq-head live" style={{ left: pos(playhead) }} />
       </div>
     </div>
   )
