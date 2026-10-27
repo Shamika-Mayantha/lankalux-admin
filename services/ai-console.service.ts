@@ -118,6 +118,25 @@ function todayStart() {
   return d.toISOString()
 }
 
+/** Actions the Manager or the Quality check sent to the owner (an unread approval_needed ping names them). */
+export function flaggedActionIds(pings: Pick<AiPing, 'kind' | 'action_id'>[]): Set<string> {
+  return new Set(pings.filter((p) => p.kind === 'approval_needed' && p.action_id).map((p) => p.action_id as string))
+}
+
+/**
+ * Whether a proposed action waits for the owner. Level 2/3 work and customer messages are proposed
+ * for approval; while the AI Manager approves messages, the owner only sees Level 3 work and
+ * anything the Manager or the Quality check flagged. The rest is the Manager's to decide.
+ */
+export function ownerDecides(
+  a: Pick<AiPendingAction, 'id' | 'level' | 'action_type'>,
+  settings: Pick<AiSettings, 'owner_approves_messages'>,
+  flagged: Set<string>
+): boolean {
+  if (a.level < 2 && !a.action_type.startsWith('message.')) return false
+  return settings.owner_approves_messages || a.level >= 3 || flagged.has(a.id)
+}
+
 export async function getAiOverview(): Promise<AiOverview> {
   const db = getServiceClient()
   const since = todayStart()
@@ -132,7 +151,13 @@ export async function getAiOverview(): Promise<AiOverview> {
       .or('level.gte.2,action_type.like.message.*')
       .order('created_at', { ascending: true })
       .limit(50),
-    db.from('ai_activity_log').select('id, actor_kind, agent_key, request_id, event, detail, created_at').order('created_at', { ascending: false }).limit(40),
+    db
+      .from('ai_activity_log')
+      .select('id, actor_kind, agent_key, request_id, event, detail, created_at')
+      // llm.start / llm.end only drive the Headquarters' "thinking" state.
+      .not('event', 'like', 'llm.%')
+      .order('created_at', { ascending: false })
+      .limit(40),
     db.from('ai_tasks').select('id', { count: 'exact', head: true }).eq('status', 'queued'),
     db.from('ai_tasks').select('id', { count: 'exact', head: true }).eq('status', 'running'),
     db.from('ai_tasks').select('id', { count: 'exact', head: true }).eq('status', 'failed').gte('finished_at', since),
@@ -185,12 +210,8 @@ export async function getAiOverview(): Promise<AiOverview> {
   }
   const cfg = settings.data as AiSettings
   const pingRows = (pings.data || []) as AiPing[]
-  // While the AI Manager approves messages, the owner only sees what needs them: Level 3 work and
-  // anything the Manager or the Quality check flagged. The rest is the Manager's to decide.
-  const flagged = new Set(pingRows.filter((p) => p.kind === 'approval_needed' && p.action_id).map((p) => p.action_id))
-  const pendingRows = ((pending.data || []) as AiPendingAction[]).filter(
-    (a) => cfg.owner_approves_messages || a.level >= 3 || flagged.has(a.id)
-  )
+  const flagged = flaggedActionIds(pingRows)
+  const pendingRows = ((pending.data || []) as AiPendingAction[]).filter((a) => ownerDecides(a, cfg, flagged))
   return {
     settings: cfg,
     pings: pingRows,

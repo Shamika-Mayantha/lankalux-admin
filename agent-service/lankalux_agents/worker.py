@@ -71,12 +71,26 @@ class Worker:
             return False
         task = tasks[0]
         started = time.monotonic()
-        out = self.run_task(task)
+        self.observe_llm(task)
+        try:
+            out = self.run_task(task)
+        finally:
+            self.observe_llm(None)
         self.ctx.queue.complete(task, out.status, out.result, out.error, out.retry_in)
         self.ctx.actions.log(task.agent_key, f"task.{out.status}",
                              {"task_type": task.task_type, "seconds": round(time.monotonic() - started, 1),
                               "error": out.error}, task_id=task.id, request_id=task.request_id)
         return True
+
+    def observe_llm(self, task: Task | None) -> None:
+        """Logs llm.start / llm.end for the task's agent while it runs, which the AI Headquarters
+        shows as the agent thinking. Cleared after the task."""
+        def observer(phase: str, detail: dict) -> None:
+            self.ctx.actions.log(task.agent_key, f"llm.{phase}", detail, task_id=task.id, request_id=task.request_id)
+
+        for llm in (self.ctx.llm, self.ctx.review_llm):
+            if llm is not None and hasattr(llm, "observer"):
+                llm.observer = observer if task else None
 
     def paused(self) -> bool:
         row = self.db.one("SELECT system_paused FROM public.ai_settings WHERE id")

@@ -4,13 +4,15 @@ acted on."""
 from __future__ import annotations
 
 import json
+import logging
 import time
-from typing import Protocol, TypeVar
+from typing import Any, Callable, Protocol, TypeVar
 
 import httpx
 from pydantic import BaseModel, ValidationError
 
 T = TypeVar("T", bound=BaseModel)
+log = logging.getLogger(__name__)
 
 
 class LLMError(RuntimeError):
@@ -29,6 +31,16 @@ class OllamaLLM:
         self.embed_model = embed_model
         self.http = httpx.Client(timeout=timeout)
         self.last_stats: dict[str, float] = {}
+        # Told when a model call starts and ends, so the AI Headquarters can show an agent
+        # thinking. Set by the worker around each task; never allowed to break a call.
+        self.observer: Callable[[str, dict[str, Any]], None] | None = None
+
+    def _notify(self, phase: str, detail: dict[str, Any]) -> None:
+        if self.observer:
+            try:
+                self.observer(phase, detail)
+            except Exception:
+                log.warning("llm observer failed", exc_info=True)
 
     def structured(self, system: str, user: str, schema: type[T], *, temperature: float = 0.2, retries: int = 1) -> T:
         body = {
@@ -44,13 +56,17 @@ class OllamaLLM:
         last_err: Exception | None = None
         for _ in range(retries + 1):
             started = time.monotonic()
+            self._notify("start", {"model": self.model, "schema": schema.__name__})
             try:
                 res = self.http.post(f"{self.base_url}/api/chat", json=body)
                 res.raise_for_status()
                 data = res.json()
             except httpx.HTTPError as err:
+                self._notify("end", {"model": self.model, "ok": False, "seconds": round(time.monotonic() - started, 1)})
                 raise LLMError(f"Ollama request failed: {err}") from err
             self._record_stats(data, time.monotonic() - started)
+            self._notify("end", {"model": self.model, "ok": True, "seconds": self.last_stats["wall_s"],
+                                 "output_tokens": self.last_stats["output_tokens"]})
             content = (data.get("message") or {}).get("content", "")
             try:
                 return schema.model_validate(json.loads(content))
