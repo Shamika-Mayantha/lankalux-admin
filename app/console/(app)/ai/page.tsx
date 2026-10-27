@@ -26,7 +26,10 @@ import { AiEmailsPanel } from '@/features/console/AiEmailsPanel'
 import { AiLeadsPanel } from '@/features/console/AiLeadsPanel'
 import { AiPartnersPanel } from '@/features/console/AiPartnersPanel'
 import { ClaudeBotsPanel } from '@/features/console/ClaudeBotsPanel'
-import type { AiActivity, AiAgent, AiConversation, AiOverview, AiPendingAction, AiPing, AiPlaybook, AiRunningTask } from '@/services/ai-console.service'
+import { capitalise, EVENT_LABEL, readable, taskLabel } from '@/features/console/ai-labels'
+import { ApprovalCard, sendNotice, type SendResult } from '@/features/console/AiApprovalCard'
+import { HqView } from '@/features/hq/HqView'
+import type { AiActivity, AiAgent, AiConversation, AiOverview, AiPing, AiPlaybook, AiRunningTask } from '@/services/ai-console.service'
 
 /** How often the page refreshes itself while it is open and visible. */
 const LIVE_REFRESH_MS = 5000
@@ -45,66 +48,11 @@ const AGENT_ICON: Record<string, LucideIcon> = {
   partners: Handshake,
 }
 
-const TASK_LABEL: Record<string, string> = {
-  qualify_lead: 'qualifying a new lead',
-  handle_inquiry: 'drafting a WhatsApp reply',
-  daily_summary: 'writing the daily summary',
-  scan_follow_ups: 'checking for quiet leads',
-  check_upcoming_trips: 'checking upcoming trips',
-  generate_itinerary: 'drafting an itinerary',
-  review_action: 'reviewing a proposed action',
-  price_guide: 'working out a price guide',
-  status_changed: 'checking a status change',
-  scan_for_leads: 'searching for new leads',
-  judge_lead: 'reading a lead',
-  scan_win_backs: 'looking for past enquiries to win back',
-  draft_win_back: 'writing a win-back email',
-  plan_partners: 'planning partner emails',
-  research_partner: 'reading a partner website',
-}
-
-/** Verb phrases; the actor's name goes in front ("Sales finished qualifying a new lead"). */
-const EVENT_LABEL: Record<string, string> = {
-  'task.succeeded': 'finished',
-  'task.failed': 'failed',
-  'task.retry': 'will retry',
-  'task.waiting': 'is waiting on',
-  'action.begin': 'started an approved action',
-  'action.executed': 'completed an action',
-  'action.failed': 'could not complete an action',
-  'action.approved': 'approved an action',
-  'action.rejected': 'rejected an action',
-  'settings.changed': 'changed the AI settings',
-  'playbook.changed': 'updated the playbook',
-  'testdrive.report': 'ran a test drive (nothing was sent)',
-  'agent.paused': 'paused an agent',
-  'agent.resumed': 'resumed an agent',
-  'conversation.taken_over': 'took over a conversation',
-  'conversation.handed_back': 'handed a conversation back to the AI',
-  'task.rate_limit': 'hit the hourly limit for a request',
-  'task.depth_limit': 'stopped a chain of tasks at the depth limit',
-  'website.request_created': 'passed a website chat to the team as a new request',
-  'agent.instructions_changed': "changed an agent's instructions",
-  'lead.replied': 'replied to a lead',
-  'lead.not_relevant': 'set a lead aside',
-  'lead.new': 'moved a lead back to new',
-  'lead.converted': 'made a request from a lead',
-}
-
 /** Answers on lankalux.com from admin itself, so it does not depend on the agent server. */
 const CONCIERGE = 'concierge'
 
 /** How the agent cards are laid out: the Manager leads, then the owner's chosen order. */
 const AGENT_ORDER = ['manager', 'sales', 'followup', 'operations', 'planner', 'pricing', 'quality', CONCIERGE, 'scout', 'winback', 'partners']
-
-function capitalise(text: string) {
-  return text.charAt(0).toUpperCase() + text.slice(1)
-}
-
-function taskLabel(type: unknown) {
-  const t = String(type || '')
-  return TASK_LABEL[t] || readable(t)
-}
 
 function describe(e: AiActivity) {
   const base = EVENT_LABEL[e.event] || readable(e.event)
@@ -117,8 +65,6 @@ function actorName(e: AiActivity, agents: AiAgent[]) {
   return agents.find((a) => a.key === e.agent_key)?.name || e.agent_key || 'System'
 }
 
-const LEVEL_LABEL: Record<number, string> = { 2: 'Manager or you', 3: 'Needs you' }
-
 /** A worker that has not checked in for this long is shown as offline. */
 const OFFLINE_AFTER_MS = 3 * 60 * 1000
 
@@ -129,116 +75,6 @@ function online(at: string | null) {
 /** WhatsApp allows free-form replies for 24 hours after the customer's last message. */
 function replyWindowOpen(until: string | null) {
   return !!until && new Date(until).getTime() > Date.now()
-}
-
-function isMessage(a: AiPendingAction) {
-  return a.action_type.startsWith('message.')
-}
-
-type SendResult = { sent: number; waiting: number; failed: number; error?: string; channel?: 'email' } | null
-
-function sendNotice(r: SendResult): string | null {
-  if (!r) return null
-  if (r.channel === 'email') {
-    if (r.sent) return 'Sent by email from hello@lankalux.com.'
-    if (r.failed) return 'Approved, but the email could not be sent. See the activity feed.'
-    return 'Approved. It goes out as soon as the AI system is running and messages to customers are allowed.'
-  }
-  if (r.error) return `Approved. The WhatsApp sender could not be reached (${r.error}), so it will go out on the next try.`
-  if (r.sent) return 'Sent on WhatsApp.'
-  if (r.failed) return 'Approved, but WhatsApp did not accept it. See the conversation below.'
-  return 'Approved. It goes out as soon as the AI system is running and messages to customers are allowed.'
-}
-
-function readable(type: string) {
-  return type.replace(/[._]/g, ' ')
-}
-
-function PayloadPreview({ payload }: { payload: Record<string, unknown> }) {
-  const entries = Object.entries(payload || {}).filter(([, v]) => v !== null && v !== '' && v !== undefined)
-  if (entries.length === 0) return null
-  return (
-    <dl className="ll-ai-payload">
-      {entries.slice(0, 12).map(([k, v]) => (
-        <div key={k}>
-          <dt>{readable(k)}</dt>
-          <dd>{typeof v === 'string' ? v : JSON.stringify(v)}</dd>
-        </div>
-      ))}
-    </dl>
-  )
-}
-
-function ApprovalCard({
-  a,
-  flag,
-  busy,
-  onDecide,
-}: {
-  a: AiPendingAction
-  /** Why the AI Manager or the Quality check sent it to you, if they did. */
-  flag?: string
-  busy: boolean
-  onDecide: (id: string, d: 'approve' | 'reject', text?: string) => void
-}) {
-  const message = isMessage(a)
-  const email = a.payload?.channel === 'email'
-  const [text, setText] = useState(String(a.payload?.text ?? a.payload?.body ?? ''))
-  return (
-    <div className="ll-card ll-ai-approval">
-      <div className="ll-row" style={{ justifyContent: 'space-between', gap: 8 }}>
-        <span className={`ll-pill ${a.level === 3 || message ? 'new' : 'follow_up'}`}>
-          {message ? (email ? 'Customer email' : 'Customer message') : LEVEL_LABEL[a.level] || `Level ${a.level}`}
-        </span>
-        <span className="ll-muted ll-small">{formatAgo(a.created_at)}</span>
-      </div>
-      <h3 style={{ marginTop: 10 }}>{a.summary}</h3>
-      <p className="ll-muted ll-small">
-        {readable(a.action_type)} · {a.agent_key}
-        {a.request_id && (
-          <>
-            {' · '}
-            <Link href={`/console/requests/${a.request_id}`}>{a.request_id}</Link>
-          </>
-        )}
-      </p>
-      {message ? (
-        <>
-          {typeof a.payload?.customer_said === 'string' && (
-            <p className="ll-ai-bubble in">{a.payload.customer_said}</p>
-          )}
-          {flag && <p className="ll-ai-flag">{flag}</p>}
-          {email && typeof a.payload?.subject === 'string' && (
-            <p className="ll-small">
-              <span className="ll-muted">Subject:</span> {a.payload.subject}
-              {typeof a.payload?.to === 'string' && <span className="ll-muted"> · to {a.payload.to}</span>}
-            </p>
-          )}
-          <label className="ll-small ll-muted" htmlFor={`reply-${a.id}`}>
-            {email
-              ? `Email (we add “Dear name,” and the sign-off${a.action_type === 'message.win_back' ? ', plus an unsubscribe link' : ''}; you can edit it)`
-              : 'Reply (you can edit it before sending)'}
-          </label>
-          <textarea id={`reply-${a.id}`} className="ll-ai-reply" rows={email ? 8 : 4} value={text} onChange={(e) => setText(e.target.value)} />
-          {a.reasoning && <p className="ll-muted ll-small">Why: {a.reasoning}</p>}
-        </>
-      ) : (
-        <>
-          {flag && <p className="ll-ai-flag">{flag}</p>}
-          {a.reasoning && <p className="ll-small">{a.reasoning}</p>}
-          <PayloadPreview payload={a.payload} />
-        </>
-      )}
-      <div className="ll-row" style={{ marginTop: 12 }}>
-        <button className="ll-btn" disabled={busy || (message && !text.trim())} onClick={() => onDecide(a.id, 'approve', message ? text : undefined)}>
-          {message ? (email ? 'Approve and email' : 'Approve and send') : 'Approve'}
-        </button>
-        <button className="ll-btn secondary" disabled={busy} onClick={() => onDecide(a.id, 'reject')}>
-          Reject
-        </button>
-      </div>
-    </div>
-  )
 }
 
 function Pings({ pings, busy, onRead }: { pings: AiPing[]; busy: boolean; onRead: (ids?: string[]) => void }) {
@@ -554,14 +390,15 @@ function secondsSince(at: number | null) {
   return at ? Math.max(0, Math.round((Date.now() - at) / 1000)) : null
 }
 
-type Tab = 'live' | 'approvals' | 'leads' | 'partners' | 'emails' | 'whatsapp' | 'website' | 'playbook' | 'claude'
+type Tab = 'hq' | 'live' | 'approvals' | 'leads' | 'partners' | 'emails' | 'whatsapp' | 'website' | 'playbook' | 'claude'
 
 export default function AiPage() {
   const { data, error, loading, reload, refreshing } = useConsoleGet<{ overview?: AiOverview }>('/api/v2/ai')
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [tab, setTab] = useState<Tab>('live')
+  // The 3D Headquarters opens first; the classic room stays one tap away (and is the fallback).
+  const [tab, setTab] = useState<Tab>('hq')
   const [updatedAt, setUpdatedAt] = useState<number | null>(null)
   const [, setTick] = useState(0)
   const o = data?.overview
@@ -655,7 +492,7 @@ export default function AiPage() {
     <div className="ll-airoom">
       <div className="ll-page-head">
         <div>
-          <h1 className="ll-h1">AI control room</h1>
+          <h1 className="ll-h1">{tab === 'hq' ? 'AI Headquarters' : 'AI control room'}</h1>
           <p className="ll-sub">
             <span className={`ll-live ${live ? 'on' : ''}`}>{live ? 'Live' : o?.settings.system_paused ? 'Paused' : 'Server offline'}</span>
             <span className="ll-muted"> · {secondsAgo === null || secondsAgo < 3 || refreshing ? 'updated just now' : `updated ${secondsAgo}s ago`} · refreshes every {LIVE_REFRESH_MS / 1000}s</span>
@@ -684,46 +521,52 @@ export default function AiPage() {
       {actionError && <div className="ll-error">{actionError}</div>}
       {notice && <div className="ll-ok">{notice}</div>}
 
-      <div className="ll-statbar">
-        <div>
-          <span>AI system</span>
-          <strong>{loading ? '…' : o?.settings.system_paused ? 'Paused' : 'Running'}</strong>
-        </div>
-        <div>
-          <span>Customer messages</span>
-          <strong>{loading ? '…' : o?.settings.customer_messaging_enabled ? 'Allowed' : 'Off'}</strong>
-        </div>
-        <div>
-          <span>Approves messages</span>
-          <div className="ll-seg ll-seg-sm" role="group" aria-label="Who approves customer messages">
-            <button type="button" className={o?.settings.owner_approves_messages ? 'on' : ''} disabled={!o || busy} onClick={() => setApprover(true)}>
-              You
-            </button>
-            <button type="button" className={o && !o.settings.owner_approves_messages ? 'on' : ''} disabled={!o || busy} onClick={() => setApprover(false)}>
-              AI Manager
-            </button>
+      {tab !== 'hq' && (
+        <div className="ll-statbar">
+          <div>
+            <span>AI system</span>
+            <strong>{loading ? '…' : o?.settings.system_paused ? 'Paused' : 'Running'}</strong>
+          </div>
+          <div>
+            <span>Customer messages</span>
+            <strong>{loading ? '…' : o?.settings.customer_messaging_enabled ? 'Allowed' : 'Off'}</strong>
+          </div>
+          <div>
+            <span>Approves messages</span>
+            <div className="ll-seg ll-seg-sm" role="group" aria-label="Who approves customer messages">
+              <button type="button" className={o?.settings.owner_approves_messages ? 'on' : ''} disabled={!o || busy} onClick={() => setApprover(true)}>
+                You
+              </button>
+              <button type="button" className={o && !o.settings.owner_approves_messages ? 'on' : ''} disabled={!o || busy} onClick={() => setApprover(false)}>
+                AI Manager
+              </button>
+            </div>
+          </div>
+          <div>
+            <span>Server</span>
+            <strong>{loading ? '…' : workerOnline ? 'Online' : 'Offline'}</strong>
+            <small>{workerSeen ? `seen ${formatAgo(workerSeen)}` : 'not started yet'}</small>
+          </div>
+          <div>
+            <span>Working now</span>
+            <strong>{o ? o.counts.running : '…'}</strong>
+            <small>{o ? `${o.counts.queued} queued` : ''}</small>
+          </div>
+          <div>
+            <span>Today</span>
+            <strong>{o ? o.counts.executed_today : '…'}</strong>
+            <small>{o ? `done · ${o.counts.failed_today} failed` : ''}</small>
           </div>
         </div>
-        <div>
-          <span>Server</span>
-          <strong>{loading ? '…' : workerOnline ? 'Online' : 'Offline'}</strong>
-          <small>{workerSeen ? `seen ${formatAgo(workerSeen)}` : 'not started yet'}</small>
-        </div>
-        <div>
-          <span>Working now</span>
-          <strong>{o ? o.counts.running : '…'}</strong>
-          <small>{o ? `${o.counts.queued} queued` : ''}</small>
-        </div>
-        <div>
-          <span>Today</span>
-          <strong>{o ? o.counts.executed_today : '…'}</strong>
-          <small>{o ? `done · ${o.counts.failed_today} failed` : ''}</small>
-        </div>
-      </div>
+
+      )}
 
       <div className="ll-seg ll-room-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={tab === 'hq'} className={tab === 'hq' ? 'on' : ''} onClick={() => setTab('hq')}>
+          Headquarters
+        </button>
         <button type="button" role="tab" aria-selected={tab === 'live'} className={tab === 'live' ? 'on' : ''} onClick={() => setTab('live')}>
-          Live
+          Classic
         </button>
         <button type="button" role="tab" aria-selected={tab === 'approvals'} className={tab === 'approvals' ? 'on' : ''} onClick={() => setTab('approvals')}>
           Approvals{o && o.pending.length > 0 && <span className="ll-count">{o.pending.length}</span>}
@@ -750,6 +593,15 @@ export default function AiPage() {
           Claude bots
         </button>
       </div>
+
+      {tab === 'hq' && (
+        <HqView
+          onClassic={(reason) => {
+            setTab('live')
+            if (reason) setNotice(reason)
+          }}
+        />
+      )}
 
       {tab === 'live' && (
         <div className="ll-room">
