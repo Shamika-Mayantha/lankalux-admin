@@ -50,6 +50,9 @@ export type ExpenseRow = {
   note: string
   created_by: string | null
   created_at: string
+  /** Copied into each new month until stopped. */
+  repeats?: boolean
+  series_id?: string | null
   base_amount: number
 }
 
@@ -152,6 +155,7 @@ type RequestLite = {
 
 export async function buildFinanceReport(month: string, focusId: string | null = null, now = new Date()): Promise<FinanceReport> {
   const sb = getServiceClient()
+  await fillRecurring(month < colomboToday(now).slice(0, 7) ? month : colomboToday(now).slice(0, 7))
   const trendFrom = shiftMonth(month, -(TREND_MONTHS - 1))
   const trendTo = shiftMonth(month, 1)
 
@@ -316,11 +320,75 @@ export async function saveTripFinance(requestId: string, body: Record<string, un
   if (error) throw new AppError(`Could not save: ${error.message}`, 500)
 }
 
+type SeriesRow = {
+  id: string
+  series_id: string
+  month: string
+  category: ExpenseCategory
+  label: string
+  amount: number
+  currency: string
+  rate: number
+  note: string
+  repeats: boolean
+}
+
+/** Pre-migration databases have no repeats/series_id columns: recurring expenses are then simply off. */
+function isMissingColumn(err: { code?: string; message?: string } | null): boolean {
+  return !!err && (err.code === '42703' || /repeats|series_id/.test(err.message || ''))
+}
+
+/**
+ * Copies every recurring expense forward into each month up to `upTo` (never past the current month).
+ * A series continues while its latest row is ticked "repeats".
+ */
+async function fillRecurring(upTo: string) {
+  const sb = getServiceClient()
+  const { data, error } = await sb
+    .from('finance_expenses')
+    .select('id, series_id, month, category, label, amount, currency, rate, note, repeats')
+    .not('series_id', 'is', null)
+    .limit(10000)
+  if (error) {
+    if (isMissingColumn(error) || isMissingTableError(error)) return
+    throw new AppError(`Supabase request failed: ${error.message}`, 500)
+  }
+  const latest = new Map<string, SeriesRow>()
+  for (const r of (data || []) as SeriesRow[]) {
+    const prev = latest.get(r.series_id)
+    if (!prev || r.month > prev.month) latest.set(r.series_id, r)
+  }
+  const rows: Record<string, unknown>[] = []
+  for (const r of latest.values()) {
+    if (!r.repeats) continue
+    for (let m = shiftMonth(monthKey(r.month), 1); m <= upTo; m = shiftMonth(m, 1)) {
+      rows.push({
+        series_id: r.series_id,
+        month: `${m}-01`,
+        category: r.category,
+        label: r.label,
+        amount: r.amount,
+        currency: r.currency,
+        rate: r.rate,
+        note: r.note,
+        repeats: true,
+        created_by: 'repeats monthly',
+      })
+    }
+  }
+  if (!rows.length) return
+  // Two page loads at once may both try; the (series_id, month) index keeps one copy.
+  const { error: insertErr } = await sb
+    .from('finance_expenses')
+    .upsert(rows, { onConflict: 'series_id,month', ignoreDuplicates: true })
+  if (insertErr) throw new AppError(`Could not add repeating expenses: ${insertErr.message}`, 500)
+}
+
 export async function addExpense(body: Record<string, unknown>, by: string | undefined) {
   const category = String(body.category || '') as ExpenseCategory
   if (!EXPENSE_CATEGORIES.includes(category)) throw new AppError('Pick an expense type.', 400)
   const cur = currency(body.currency, 'Expense')
-  const row = {
+  const row: Record<string, unknown> = {
     month: `${monthKey(String(body.month || ''))}-01`,
     category,
     label: String(body.label || '').trim().slice(0, 200),
@@ -331,13 +399,83 @@ export async function addExpense(body: Record<string, unknown>, by: string | und
     created_by: by || null,
   }
   if (!row.amount) throw new AppError('Enter an amount.', 400)
+  if (body.repeats === true) {
+    row.repeats = true
+    row.series_id = crypto.randomUUID()
+  }
   const { error } = await getServiceClient().from('finance_expenses').insert(row)
-  if (error) throw new AppError(`Could not save: ${error.message}`, 500)
+  if (error) {
+    if (isMissingColumn(error)) throw new AppError('Repeating expenses need a small database update first.', 400)
+    throw new AppError(`Could not save: ${error.message}`, 500)
+  }
 }
 
+async function getExpense(id: string) {
+  const { data, error } = await getServiceClient()
+    .from('finance_expenses')
+    .select('id, series_id, month, repeats')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw new AppError(`Supabase request failed: ${error.message}`, 500)
+  if (!data) throw new AppError('Expense not found.', 404)
+  return data as { id: string; series_id: string | null; month: string; repeats: boolean }
+}
+
+/** Ends a series after `month`: removes its later copies so they are not counted. */
+async function endSeriesAfter(seriesId: string, month: string) {
+  const { error } = await getServiceClient().from('finance_expenses').delete().eq('series_id', seriesId).gt('month', month)
+  if (error) throw new AppError(`Could not stop repeating: ${error.message}`, 500)
+}
+
+/**
+ * Edits an expense. For a repeating cost the new label/amount also apply to its later months,
+ * and unticking "repeats" stops it after this month.
+ */
+export async function updateExpense(id: string, body: Record<string, unknown>) {
+  const sb = getServiceClient()
+  const row = await getExpense(id)
+  const cur = currency(body.currency, 'Expense')
+  const patch: Record<string, unknown> = {
+    label: String(body.label || '').trim().slice(0, 200),
+    amount: money(body.amount, 'Amount'),
+    currency: cur,
+    rate: fxRate(body.rate, cur, 'this expense'),
+  }
+  if (!patch.amount) throw new AppError('Enter an amount.', 400)
+  const repeats = body.repeats === true
+  let seriesId = row.series_id
+  if (repeats && !seriesId) seriesId = crypto.randomUUID()
+  const { error } = await sb
+    .from('finance_expenses')
+    .update({ ...patch, repeats, ...(seriesId ? { series_id: seriesId } : {}) })
+    .eq('id', id)
+  if (error) {
+    if (isMissingColumn(error)) throw new AppError('Repeating expenses need a small database update first.', 400)
+    throw new AppError(`Could not save: ${error.message}`, 500)
+  }
+  if (!seriesId) return
+  if (repeats) {
+    const later = await sb.from('finance_expenses').update(patch).eq('series_id', seriesId).gt('month', row.month)
+    if (later.error) throw new AppError(`Could not update later months: ${later.error.message}`, 500)
+  } else {
+    await endSeriesAfter(seriesId, row.month)
+  }
+}
+
+/** Deletes an expense. A repeating cost is removed from this month on and stops repeating. */
 export async function deleteExpense(id: string) {
-  const { error } = await getServiceClient().from('finance_expenses').delete().eq('id', id)
+  const sb = getServiceClient()
+  const row = await getExpense(id)
+  if (!row.series_id) {
+    const { error } = await sb.from('finance_expenses').delete().eq('id', id)
+    if (error) throw new AppError(`Could not delete: ${error.message}`, 500)
+    return
+  }
+  const { error } = await sb.from('finance_expenses').delete().eq('series_id', row.series_id).gte('month', row.month)
   if (error) throw new AppError(`Could not delete: ${error.message}`, 500)
+  // The month before keeps its row but no longer carries the cost forward.
+  const stop = await sb.from('finance_expenses').update({ repeats: false }).eq('series_id', row.series_id).lt('month', row.month)
+  if (stop.error) throw new AppError(`Could not stop repeating: ${stop.error.message}`, 500)
 }
 
 /** Copies last month's salary lines into `month`, skipping names already entered there. */

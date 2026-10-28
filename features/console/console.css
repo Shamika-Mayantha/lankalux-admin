@@ -2533,3 +2533,20 @@ html:has(.ll-root),
 .ll-fin-bars i { display: block; height: 6px; border-radius: 3px; margin: 2px 0; }
 .ll-fin-bars i.in { background: #2F7A50; }
 .ll-fin-bars i.out { background: var(--gold); }
+.ll-fin-check { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--forest); cursor: pointer; }
+.ll-fin-editing .ll-fin-check { margin-top: 8px; }
+.ll-fin-repeat {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--gold-soft);
+  color: var(--forest);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.ll-fin-actions { white-space: nowrap; text-align: right; }
+.ll-fin-editing td { vertical-align: top; }
+.ll-fin-editing input:not([type='checkbox']) { width: 100%; min-width: 90px; }
+.ll-fin-inline { display: flex; gap: 6px; margin-bottom: 6px; }
+.ll-fin-inline select { min-width: 84px; }
