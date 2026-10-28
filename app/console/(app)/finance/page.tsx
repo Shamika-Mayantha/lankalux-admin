@@ -418,7 +418,15 @@ function Expenses({
   lastRates: Record<string, number>
   onChange: () => void
 }) {
-  const blank = { category: 'ad_spend' as ExpenseCategory, label: '', amount: '', currency: 'USD', rate: String(lastRates.USD || '') }
+  const blank = {
+    category: 'ad_spend' as ExpenseCategory,
+    label: '',
+    amount: '',
+    currency: 'USD',
+    rate: String(lastRates.USD || ''),
+    repeats: false,
+  }
+  const [editing, setEditing] = useState<string | null>(null)
   const [form, setForm] = useState(blank)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -441,10 +449,17 @@ function Expenses({
   const add = () =>
     run(async () => {
       await consoleFetch('/api/v2/finance/expenses', { method: 'POST', body: JSON.stringify({ ...form, month }) })
-      setForm((p) => ({ ...blank, category: p.category, currency: p.currency, rate: p.rate }))
+      setForm((p) => ({ ...blank, category: p.category, currency: p.currency, rate: p.rate, repeats: p.repeats }))
     })
-  const remove = (id: string) =>
-    run(() => consoleFetch(`/api/v2/finance/expenses/${id}`, { method: 'DELETE' }))
+  const remove = (e: ExpenseRow) => {
+    if (e.repeats && !window.confirm(`Remove "${e.label || EXPENSE_LABEL[e.category]}" from ${monthLabel(month)} onwards and stop repeating it?`)) return
+    run(() => consoleFetch(`/api/v2/finance/expenses/${e.id}`, { method: 'DELETE' }))
+  }
+  const save = (id: string, body: Record<string, unknown>) =>
+    run(async () => {
+      await consoleFetch(`/api/v2/finance/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+      setEditing(null)
+    })
   const copy = () =>
     run(async () => {
       const res = await consoleFetch('/api/v2/finance/expenses/copy-salaries', { method: 'POST', body: JSON.stringify({ month }) })
@@ -470,7 +485,13 @@ function Expenses({
               onChange={(e) => {
                 const category = e.target.value as ExpenseCategory
                 const currency = category === 'ad_spend' ? 'USD' : BASE_CURRENCY
-                setForm((p) => ({ ...p, category, currency, rate: currency === BASE_CURRENCY ? '1' : String(lastRates[currency] || '') }))
+                setForm((p) => ({
+                  ...p,
+                  category,
+                  currency,
+                  rate: currency === BASE_CURRENCY ? '1' : String(lastRates[currency] || ''),
+                  repeats: category === 'salary' || category === 'software' || category === 'office',
+                }))
               }}
             >
               {EXPENSE_CATEGORIES.map((c) => (
@@ -503,6 +524,10 @@ function Expenses({
           )}
         </div>
         <div className="ll-row" style={{ marginTop: 14 }}>
+          <label className="ll-fin-check">
+            <input type="checkbox" checked={form.repeats} onChange={(e) => setForm({ ...form, repeats: e.target.checked })} />
+            Repeats monthly
+          </label>
           <button className="ll-btn" onClick={add} disabled={saving || !form.amount}>
             Add expense
           </button>
@@ -535,24 +560,90 @@ function Expenses({
                 </td>
               </tr>
             ) : (
-              EXPENSE_CATEGORIES.flatMap((c) => rows.filter((e) => e.category === c)).map((e) => (
-                <tr key={e.id}>
-                  <td>{EXPENSE_LABEL[e.category]}</td>
-                  <td>{e.label || '—'}</td>
-                  <td>{fmt(e.amount, e.currency)}</td>
-                  <td>{fmt(e.base_amount)}</td>
-                  <td>
-                    <button className="ll-btn ghost" onClick={() => remove(e.id)} disabled={saving} aria-label="Delete expense">
-                      ×
-                    </button>
-                  </td>
-                </tr>
-              ))
+              EXPENSE_CATEGORIES.flatMap((c) => rows.filter((e) => e.category === c)).map((e) =>
+                editing === e.id ? (
+                  <ExpenseEdit key={e.id} row={e} saving={saving} onSave={(body) => save(e.id, body)} onCancel={() => setEditing(null)} />
+                ) : (
+                  <tr key={e.id}>
+                    <td>{EXPENSE_LABEL[e.category]}</td>
+                    <td>
+                      {e.label || '—'}
+                      {e.repeats && <span className="ll-fin-repeat">Monthly</span>}
+                    </td>
+                    <td>{fmt(e.amount, e.currency)}</td>
+                    <td>{fmt(e.base_amount)}</td>
+                    <td className="ll-fin-actions">
+                      <button className="ll-btn ghost" onClick={() => setEditing(e.id)} disabled={saving}>
+                        Edit
+                      </button>
+                      <button className="ll-btn ghost" onClick={() => remove(e)} disabled={saving} aria-label="Delete expense">
+                        ×
+                      </button>
+                    </td>
+                  </tr>
+                )
+              )
             )}
           </tbody>
         </table>
       </div>
     </div>
+  )
+}
+
+function ExpenseEdit({
+  row,
+  saving,
+  onSave,
+  onCancel,
+}: {
+  row: ExpenseRow
+  saving: boolean
+  onSave: (body: Record<string, unknown>) => void
+  onCancel: () => void
+}) {
+  const [f, setF] = useState({
+    label: row.label,
+    amount: String(row.amount),
+    currency: row.currency,
+    rate: String(row.rate),
+    repeats: !!row.repeats,
+  })
+  return (
+    <tr className="ll-fin-editing">
+      <td>{EXPENSE_LABEL[row.category]}</td>
+      <td>
+        <input value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} aria-label="For" />
+        <label className="ll-fin-check">
+          <input type="checkbox" checked={f.repeats} onChange={(e) => setF({ ...f, repeats: e.target.checked })} />
+          Repeats monthly
+        </label>
+      </td>
+      <td>
+        <div className="ll-fin-inline">
+          <input inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} aria-label="Amount" />
+          <CurrencyPicker value={f.currency} onChange={(c) => setF({ ...f, currency: c, rate: c === BASE_CURRENCY ? '1' : f.rate })} />
+        </div>
+        {f.currency !== BASE_CURRENCY && (
+          <input
+            inputMode="decimal"
+            value={f.rate}
+            onChange={(e) => setF({ ...f, rate: e.target.value })}
+            aria-label={`1 ${f.currency} in ${BASE_CURRENCY}`}
+            placeholder={`1 ${f.currency} = ? ${BASE_CURRENCY}`}
+          />
+        )}
+        {row.repeats && <span className="ll-muted">Also changes the months after this one.</span>}
+      </td>
+      <td colSpan={2} className="ll-fin-actions">
+        <button className="ll-btn" onClick={() => onSave(f)} disabled={saving}>
+          Save
+        </button>
+        <button className="ll-btn ghost" onClick={onCancel}>
+          Cancel
+        </button>
+      </td>
+    </tr>
   )
 }
 
