@@ -615,6 +615,19 @@
   color: var(--hq-muted);
 }
 
+.hq-ask textarea {
+  width: 100%;
+  margin: 8px 0;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.hq-ask-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .hq-count {
   background: var(--hq-amber);
   color: #3b2600;

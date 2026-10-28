@@ -1,4 +1,5 @@
-import { getServiceClient } from '@/services/supabase.server'
+import { AppError, getServiceClient } from '@/services/supabase.server'
+import type { Staff } from '@/services/staff.service'
 
 /**
  * Claude bots: Claude scheduled tasks that run on the owner's Claude subscription (not the
@@ -54,6 +55,78 @@ export async function listClaudeBots(): Promise<ClaudeBot[]> {
     .order('started_at', { ascending: false })
     .limit(60)
   if (error) throw new Error(`Could not read Claude bot runs: ${error.message}`)
-  const runs = (data || []) as ClaudeBotRun[]
+  const runs = ((data || []) as ClaudeBotRun[]).map(settleStale)
   return BOTS.map((b) => ({ ...b, runs: runs.filter((r) => r.bot === b.key).slice(0, 5) }))
+}
+
+/** A run that never reported back (Claude was busy or the run broke) stops showing as running. */
+const STALE_AFTER_MS = 45 * 60 * 1000
+
+function settleStale(run: ClaudeBotRun): ClaudeBotRun {
+  if (run.status !== 'running' || Date.now() - Date.parse(run.started_at) < STALE_AFTER_MS) return run
+  return { ...run, status: 'failed', summary: run.summary ? `${run.summary} No report came back from Claude.` : 'No report came back from Claude.' }
+}
+
+/**
+ * "Ask Claude now" for the Telegram replies bot. Starts its Claude scheduled task through the task's
+ * API trigger. The token lives only in the server env (CLAUDE_TELEGRAM_FIRE_TOKEN) and can do nothing
+ * but start that one task. A "running" row is written first so the annex shows the robot at work;
+ * the task fills in that same row with its report.
+ */
+const TELEGRAM_TASK_ID = 'trig_015EpDbTmPazQ1EnAZj4tWCR'
+const FIRE_URL = `https://api.anthropic.com/v1/claude_code/routines/${TELEGRAM_TASK_ID}/fire`
+
+export async function askTelegramBot(staff: Staff, input: { postUpdate?: unknown; note?: unknown }): Promise<ClaudeBotRun> {
+  const token = process.env.CLAUDE_TELEGRAM_FIRE_TOKEN
+  if (!token) throw new AppError('The Telegram bot is not connected to admin yet: CLAUDE_TELEGRAM_FIRE_TOKEN is not set in Vercel.', 503)
+  const postUpdate = input.postUpdate === true
+  const note = typeof input.note === 'string' ? input.note.trim().slice(0, 1000) : ''
+
+  const db = getServiceClient()
+  const { data: busy } = await db
+    .from('claude_bot_runs')
+    .select('id, started_at')
+    .eq('bot', 'telegram_replies')
+    .eq('status', 'running')
+    .gte('started_at', new Date(Date.now() - STALE_AFTER_MS).toISOString())
+    .limit(1)
+  if (busy?.length) throw new AppError('Claude is already checking the group. Its report will appear here when it finishes.', 409)
+
+  const asked = postUpdate ? 'Asked to check the group and post an update there.' : 'Asked to check the group and report back.'
+  const { data: row, error } = await db
+    .from('claude_bot_runs')
+    .insert({ bot: 'telegram_replies', status: 'running', summary: note ? `${asked} Your note: ${note}` : asked })
+    .select('id, bot, status, summary, links, started_at, finished_at')
+    .single()
+  if (error || !row) throw new Error(`Could not record the request: ${error?.message}`)
+
+  const text = [
+    'Started from the LankaLux admin "Ask Claude now" button (supervisor only).',
+    `run_id: ${row.id}`,
+    `asked_by: ${staff.email || staff.name}`,
+    `post_update_to_group: ${postUpdate ? 'yes' : 'no'}`,
+    `note_from_owner: ${note || '(none)'}`,
+  ].join('\n')
+  let failure = ''
+  try {
+    const res = await fetch(FIRE_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'anthropic-beta': 'experimental-cc-routine-2026-04-01',
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text }),
+      signal: AbortSignal.timeout(20_000),
+    })
+    if (!res.ok) failure = res.status === 401 || res.status === 403 ? 'Claude refused the token (it may have been regenerated).' : `Claude answered ${res.status}.`
+  } catch {
+    failure = 'Could not reach Claude.'
+  }
+  if (failure) {
+    await db.from('claude_bot_runs').update({ status: 'failed', summary: `${asked} ${failure}`, finished_at: new Date().toISOString() }).eq('id', row.id)
+    throw new AppError(failure, 502)
+  }
+  return row as ClaudeBotRun
 }
