@@ -1,7 +1,7 @@
 -- Photos and videos the content creator sends in the Telegram group, so Claude can review them.
 -- The telegram-bot edge function downloads each one from Telegram (Bot API limit 20 MB) and keeps
 -- it here as base64; Claude reads it through SQL, decodes it and looks at the photo or video frames.
--- Files are deleted after 14 days to keep the database small.
+-- Files are deleted after 2 days (Shamika, 28 Oct) to keep the database small.
 
 CREATE TABLE IF NOT EXISTS public.telegram_media (
   id bigserial PRIMARY KEY,
@@ -26,5 +26,5 @@ REVOKE ALL ON SEQUENCE public.telegram_media_id_seq FROM PUBLIC, anon, authentic
 SELECT cron.schedule(
   'telegram-media-cleanup',
   '20 21 * * *',
-  $$DELETE FROM public.telegram_media WHERE created_at < now() - interval '14 days'$$
+  $$DELETE FROM public.telegram_media WHERE created_at < now() - interval '2 days'$$
 );
