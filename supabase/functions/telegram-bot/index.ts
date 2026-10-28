@@ -2,19 +2,24 @@
 //
 // Two callers:
 // - Telegram posts group messages here (checked with X-Telegram-Bot-Api-Secret-Token). They are
-//   stored in telegram_messages; nothing is answered automatically. Claude reads them on a
-//   schedule and writes replies as 'out' rows.
+//   stored in telegram_messages and, when CLAUDE_TELEGRAM_FIRE_TOKEN is set, wake the Claude
+//   replies task (at most once per cooldown). Claude also reads them on a schedule and writes
+//   replies as 'out' rows.
 // - The database (x-internal-token, checked against Vault) asks to 'send' unsent replies, to
 //   'register' this function as the bot's webhook, or for 'info' on webhook health.
 // Replies only go to chats marked allowed in telegram_chats. Deploy with verify_jwt = false.
 //
-// Secret (Supabase dashboard, never in code or chat): TELEGRAM_BOT_TOKEN from @BotFather.
+// Secrets (Supabase dashboard, never in code or chat): TELEGRAM_BOT_TOKEN from @BotFather, and
+// optionally CLAUDE_TELEGRAM_FIRE_TOKEN so a new group message wakes the Claude replies task.
 // Nothing here logs a token.
 
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4'
 
 const BOT_TOKEN = (Deno.env.get('TELEGRAM_BOT_TOKEN') ?? '').trim()
 const SELF_URL = `${Deno.env.get('SUPABASE_URL')}/functions/v1/telegram-bot`
+// Same token as the admin "Ask Claude now" button (Vercel CLAUDE_TELEGRAM_FIRE_TOKEN); unset = no wake.
+const FIRE_TOKEN = (Deno.env.get('CLAUDE_TELEGRAM_FIRE_TOKEN') ?? '').trim()
+const FIRE_URL = 'https://api.anthropic.com/v1/claude_code/routines/trig_015EpDbTmPazQ1EnAZj4tWCR/fire'
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {
   auth: { persistSession: false },
 })
@@ -53,6 +58,27 @@ async function storeIncoming(update: any) {
     tg_message_id: msg.message_id,
     reply_to_tg_message_id: msg.reply_to_message?.message_id ?? null,
   })
+  if (update.message) await wakeClaude(msg.chat.id, sender)
+}
+
+// Starts the Claude replies task now instead of at its next scheduled check. The database decides
+// (allowed chat, cooldown, no admin button run in progress), so a burst of messages fires once.
+async function wakeClaude(chatId: number, sender: string | null) {
+  if (!FIRE_TOKEN) return
+  const { data: claimed } = await db.rpc('telegram_claim_wake', { p_chat_id: chatId })
+  if (claimed !== true) return
+  const res = await fetch(FIRE_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${FIRE_TOKEN}`,
+      'anthropic-beta': 'experimental-cc-routine-2026-04-01',
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json',
+    },
+    signal: AbortSignal.timeout(8000),
+    body: JSON.stringify({ text: `Woken by a new Telegram message from ${sender ?? 'someone'} in the content group (TELEGRAM WAKE).` }),
+  })
+  if (!res.ok) console.error('telegram-bot wake failed:', res.status)
 }
 
 async function sendPending() {
