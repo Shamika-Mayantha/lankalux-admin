@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ExternalLink, Pause, Play, X } from 'lucide-react'
 import { formatAgo } from '@/lib/format'
@@ -29,6 +29,7 @@ type Props = {
   pending: HqAction[]
   onDecide: (id: string, d: 'approve' | 'reject', text?: string) => void
   onPause: (key: string, paused: boolean) => void
+  onAskTelegram: (postUpdate: boolean, note: string) => Promise<boolean>
   onSelect: (n: NodeKey) => void
   onClose: () => void
   isGateway: boolean
@@ -268,6 +269,8 @@ export function HqPanel(p: Props) {
           </section>
         )}
 
+        {bot?.key === 'telegram_replies' && <AskTelegram busy={p.busy || bot.runs[0]?.status === 'running'} onAsk={p.onAskTelegram} />}
+
         {/* Claude bot runs */}
         {bot && (
           <section>
@@ -352,4 +355,37 @@ function messagesFor(store: HqStore, node: NodeKey): HqMessage[] {
     mine = all.filter((m) => convs.has(m.conversation_id))
   }
   return mine.sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)).slice(-8)
+}
+
+/** Starts the Telegram bot now: it checks the content group, answers, and reports back here (or also posts an update there). */
+function AskTelegram({ busy, onAsk }: { busy: boolean; onAsk: (postUpdate: boolean, note: string) => Promise<boolean> }) {
+  const [note, setNote] = useState('')
+  const ask = async (postUpdate: boolean) => {
+    if (postUpdate && !window.confirm('Claude will post a short update in the content team’s Telegram group. Go ahead?')) return
+    if (await onAsk(postUpdate, note)) setNote('')
+  }
+  return (
+    <section className="hq-ask">
+      <h3>Ask Claude now</h3>
+      <p className="hq-muted hq-small">
+        Claude checks the group, answers anything waiting, and sends you the latest and its suggestions under Recent runs, usually within a few minutes.
+      </p>
+      <textarea
+        rows={2}
+        maxLength={1000}
+        placeholder="Optional note for Claude, e.g. ask how the Ella reel is going"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        disabled={busy}
+      />
+      <div className="hq-ask-buttons">
+        <button type="button" className="ll-btn small" disabled={busy} onClick={() => ask(false)}>
+          {busy ? 'Claude is checking…' : 'Check and report to me'}
+        </button>
+        <button type="button" className="ll-btn small secondary" disabled={busy} onClick={() => ask(true)}>
+          Check and post an update in the group
+        </button>
+      </div>
+    </section>
+  )
 }

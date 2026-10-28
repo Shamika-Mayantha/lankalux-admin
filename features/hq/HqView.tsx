@@ -197,6 +197,22 @@ export function HqView({ onClassic }: { onClassic: (reason?: string) => void }) 
     }
   }
 
+  async function askTelegram(postUpdate: boolean, note: string): Promise<boolean> {
+    setBusy(true)
+    setNotice(null)
+    try {
+      await consoleFetch('/api/v2/ai/claude-bots/telegram', { method: 'POST', body: JSON.stringify({ postUpdate, note }) })
+      setNotice('Claude is on it. The report will appear under Recent runs in a few minutes.')
+      await load()
+      return true
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Something went wrong.')
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
+
   function decide(id: string, decision: 'approve' | 'reject', text?: string) {
     if (decision === 'reject' && !window.confirm('Reject this action? The agent will not run it.')) return
     send(`/api/v2/ai/actions/${id}`, 'POST', { decision, text })
@@ -336,6 +352,7 @@ export function HqView({ onClassic }: { onClassic: (reason?: string) => void }) 
           pending={selected === OWNER ? pending : pending.filter((a) => a.agent_key === selected)}
           onDecide={decide}
           onPause={(key, paused) => send(`/api/v2/ai/agents/${key}`, 'PATCH', { paused })}
+          onAskTelegram={askTelegram}
           onSelect={select}
           onClose={() => select(null)}
           isGateway={selected === GATEWAY}
