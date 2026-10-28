@@ -1,6 +1,9 @@
 // Copies the LankaLux Instagram account's recent posts, reels and their numbers into
 // instagram_account / instagram_media, so the weekly reels planner can see what worked.
 //
+// Also saves account-level audience insights (follower countries, cities, age, gender, 30 day
+// totals, daily reach, and hourly online followers if Instagram allows it) in instagram_account.insights.
+//
 // Read only: the token carries instagram_business_basic and instagram_business_manage_insights,
 // and this function only makes GET calls. It never posts, comments or changes anything on
 // Instagram. Called once a day by pg_cron (x-instagram-sync-token header, checked against
@@ -41,6 +44,38 @@ async function get(path: string, params: Record<string, string>, token: string) 
   const body = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(String(body?.error?.message ?? `Instagram API ${res.status}`))
   return body
+}
+
+// Account-level insights (audience countries, 30 day totals, daily reach). Each call is tried on its
+// own: Instagram refuses some metrics for some accounts, and one refusal must not stop the sync.
+async function accountInsights(token: string) {
+  const until = Math.floor(Date.now() / 1000)
+  const since = until - 29 * 86_400
+  const audience = { period: 'lifetime', metric_type: 'total_value' }
+  const calls: Record<string, Record<string, string>> = {
+    followers_by_country: { metric: 'follower_demographics', breakdown: 'country', ...audience },
+    followers_by_city: { metric: 'follower_demographics', breakdown: 'city', ...audience },
+    followers_by_age: { metric: 'follower_demographics', breakdown: 'age', ...audience },
+    followers_by_gender: { metric: 'follower_demographics', breakdown: 'gender', ...audience },
+    engaged_by_country: { metric: 'engaged_audience_demographics', breakdown: 'country', timeframe: 'last_30_days', ...audience },
+    reached_by_country: { metric: 'reached_audience_demographics', breakdown: 'country', timeframe: 'last_30_days', ...audience },
+    totals_30_days: {
+      metric: 'reach,views,accounts_engaged,total_interactions,profile_links_taps,follows_and_unfollows',
+      metric_type: 'total_value', period: 'day', since: String(since), until: String(until),
+    },
+    reach_per_day: { metric: 'reach', period: 'day', since: String(since), until: String(until) },
+    online_followers: { metric: 'online_followers', period: 'lifetime' },
+  }
+  const out: Record<string, unknown> = { fetched_at: new Date().toISOString() }
+  for (const [name, params] of Object.entries(calls)) {
+    try {
+      const r = await get('me/insights', params, token)
+      out[name] = r.data ?? []
+    } catch (e) {
+      out[name] = { error: (e as Error).message }
+    }
+  }
+  return out
 }
 
 async function currentToken(): Promise<string> {
@@ -97,6 +132,7 @@ Deno.serve(async (req: Request) => {
       username: me.username,
       followers_count: me.followers_count ?? null,
       media_count: me.media_count ?? null,
+      insights: await accountInsights(token),
       synced_at: new Date().toISOString(),
     })
 
