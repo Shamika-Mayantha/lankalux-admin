@@ -173,12 +173,19 @@ function Totals({ totals, busy }: { totals?: MonthTotals; busy: boolean }) {
     { label: 'Net profit', value: totals?.net_profit, hint: 'Gross profit minus expenses', strong: true },
   ]
   return (
-    <div className="ll-grid">
+    <div className="ll-grid ll-fin-totals">
       {cards.map((c) => (
         <div key={c.label} className={`ll-card${c.strong ? ' ll-fin-net' : ''}`}>
           <h3>{c.label}</h3>
-          <p className={`ll-stat ll-perf-money${c.value != null && c.value < 0 ? ' ll-fin-loss' : ''}`}>
-            {busy ? <span className="ll-skel ll-skel-stat" /> : fmt(c.value || 0)}
+          <p className={`ll-stat ll-fin-amount${c.value != null && c.value < 0 ? ' ll-fin-loss' : ''}`}>
+            {busy ? (
+              <span className="ll-skel ll-skel-stat" />
+            ) : (
+              <>
+                <span className="ll-fin-cur">{BASE_CURRENCY}</span>
+                {Math.round(c.value || 0).toLocaleString('en-GB')}
+              </>
+            )}
           </p>
           {c.hint && <span className="ll-muted ll-perf-change">{c.hint}</span>}
         </div>

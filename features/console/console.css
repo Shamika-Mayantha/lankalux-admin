@@ -2550,3 +2550,28 @@ html:has(.ll-root),
 .ll-fin-editing input:not([type='checkbox']) { width: 100%; min-width: 90px; }
 .ll-fin-inline { display: flex; gap: 6px; margin-bottom: 6px; }
 .ll-fin-inline select { min-width: 84px; }
+/* Totals: the currency is a small label so big rupee amounts stay inside their card. */
+.ll-fin-totals { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+/* Narrower screens: two by two, with net profit as a full-width row underneath instead of a lone card. */
+@media (max-width: 1199px) {
+  .ll-fin-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ll-fin-totals .ll-fin-net { grid-column: 1 / -1; }
+}
+.ll-fin-totals .ll-card { min-width: 0; }
+.ll-card p.ll-stat.ll-fin-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: clamp(22px, 1.8vw, 28px);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: normal;
+}
+.ll-fin-cur {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-family: inherit;
+}
+.ll-fin-loss .ll-fin-cur { color: inherit; }
