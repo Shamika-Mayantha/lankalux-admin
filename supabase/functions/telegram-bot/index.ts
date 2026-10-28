@@ -2,7 +2,8 @@
 //
 // Two callers:
 // - Telegram posts group messages here (checked with X-Telegram-Bot-Api-Secret-Token). They are
-//   stored in telegram_messages and, when CLAUDE_TELEGRAM_FIRE_TOKEN is set, wake the Claude
+//   stored in telegram_messages (photos and videos also in telegram_media, so Claude can review
+//   them) and, when CLAUDE_TELEGRAM_FIRE_TOKEN is set, wake the Claude
 //   replies task (at most once per cooldown). Claude also reads them on a schedule and writes
 //   replies as 'out' rows.
 // - The database (x-internal-token, checked against Vault) asks to 'send' unsent replies, to
@@ -14,6 +15,7 @@
 // Nothing here logs a token.
 
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4'
+import { encodeBase64 } from 'jsr:@std/encoding@1/base64'
 
 const BOT_TOKEN = (Deno.env.get('TELEGRAM_BOT_TOKEN') ?? '').trim()
 const SELF_URL = `${Deno.env.get('SUPABASE_URL')}/functions/v1/telegram-bot`
@@ -41,23 +43,77 @@ async function sha256Hex(text: string) {
   return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+// The largest file the Bot API lets a bot download.
+const MAX_DOWNLOAD = 20 * 1024 * 1024
+
+// Picks the photo or video in a message, if any. Creators often send "as file" to keep quality,
+// so image and video documents count too.
+function mediaOf(msg: any) {
+  if (msg.photo?.length) {
+    const p = msg.photo[msg.photo.length - 1]
+    return { kind: 'photo', file: p, mime: 'image/jpeg', width: p.width, height: p.height }
+  }
+  const v = msg.video ?? msg.animation ?? msg.video_note
+  if (v) return { kind: 'video', file: v, mime: v.mime_type ?? 'video/mp4', width: v.width ?? v.length, height: v.height ?? v.length, duration: v.duration, thumb: v.thumbnail ?? v.thumb }
+  const d = msg.document
+  if (d && /^(image|video)\//.test(d.mime_type ?? '')) {
+    return { kind: d.mime_type.startsWith('image/') ? 'photo' : 'video', file: d, mime: d.mime_type, thumb: d.thumbnail ?? d.thumb }
+  }
+  return null
+}
+
+async function download(fileId: string) {
+  const f = await telegram('getFile', { file_id: fileId })
+  const res = await fetch(`https://api.telegram.org/file/bot${BOT_TOKEN}/${f.file_path}`)
+  if (!res.ok) throw new Error(`file download ${res.status}`)
+  return encodeBase64(new Uint8Array(await res.arrayBuffer()))
+}
+
+// Keeps a copy of the photo or video so Claude can review it; too-big videos keep their cover frame.
+async function storeMedia(messageId: number, media: any, fileName: string | null) {
+  const size = media.file.file_size ?? 0
+  const row = {
+    message_id: messageId, kind: media.kind, mime: media.mime, file_name: fileName,
+    width: media.width ?? null, height: media.height ?? null, duration_seconds: media.duration ?? null, size_bytes: size || null,
+  }
+  if (size <= MAX_DOWNLOAD) {
+    await db.from('telegram_media').insert({ ...row, b64: await download(media.file.file_id) })
+  } else if (media.thumb) {
+    await db.from('telegram_media').insert({
+      ...row, kind: 'video_thumb', mime: 'image/jpeg', width: media.thumb.width, height: media.thumb.height,
+      b64: await download(media.thumb.file_id), note: 'file over 20 MB, only the cover frame was saved',
+    })
+  } else {
+    await db.from('telegram_media').insert({ ...row, note: 'file over 20 MB, not saved' })
+  }
+}
+
 async function storeIncoming(update: any) {
   const msg = update.message ?? update.edited_message
-  if (!msg?.chat?.id || !(msg.text ?? msg.caption)) return
-  if (msg.from?.is_bot) return
+  if (!msg?.chat?.id || msg.from?.is_bot) return
+  const media = mediaOf(msg)
+  const text = msg.text ?? msg.caption ?? (media ? `[${media.kind} with no caption]` : null)
+  if (!text) return
   await db.from('telegram_chats').upsert(
     { chat_id: msg.chat.id, title: msg.chat.title ?? msg.chat.username ?? msg.chat.first_name ?? null },
     { onConflict: 'chat_id', ignoreDuplicates: true },
   )
   const sender = [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(' ') || msg.from?.username || null
-  await db.from('telegram_messages').insert({
+  const { data: saved } = await db.from('telegram_messages').insert({
     chat_id: msg.chat.id,
     direction: 'in',
     sender,
-    text: msg.text ?? msg.caption,
+    text,
     tg_message_id: msg.message_id,
     reply_to_tg_message_id: msg.reply_to_message?.message_id ?? null,
-  })
+  }).select('id').single()
+  if (media && saved && update.message) {
+    try {
+      await storeMedia(saved.id, media, msg.document?.file_name ?? null)
+    } catch (e) {
+      console.error('telegram-bot media failed:', (e as Error).message)
+    }
+  }
   if (update.message) await wakeClaude(msg.chat.id, sender)
 }
 
