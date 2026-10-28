@@ -23,6 +23,7 @@ import {
   Users,
   X,
   type LucideIcon,
+  Wallet,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { consoleFetch } from '@/lib/console-api'
@@ -56,6 +57,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Finance',
     items: [
+      { href: '/console/finance', label: 'Profit & expenses', icon: Wallet },
       { href: '/console/invoices', label: 'Invoices', icon: FileText },
       { href: '/console/payments', label: 'Payments', icon: CreditCard },
     ],
@@ -90,7 +92,7 @@ function initials(me: Me) {
 }
 
 /** Pages hidden from agents; their API routes use requireAdmin, which also refuses agents. */
-const SUPERVISOR_ONLY = ['/console/performance', '/console/ai', '/console/payments', '/console/team', '/console/website']
+const SUPERVISOR_ONLY = ['/console/performance', '/console/finance', '/console/ai', '/console/payments', '/console/team', '/console/website']
 
 function supervisorOnly(href: string) {
   return SUPERVISOR_ONLY.some((p) => href === p || href.startsWith(`${p}/`))

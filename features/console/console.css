@@ -2504,3 +2504,32 @@ html:has(.ll-root),
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Profit & expenses (finance page) */
+.ll-fin-month { margin-bottom: 18px; }
+.ll-fin-month strong { min-width: 150px; text-align: center; color: var(--forest); font-size: 16px; }
+.ll-fin-net { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+.ll-root .ll-fin-loss, .ll-fin-loss { color: var(--error-text); }
+.ll-fin-missing { margin: 18px 0 0; border-color: var(--gold); }
+.ll-fin-missing h3 { margin: 0 0 4px; }
+.ll-fin-missing p { margin: 0 0 12px; }
+.ll-table-wrap { width: 100%; overflow-x: auto; }
+.ll-fin-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; max-width: none; align-items: end; }
+.ll-fin-subhead { margin: 6px 0 -4px; font-size: 14px; color: var(--forest); }
+.ll-fin-add { margin-bottom: 14px; }
+.ll-fin-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  padding: 12px 14px;
+  background: var(--ivory-deep);
+  border: 1px solid var(--line);
+  font-size: 14px;
+}
+.ll-fin-preview strong { color: var(--forest); margin-left: 4px; }
+.ll-fin-trend tbody tr { cursor: pointer; }
+.ll-fin-trend tbody tr.on td { background: var(--gold-soft); }
+.ll-fin-bars { width: 32%; min-width: 120px; }
+.ll-fin-bars i { display: block; height: 6px; border-radius: 3px; margin: 2px 0; }
+.ll-fin-bars i.in { background: #2F7A50; }
+.ll-fin-bars i.out { background: var(--gold); }
