@@ -17,6 +17,7 @@ import { JourneyView } from '@/features/journey/JourneyView'
 import { PhotoPicker } from '@/features/console/PhotoPicker'
 import { InvoiceWorkspace } from '@/features/invoices/InvoiceWorkspace'
 import { AgentAssignment } from '@/features/console/AgentAssignment'
+import { useIsSupervisor } from '@/features/console/StaffContext'
 import { EmailThread } from '@/features/requests/EmailThread'
 import '@/features/journey/journey.css'
 import type { ActivityEvent, CanonicalJourney, ClientRequestRow, DriverRecord, HotelRecord, ItineraryDay, ItineraryRecord, RequestHotel, StructuredItinerary, VehicleRecord } from '@/types/domain'
@@ -264,6 +265,7 @@ const WORKSPACE_TABS = ['overview', 'itineraries', 'editor', 'hotels', 'invoices
 type WorkspaceTab = (typeof WORKSPACE_TABS)[number]
 
 export function RequestWorkspace() {
+  const isSupervisor = useIsSupervisor()
   const params = useParams<{ id: string }>()
   const id = params.id
   const [row, setRow] = useState<ClientRequestRow | null>(null)
@@ -929,6 +931,11 @@ export function RequestWorkspace() {
             <button className="ll-btn secondary" onClick={() => setDriverPackOpen(true)}>
               Driver Pack
             </button>
+          ) : null}
+          {(status === 'sold' || status === 'after_sales') && isSupervisor ? (
+            <Link className="ll-btn secondary" href={`/console/finance?trip=${encodeURIComponent(id)}`}>
+              Sale &amp; costs
+            </Link>
           ) : null}
         </div>
       </div>
