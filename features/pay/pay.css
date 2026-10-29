@@ -1,0 +1,161 @@
+/* Client pay page. Tokens from lankalux.com / lankalux-design.css (same as config/brand.ts). */
+html:has(.ll-pay) {
+  zoom: 1;
+  background: #f9f4eb;
+}
+html:has(.ll-pay) body {
+  background: #f9f4eb !important;
+}
+
+.ll-pay {
+  --forest: #1a2a1d;
+  --gold: #b18544;
+  --ivory: #f9f4eb;
+  --cream: #f1e9da;
+  --ink: #252523;
+  --muted: #6b6b66;
+  --line: rgba(26, 42, 29, 0.12);
+  min-height: 100vh;
+  padding: 32px 16px 40px;
+  color: var(--ink);
+  font-family: var(--font-switzer), system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ll-pay a { color: var(--forest); }
+
+.ll-pay-head { margin-bottom: 28px; }
+.ll-pay-logo { height: 44px; width: auto; display: block; }
+
+.ll-pay-card {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 36px 28px 30px;
+  text-align: center;
+  box-shadow: 0 18px 50px -30px rgba(26, 42, 29, 0.35);
+}
+
+.ll-pay-card h1 {
+  font-family: var(--font-gambetta), Georgia, serif;
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 1.15;
+  color: var(--forest);
+  margin: 0 0 10px;
+}
+
+.ll-pay-eyebrow {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.ll-pay-amount {
+  font-family: var(--font-gambetta), Georgia, serif;
+  font-size: 44px;
+  line-height: 1.1;
+  color: var(--forest);
+  margin: 6px 0 8px;
+}
+
+.ll-pay-muted { color: var(--muted); font-size: 14px; line-height: 1.55; margin: 0; }
+
+.ll-pay-note {
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  background: var(--cream);
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.55;
+  text-align: left;
+}
+
+.ll-pay-action { margin-top: 26px; }
+
+.ll-pay-btn {
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--forest);
+  color: var(--ivory);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.ll-pay-btn:hover { background: #243328; }
+.ll-pay-btn:active { transform: scale(0.99); }
+.ll-pay-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+.ll-pay-after { margin-top: 12px; }
+
+.ll-pay-state {
+  margin-top: 26px;
+  padding: 18px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--ivory);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.ll-pay-state strong { color: var(--forest); font-size: 16px; font-weight: 600; }
+.ll-pay-state.ok { background: #eef3ec; border-color: rgba(26, 42, 29, 0.2); }
+
+.ll-pay-link {
+  background: none;
+  border: 0;
+  padding: 4px;
+  color: var(--forest);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ll-pay-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  border-top-color: var(--gold);
+  animation: ll-pay-spin 0.9s linear infinite;
+  margin-bottom: 4px;
+}
+@keyframes ll-pay-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ll-pay-spinner { animation: none; } }
+
+.ll-pay-journey {
+  display: inline-block;
+  margin-top: 22px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+.ll-pay-foot {
+  max-width: 460px;
+  margin-top: 26px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.ll-pay-foot p { margin: 0 0 6px; }
+
+@media (max-width: 420px) {
+  .ll-pay { padding-top: 24px; }
+  .ll-pay-card { padding: 30px 20px 24px; }
+  .ll-pay-amount { font-size: 38px; }
+}

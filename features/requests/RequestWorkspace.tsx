@@ -19,6 +19,7 @@ import { InvoiceWorkspace } from '@/features/invoices/InvoiceWorkspace'
 import { AgentAssignment } from '@/features/console/AgentAssignment'
 import { useIsSupervisor } from '@/features/console/StaffContext'
 import { EmailThread } from '@/features/requests/EmailThread'
+import { PaymentLinksPanel } from '@/features/requests/PaymentLinksPanel'
 import '@/features/journey/journey.css'
 import type { ActivityEvent, CanonicalJourney, ClientRequestRow, DriverRecord, HotelRecord, ItineraryDay, ItineraryRecord, RequestHotel, StructuredItinerary, VehicleRecord } from '@/types/domain'
 import {
@@ -252,6 +253,10 @@ function activityLabel(eventType: string) {
     payment_edited: 'Payment edited',
     payment_deleted: 'Payment deleted',
     invoice_marked_paid: 'Invoice marked paid',
+    payment_link_created: 'Revolut pay page created',
+    payment_link_opened: 'Client opened pay page',
+    payment_link_paid: 'Revolut payment marked paid',
+    payment_link_cancelled: 'Revolut pay page cancelled',
     hotel_proposal_attached: 'Hotel attached',
     hotel_proposal_removed: 'Hotel removed',
     hotels_applied_to_itineraries: 'Hotels inserted into itineraries',
@@ -272,6 +277,8 @@ export function RequestWorkspace() {
   const [itineraries, setItineraries] = useState<ItineraryRecord[]>([])
   const [activity, setActivity] = useState<ActivityEvent[]>([])
   const [error, setError] = useState<string | null>(null)
+  // Bumped when a Revolut link is marked paid, so the invoice list reloads with the new payment.
+  const [invoiceKey, setInvoiceKey] = useState(0)
   // The open tab lives in the URL hash so a refresh or back button lands on the same tab.
   const [tab, setTabState] = useState<WorkspaceTab>(() => {
     const hash = typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
@@ -1461,7 +1468,10 @@ export function RequestWorkspace() {
       )}
 
       {tab === 'invoices' && (
-        <InvoiceWorkspace requestId={id} requestEmail={row.email} compact />
+        <>
+          <PaymentLinksPanel requestId={id} onPaid={() => setInvoiceKey((k) => k + 1)} />
+          <InvoiceWorkspace key={invoiceKey} requestId={id} requestEmail={row.email} compact />
+        </>
       )}
 
       {tab === 'emails' && <EmailThread requestId={id} clientEmail={row.email} />}
